@@ -1,248 +1,242 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   FitSet — tasarım katmanı
-   Kimlik: pembe defter kâğıdı · lacivert mürekkep · kırmızı vurgu
+   FitSet — "ODAK" (Yön A)
    ══════════════════════════════════════════════════════════════════════════
 
-   ┌─ İKİ TASARIM KARARI ────────────────────────────────────────────────────┐
-   │ 1. ÇİZGİLİ KÂĞIT DESENİ VERİ ALANLARINDA YOK.                           │
-   │    Yatay çizgiler küçük mono rakamların altını keser ve salon ışığında  │
-   │    okunurluğu düşürür. Desen başlıklarda ve boş alanlarda yaşar; set    │
-   │    satırları ve sayı girişleri düz zemin üstünde durur.                 │
+   ┌─ TASARIM KARARLARI ─────────────────────────────────────────────────────┐
+   │ 1. İKİ EKRAN, TEK İŞ.                                                    │
+   │    LİSTE = "bugün ne var / nerede kaldım". ODAK = "şu anda ne yapıyorum".│
+   │    Odak ekranında dokuz hareket görmek gereksiz bilişsel yük; salonda    │
+   │    ekranda aranacak hiçbir şey olmamalı.                                 │
    │                                                                          │
-   │ 2. KOYU TEMA PEMBEYİ KARARTARAK YAPILMAZ — çamur rengi çıkar.           │
-   │    Zemin nötr-sıcak koyuya döner, KIRMIZI VURGU AYNEN KORUNUR, lacivert │
-   │    mürekkep açık mürekkebe geçer. Kimlik zeminden değil vurgu renginden │
-   │    ve tipografiden taşınır.                                             │
+   │ 2. KOYU TEMAYA BİLİNÇLİ BAĞLANIYOR.                                      │
+   │    A yönünün kimliği bu. Zemin mavi-siyah (nötr seçilmiş, mavi eğimli),  │
+   │    metin SICAK kırık beyaz — soğuk zemine sıcak metin. Tek vurgu rengi   │
+   │    markanın kırmızısı; "tamamlandı" için ayrı bir semantik yeşil.        │
+   │    (Açık tema sonradan eklenebilir; şimdilik seçim, eksiklik değil.)     │
+   │                                                                          │
+   │ 3. RAKAMLAR SAYFANIN KAHRAMANI.                                          │
+   │    Ağırlık ve tekrar 46px; kol mesafesinden, terli gözle okunur.         │
+   │    Tabular rakamlar — değer değişirken sayılar zıplamaz.                 │
    └──────────────────────────────────────────────────────────────────────────┘ */
 
-/* NOT: fonts.css buradan @import EDİLMEZ. @import indirmeleri zincire sokar
-   (style.css inmeden fonts.css istenmez) ve stil geç uygulanır — sayfa bir an
-   biçimsiz görünür, kapalı olması gereken paneller açık görünür. index.html
-   ikisini de <link> ile PARALEL yükler. */
-
 :root {
-  --paper:      #F7DEE6;
-  --paper-deep: #EFCBD7;
-  --stage:      #FDF3F6;
-  --field:      #FFFFFF;   /* sayı girişleri — desen YOK, en yüksek kontrast */
-  --rule:       #E7ADBF;
-  --ink:        #2A32B8;
-  --ink-soft:   #7B82D8;
-  --ghost:      #BFC3EC;
-  --trail:      #E7A0B6;
-  --red:        #C81E4E;
-  --graphite:   #463F4C;
-  --muted:      #7B7280;
-  --equip:      #8A8090;
-  --ground:     #C9BFCE;
+  --bg:    #0E1118;   /* mavi-siyah — nötr "seçildi", devralınmadı */
+  --surf:  #161C27;
+  --surf2: #1D2534;
+  --line:  #232B3A;
+  --tx:    #ECE7DF;   /* sıcak kırık beyaz */
+  --dim:   #7E889D;
+  --acc:   #FF4D6D;   /* tek vurgu — markanın kırmızısı */
+  --ok:    #46C7A8;   /* semantik: tamamlandı (vurgu değil) */
+  --warn:  #FFB84D;
 
-  --fig-head: #FDF3F6;   /* kafa dairesi = ZEMİN rengi (boyun çizgisini maskeler) */
-  --line-h: 30px;
-  --touch: 52px;          /* asgari dokunma hedefi — terli/eldivenli parmak */
-  --wrap: 560px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper:      #16131A;
-    --paper-deep: #221D28;
-    --stage:      #1E1A24;
-    --field:      #262030;
-    --rule:       #2E2736;
-    --ink:        #C4CBFF;
-    --ink-soft:   #7C84C8;
-    --ghost:      #4A4E78;
-    --trail:      #9E5C72;
-    --red:        #FF5C82;   /* koyu zeminde WCAG için açıldı, kimlik aynı */
-    --fig-head:   #1E1A24;   /* = --stage; kafa dairesi zemini maskeler */
-    --graphite:   #E4DEE8;
-    --muted:      #9A90A2;
-    --equip:      #8A8090;
-    --ground:     #4A4350;
-  }
-}
-/* Kullanıcı ayarlardan zorladıysa sistem tercihini ezer */
-:root[data-theme="dark"] {
-  --paper: #16131A; --paper-deep: #221D28; --stage: #1E1A24; --field: #262030;
-  --rule: #2E2736; --ink: #C4CBFF; --ink-soft: #7C84C8; --ghost: #4A4E78;
-  --trail: #9E5C72; --red: #FF5C82; --graphite: #E4DEE8; --muted: #9A90A2; --ground: #4A4350; --fig-head: #1E1A24;
+  --fig:      var(--tx);
+  --fig-head: var(--surf);   /* kafa dairesi boyun çizgisini maskeler = zemin rengi */
+  --touch: 52px;             /* asgari dokunma hedefi — terli/eldivenli parmak */
+  --wrap: 520px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html { -webkit-text-size-adjust: 100%; }
-
+html, body { height: 100%; }
 body {
-  margin: 0;
-  padding: 0 0 88px;                       /* alt aksiyon çubuğu için yer */
-  background: var(--paper);
-  /* Defter çizgileri — yalnızca gövde zemininde, veri alanlarında değil */
-  background-image: repeating-linear-gradient(to bottom, transparent 0,
-    transparent calc(var(--line-h) - 1px), var(--rule) calc(var(--line-h) - 1px), var(--rule) var(--line-h));
-  color: var(--graphite);
+  margin: 0; background: var(--bg); color: var(--tx);
   font-family: 'Karla', system-ui, -apple-system, sans-serif;
-  font-size: 17px; line-height: var(--line-h);
+  font-size: 16px; line-height: 1.5;
+  overscroll-behavior-y: contain;
 }
-.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 16px; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+*:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
-/* Marka ve İngilizce egzersiz adları: lang="en" ile işaretli.
-   lang="tr" altında uppercase yapılırsa i → İ olur ("FİTSET", "PUSH DOWN" → "PUSH DOWN"). */
-.brand, [lang="en"] { text-transform: none; }
+.screen { display: none; flex-direction: column; min-height: 100%; max-width: var(--wrap); margin: 0 auto; }
+.screen.on { display: flex; }
 
-/* ── Tipografi ─────────────────────────────────────────────────────────── */
-.eyebrow { font-family: 'Space Mono', ui-monospace, monospace; font-size: 12px;
-  letter-spacing: .18em; text-transform: uppercase; color: var(--red); margin: 0; }
-h1 { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
-  font-size: clamp(34px, 9vw, 46px); line-height: .98; margin: 6px 0 8px;
-  color: var(--ink); letter-spacing: -.03em; }
-header { padding: 22px 0 2px; }
+/* ── Ortak parçalar ────────────────────────────────────────────────────── */
+.mono { font-family: 'Space Mono', ui-monospace, monospace; }
+.lbl {
+  font-family: 'Space Mono', ui-monospace, monospace; font-size: 10.5px;
+  letter-spacing: .17em; text-transform: uppercase; color: var(--dim);
+}
+.rail { display: flex; gap: 4px; padding: 14px 18px 0; }
+.rail i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+.rail i.d { background: var(--ok); }
+.rail i.c { background: var(--acc); }
 
-/* ── Bugün kartı ───────────────────────────────────────────────────────── */
-.today { border: 1.5px solid var(--ink); background: var(--ink); color: var(--stage);
-  padding: 13px 15px; margin: 18px 0 0; }
-.today .lbl { font-family: 'Space Mono', ui-monospace, monospace; font-size: 11px;
-  letter-spacing: .16em; text-transform: uppercase; opacity: .78; display: block; }
-.today .big { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 700;
-  font-size: 20px; line-height: 1.25; display: block; margin-top: 3px; }
-.today .rest { font-size: 14.5px; line-height: 1.45; display: block; margin-top: 4px; opacity: .92; }
-.upnext { font-family: 'Space Mono', ui-monospace, monospace; font-size: 12px;
-  line-height: 1.9; margin: 8px 0 0; color: var(--muted); }
+/* ══ LİSTE EKRANI ═════════════════════════════════════════════════════════ */
+#list-screen header { padding: 22px 18px 4px; }
+#list-screen .day {
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
+  font-size: 32px; line-height: 1.04; letter-spacing: -.03em; margin: 6px 0 2px;
+}
+#list-screen .muscles { color: var(--dim); font-size: 14.5px; margin: 0; }
+#list-screen .resting { color: var(--warn); font-size: 14px; margin: 8px 0 0; }
 
-/* ── İlerleme ──────────────────────────────────────────────────────────── */
-.prog { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 2px; }
-.prog b { font-family: 'Space Mono', ui-monospace, monospace; font-size: 22px; color: var(--ink); }
-.prog span { font-size: 14px; color: var(--muted); }
-.bar { height: 8px; background: var(--paper-deep); border: 1.5px solid var(--ink); margin: 6px 0 20px; }
-/* width DEĞİL transform animasyonu: width her karede yeniden yerleşim (layout)
-   tetikler; scaleX yalnız derleyici katmanında çalışır. Orta seviye Android'de
-   fark hissedilir — İP-2'deki animasyon önbelleğiyle aynı gerekçe. */
-.bar i { display: block; height: 100%; width: 100%; background: var(--ink);
-  transform: scaleX(0); transform-origin: left; transition: transform .35s ease; }
+.sum { display: flex; gap: 9px; padding: 16px 18px 6px; }
+.sum div { flex: 1; background: var(--surf); border-radius: 13px; padding: 12px 13px; }
+.sum span { display: block; margin-bottom: 2px; }
+.sum b {
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-size: 21px;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
+.sum i { font-style: normal; font-size: 12px; color: var(--dim); }
 
-/* ── Egzersiz kartı ────────────────────────────────────────────────────── */
-.card { border-top: 1.5px solid var(--ink); }
-.card:last-of-type { border-bottom: 1.5px solid var(--ink); }
-.row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 2px; cursor: pointer;
-  background: none; border: 0; width: 100%; text-align: left; font: inherit; color: inherit;
-  min-height: var(--touch); }
-.row:focus-visible { outline: 3px solid var(--red); outline-offset: -3px; }
-.num { font-family: 'Space Mono', ui-monospace, monospace; font-size: 13px; color: var(--red);
-  width: 22px; flex: none; padding-top: 3px; }
-.names { flex: 1; min-width: 0; }
-.en { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 700; font-size: 18px;
-  line-height: 1.2; color: var(--ink); display: block; }
-.tr { display: block; font-size: 14px; line-height: 1.35; color: var(--muted); margin-top: 1px; }
-.reps { font-family: 'Space Mono', ui-monospace, monospace; font-size: 13px; flex: none;
-  white-space: nowrap; padding-top: 4px; color: var(--muted); }
-.chev { flex: none; width: 12px; height: 12px; margin-top: 8px;
-  border-right: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink);
-  transform: rotate(45deg); transition: transform .2s ease; }
-.card.open .chev { transform: rotate(225deg); }
-.card.done .en { text-decoration: line-through; text-decoration-thickness: 2px; }
-.card.done .num::after { content: ' ✓'; }
-.panel { display: none; padding: 0 0 18px; }
-.card.open .panel { display: block; }
+.items { padding: 8px 18px 0; display: flex; flex-direction: column; gap: 8px; }
+.item {
+  display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
+  background: var(--surf); border-radius: 13px; padding: 13px 15px; min-height: 64px;
+}
+.item:active { background: var(--surf2); }
+.item .ix { font-size: 11px; color: var(--dim); width: 18px; flex: none; }
+.item .nm { flex: 1; min-width: 0; }
+.item .en {
+  display: block; font-family: 'Bricolage Grotesque', 'Karla', sans-serif;
+  font-weight: 800; font-size: 16.5px; letter-spacing: -.015em;
+}
+.item .tr { display: block; color: var(--dim); font-size: 13px; margin-top: 1px; }
+.item .pips { display: flex; gap: 3px; flex: none; }
+.item .pips i { width: 7px; height: 16px; border-radius: 2px; background: var(--line); }
+.item .pips i.f { background: var(--ok); }
+.item .pips i.w { background: var(--dim); opacity: .5; }
+.item.done .en { color: var(--ok); }
 
-/* ── Animasyon sahnesi ─────────────────────────────────────────────────── */
-.stage { position: relative; background: var(--stage); border: 1.5px solid var(--ink); margin-bottom: 10px; }
-.stage svg { display: block; width: 100%; height: auto; }
-.art { stroke: var(--ink); }
-.far { stroke: var(--ink-soft); }
-.ghost { stroke: var(--ghost); stroke-width: 3; stroke-dasharray: 5 5; }
-.trail { stroke: var(--trail); stroke-width: 2.5; fill: none; }
-.eq { stroke: var(--equip); stroke-width: 3; }
-.cbl { stroke: var(--equip); stroke-width: 2; stroke-dasharray: 5 4; }
-.gr { stroke: var(--ground); stroke-width: 3; }
-.ctrl { display: flex; align-items: center; gap: 12px; padding: 8px 11px 11px;
-  border-top: 1px dashed var(--rule); }
-.playbtn { flex: none; border: 1.5px solid var(--ink); background: var(--stage); color: var(--ink);
-  font-family: 'Space Mono', ui-monospace, monospace; font-size: 12px; padding: 10px 13px;
-  cursor: pointer; border-radius: 2px; min-height: 40px; }
-.scrub { flex: 1; min-width: 0; accent-color: var(--ink); height: 32px; }
-.phase { position: absolute; left: 11px; top: 9px; font-family: 'Space Mono', ui-monospace, monospace;
-  font-size: 11px; letter-spacing: .12em; color: var(--red); text-transform: uppercase; }
-.viewlbl { position: absolute; right: 11px; top: 9px; font-family: 'Space Mono', ui-monospace, monospace;
-  font-size: 10.5px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+.finisher {
+  margin: 14px 18px 0; border: 1px dashed var(--line); border-radius: 13px; padding: 14px 16px;
+}
+.finisher h3 { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-size: 15.5px; margin: 0 0 3px; }
+.finisher p { margin: 0; font-size: 14px; color: var(--dim); line-height: 1.45; }
 
-/* ── Anlatım ───────────────────────────────────────────────────────────── */
-.mus { margin: 0 0 12px; font-size: 14px; line-height: 1.4; }
-.mus b { font-family: 'Space Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--red); display: block; }
-ol.steps { margin: 0 0 12px; padding-left: 24px; }
-ol.steps li { margin-bottom: 6px; line-height: 1.45; }
-ol.steps li::marker { font-family: 'Space Mono', ui-monospace, monospace; font-size: 13px; color: var(--ink); }
-.tip { border-left: 3px solid var(--red); padding: 2px 0 2px 12px; color: var(--red);
-  font-size: 15px; line-height: 1.45; margin-bottom: 16px; }
-.tip b { font-family: 'Space Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: .14em;
-  text-transform: uppercase; display: block; }
+.foot { padding: 20px 18px 26px; color: var(--dim); font-size: 12.5px; line-height: 1.5; }
+.foot button { color: var(--acc); text-decoration: underline; font-size: 13px; padding: 9px 0; min-height: 40px; }
+.spacer { flex: 1; min-height: 12px; }
 
-/* ── Kayıt alanı — DESENSİZ ZEMİN, en yüksek okunurluk ─────────────────── */
-.log { background: var(--field); border: 1.5px solid var(--ink); padding: 12px; }
-.lasttime { font-family: 'Space Mono', ui-monospace, monospace; font-size: 12.5px;
-  color: var(--muted); margin: 0 0 10px; }
-.lasttime b { color: var(--ink); font-weight: 700; }
-.setlist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-.setitem { display: flex; align-items: center; gap: 10px; font-family: 'Space Mono', ui-monospace, monospace;
-  font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--rule); }
-.setitem .k { color: var(--muted); font-size: 12px; width: 46px; flex: none; }
-.setitem .v { flex: 1; color: var(--graphite); }
-.setitem.warm .v { color: var(--muted); font-style: italic; }
-.setitem .undo { border: 0; background: none; color: var(--red); font: inherit; font-size: 12px;
-  text-decoration: underline; cursor: pointer; padding: 8px; min-height: 40px; }
+.bar { display: flex; gap: 10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.btn {
+  flex: 1; min-height: var(--touch); border-radius: 13px; background: var(--surf);
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800; font-size: 16px;
+}
+.btn.primary { background: var(--acc); color: #12060A; }
+.btn:disabled { opacity: .4; }
 
-/* Sayı girişi — her alan TAM GENİŞLİK, etiket üstte.
-   Yan yana konduklarında sayı alanı 4px'e kadar eziliyordu (ölçüldü). */
-.entry { display: flex; flex-direction: column; gap: 12px; }
-.field { display: block; }
-.flab { display: block; font-family: 'Space Mono', ui-monospace, monospace; font-size: 11px;
-  letter-spacing: .13em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
-.stepper { display: flex; align-items: stretch; border: 2px solid var(--ink); border-radius: 3px;
-  overflow: hidden; background: var(--field); }
-.stepper button { width: 64px; flex: none; border: 0; background: var(--paper-deep);
-  color: var(--ink); font-size: 26px; font-weight: 700; cursor: pointer; line-height: 1; }
-.stepper button:active { background: var(--ink); color: var(--stage); }
-.stepper input { flex: 1; min-width: 3ch; border: 0; background: var(--field); color: var(--graphite);
-  font-family: 'Space Mono', ui-monospace, monospace; font-size: 22px; font-weight: 700;
-  text-align: center; padding: 13px 4px; -moz-appearance: textfield; }
-.stepper input::placeholder { color: var(--muted); font-weight: 400; }
-.stepper input::-webkit-outer-spin-button,
-.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* ══ ODAK EKRANI ══════════════════════════════════════════════════════════ */
+#focus-screen .top {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px 0; gap: 12px;
+}
+#focus-screen .back { padding: 6px 0; min-height: 40px; color: var(--dim); font-size: 13px; }
+#focus-screen h2 {
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
+  font-size: 27px; line-height: 1.05; letter-spacing: -.025em; margin: 12px 18px 0;
+  text-wrap: balance;
+}
+#focus-screen .sub { margin: 5px 18px 0; color: var(--dim); font-size: 14px; }
 
-.add { min-height: var(--touch); border: 2px solid var(--ink); background: var(--ink);
-  color: var(--stage); font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 700;
-  font-size: 17px; cursor: pointer; border-radius: 3px; }
-.add:active { background: var(--red); border-color: var(--red); }
-.warmtog { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted);
-  margin-top: 10px; cursor: pointer; min-height: 40px; }
-.warmtog input { width: 22px; height: 22px; accent-color: var(--red); }
+.viz { margin: 13px 18px 0; background: var(--surf); border-radius: 16px; padding: 4px 0; position: relative; }
+.viz svg { display: block; width: 100%; height: auto; }
+.art { stroke: var(--fig); }
+.far { stroke: #55607A; }
+.ghost { stroke: #3A4256; stroke-width: 3; stroke-dasharray: 5 5; }
+.trail { stroke: #A8506A; stroke-width: 2.5; fill: none; }
+.eq, .cbl { stroke: #5A6478; stroke-width: 3; }
+.cbl { stroke-width: 2; stroke-dasharray: 5 4; }
+.gr { stroke: #39414F; stroke-width: 3; }
+.phase { position: absolute; left: 14px; top: 10px; }
+.scrub { width: calc(100% - 28px); margin: 2px 14px 8px; accent-color: var(--acc); height: 30px; }
 
-/* ── Alt aksiyon çubuğu ────────────────────────────────────────────────── */
-.actions { position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper-deep);
-  border-top: 1.5px solid var(--ink); padding: 10px 16px; display: flex; gap: 10px;
-  justify-content: center; z-index: 20; }
-.actions > * { max-width: calc(var(--wrap) / 2); }
-.btn { flex: 1; min-height: var(--touch); border: 2px solid var(--ink); background: transparent;
-  color: var(--ink); font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 700;
-  font-size: 16px; border-radius: 3px; cursor: pointer; }
-.btn.primary { background: var(--ink); color: var(--stage); }
-.btn:disabled { opacity: .45; cursor: default; }
+/* Plank gibi izometrik hareketler: doğru duruş + yaygın hatalar yan yana */
+.variants { display: flex; gap: 8px; margin: 13px 18px 0; }
+.variants figure { flex: 1; margin: 0; background: var(--surf); border-radius: 12px; overflow: hidden; }
+.variants figure.ok { box-shadow: inset 0 0 0 1.5px var(--ok); }
+.variants svg { display: block; width: 100%; height: auto; }
+.variants figcaption { padding: 7px 9px 10px; }
+.variants b { display: block; font-size: 12px; margin-bottom: 2px; }
+.variants figure.ok b { color: var(--ok); }
+.variants figure:not(.ok) b { color: var(--acc); }
+.variants figcaption span { font-size: 11.5px; color: var(--dim); line-height: 1.35; display: block; }
 
-/* ── Not / bilgi kutusu ────────────────────────────────────────────────── */
-.note { border: 1.5px dashed var(--ink); padding: 13px 15px; margin: 20px 0 0; }
-.note h3 { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; margin: 0 0 2px;
-  font-size: 17px; color: var(--ink); }
-.note p { margin: 0; font-size: 15px; line-height: 1.5; }
-.linkbtn { background: none; border: 0; color: var(--red); font: inherit; font-size: 14px;
-  text-decoration: underline; cursor: pointer; padding: 10px 0; min-height: 40px; }
-footer { margin-top: 22px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.steps { margin: 14px 18px 0; padding-left: 20px; color: var(--dim); font-size: 14px; line-height: 1.5; }
+.steps li { margin-bottom: 5px; }
+.steps li::marker { color: var(--acc); font-family: 'Space Mono', monospace; font-size: 12px; }
+.tip { margin: 12px 18px 0; font-size: 14px; color: var(--warn); line-height: 1.45; }
+.tip b { display: block; margin-bottom: 2px; }
 
-/* ── Bildirim şeridi (güncelleme, geri alma, hata) ─────────────────────── */
-.toast { position: fixed; left: 12px; right: 12px; bottom: 84px; z-index: 30;
-  background: var(--ink); color: var(--stage); padding: 12px 14px; border-radius: 3px;
-  font-size: 15px; display: flex; align-items: center; gap: 12px;
-  box-shadow: 0 6px 20px rgb(0 0 0 / .25); max-width: var(--wrap); margin: 0 auto; }
-.toast.warn { background: var(--red); }
-.toast button { border: 1.5px solid currentColor; background: none; color: inherit; font: inherit;
-  font-size: 14px; padding: 8px 12px; border-radius: 3px; cursor: pointer; min-height: 40px; flex: none; }
+.prev { margin: 14px 18px 0; font-size: 12.5px; color: var(--dim); }
+.prev b { color: var(--tx); font-weight: 400; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 11px 18px 0; }
+.chips span {
+  padding: 7px 11px; border-radius: 9px; background: var(--surf); font-size: 12px;
+  font-family: 'Space Mono', ui-monospace, monospace; color: var(--dim);
+}
+.chips span.on { background: rgba(70,199,168,.14); color: var(--ok); }
+.chips span.warm { font-style: italic; }
+.chips button.undo { color: var(--acc); font-size: 12px; text-decoration: underline; padding: 7px 4px; min-height: 40px; }
 
-*:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* Sayı girişi — rakamlar sayfanın kahramanı */
+.nums { display: flex; gap: 12px; padding: 8px 18px 0; }
+.nums .f { flex: 1; text-align: center; min-width: 0; }
+.nums .val {
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
+  font-size: 44px; line-height: 1.05; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums; width: 100%; text-align: center;
+  background: none; border: 0; color: var(--tx); padding: 2px 0;
+  -moz-appearance: textfield;
+}
+.nums .val::-webkit-outer-spin-button, .nums .val::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.nums .val::placeholder { color: var(--dim); }
+.nums .unit { font-size: 14px; color: var(--dim); }
+.pm { display: flex; gap: 9px; margin-top: 8px; }
+.pm button { flex: 1; height: 46px; border-radius: 11px; background: var(--surf); font-size: 22px; }
+.pm button:active { background: var(--surf2); }
+.hint { margin: 9px 18px 0; text-align: center; font-size: 12.5px; color: var(--dim); }
+.warmtog { display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 12px 18px 0; color: var(--dim); font-size: 13.5px; min-height: 40px; }
+.warmtog input { width: 20px; height: 20px; accent-color: var(--acc); }
+
+.go { margin: 14px 18px 0; height: 58px; border-radius: 15px; background: var(--acc); color: #12060A;
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800; font-size: 18px;
+  width: calc(100% - 36px); }
+.nav { display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 18px calc(18px + env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--dim); }
+.nav button { padding: 10px 4px; min-height: 44px; color: var(--dim); }
+.nav button:disabled { opacity: .3; }
+
+/* ── Geri sayım ────────────────────────────────────────────────────────── */
+.clock { margin: 16px 18px 0; background: var(--surf); border-radius: 16px; padding: 18px; text-align: center; }
+.clock .time {
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
+  font-size: 62px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+  display: block; margin: 6px 0 2px;
+}
+.clock.run .time { color: var(--acc); }
+.clock .row { display: flex; gap: 9px; margin-top: 13px; }
+.clock .row button { flex: 1; min-height: 46px; border-radius: 11px; background: var(--surf2); font-size: 15px; }
+.clock .row button.main { background: var(--acc); color: #12060A; font-weight: 700; }
+.clock .late { color: var(--warn); font-size: 13px; margin: 8px 0 0; }
+
+/* Dinlenme şeridi — ekranın altına yapışır, akışı kesmez */
+.rest {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  background: var(--surf2); border-top: 1px solid var(--line);
+  padding: 11px 18px calc(11px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 12px;
+  max-width: var(--wrap); margin: 0 auto;
+}
+.rest .t { font-family: 'Space Mono', ui-monospace, monospace; font-size: 22px;
+  font-variant-numeric: tabular-nums; color: var(--acc); min-width: 62px; }
+.rest .l { flex: 1; font-size: 13px; color: var(--dim); }
+.rest button { padding: 10px 12px; border-radius: 9px; background: var(--surf); font-size: 13px; min-height: 44px; }
+
+body.resting { padding-bottom: 84px; }
+
+/* ── Bildirim şeridi ───────────────────────────────────────────────────── */
+.toast {
+  position: fixed; left: 12px; right: 12px; bottom: 88px; z-index: 40;
+  background: var(--surf2); border: 1px solid var(--line); color: var(--tx);
+  padding: 13px 15px; border-radius: 12px; font-size: 14.5px;
+  display: flex; align-items: center; gap: 12px;
+  max-width: calc(var(--wrap) - 24px); margin: 0 auto;
+  box-shadow: 0 10px 34px rgb(0 0 0 / .5);
+}
+.toast.warn { border-color: var(--acc); color: var(--acc); }
+.toast span { flex: 1; }
+.toast button { border: 1px solid currentColor; padding: 8px 12px; border-radius: 9px;
+  font-size: 13px; min-height: 40px; flex: none; }

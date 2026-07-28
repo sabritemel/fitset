@@ -135,6 +135,9 @@ export async function persist(session) {
   await store.saveSession(session);
 }
 
+/** Anlık hacim — liste ekranındaki özet şeridi için (senkron) */
+export const summaryVolume = session => store.sessionVolume(session, byId);
+
 /** Bitiş özeti */
 export async function summary(session) {
   const v = store.sessionVolume(session, byId);
