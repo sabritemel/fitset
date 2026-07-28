@@ -1,0 +1,19 @@
+{
+  "name": "FitSet — Antrenman Defteri",
+  "short_name": "FitSet",
+  "description": "Salon antrenman defteri. Ağırlık ve tekrar kaydı, hareket anlatımları, çevrimdışı çalışır. Veri cihazda kalır.",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7DEE6",
+  "theme_color": "#2A32B8",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

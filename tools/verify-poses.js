@@ -1,0 +1,150 @@
+/**
+ * POZ DOĞRULAYICI — her poz değişikliğinden sonra ÇALIŞTIR.
+ *
+ *   node tools/verify-poses.js        (veya: npm run verify)
+ *
+ * Neden var: çubuk-adam motoru forward kinematics kullandığı için uzuv UZUNLUKLARI
+ * yapı gereği sabittir — ama EKLEM AÇILARI değildir. İki eklem bağımsız interpole
+ * edilirse, her iki UÇ POZ doğru olsa bile ARA POZDA dirsek/diz insan sınırını
+ * aşabilir. Gözle bakınca fark edilmez; sayıyla bakınca hemen görünür.
+ *
+ * Çıkış kodu 0 = temiz, 1 = en az bir ihlal (ileride CI kapısı olarak kullanılabilir).
+ */
+import { EX } from '../js/data/exercises.js';
+import { L, skeleton, poseAt } from '../js/anim/engine.js';
+
+const STEPS = 40;                 // her egzersiz için denetlenecek ara kare sayısı
+const LEN_TOL = 0.01;             // segment uzunluğunda kabul edilen sapma (%1)
+const JOINT_MAX = 150;            // dirsek/diz azami fleksiyon (insan sınırı ~145-150°)
+const GROUND_Y = 186;             // zemin çizgisi (engine ile aynı viewBox)
+
+/**
+ * Bilinçli istisna: yukarıdan görünümde kolların kameraya doğru gelmesi 2B'de
+ * ancak kısaltarak (foreshortening) temsil edilebilir. Bu egzersizlerde `al`
+ * çarpanı uzuv uzunluğunu KASTEN değiştirir — bug değildir.
+ */
+const FORESHORTEN_OK = new Set(['Dumbbell Bench Fly', 'Reverse Pec Fly']);
+
+const norm = a => { while (a > 180) a -= 360; while (a < -180) a += 360; return a; };
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const all = EX.flat();
+let fails = 0, warns = 0;
+const problem = [];
+
+const say = (icon, ex, msg) => console.log(`  ${icon} ${ex.en.padEnd(34)} ${msg}`);
+
+// ── 1. Segment uzunluğu hareket boyunca sabit mi? ────────────────────────────
+console.log('\n1) SEGMENT UZUNLUK SABİTLİĞİ');
+for (const ex of all) {
+  let worst = 0;
+  for (let i = 0; i <= STEPS; i++) {
+    const s = skeleton(poseAt(ex.a, ex.b, i / STEPS), ex.view);
+    for (const [got, want] of [[dist(s.shA, s.elA), L.ua], [dist(s.elA, s.haA), L.fa],
+                               [dist(s.hipA, s.knA), L.th], [dist(s.knA, s.ftA), L.sh]])
+      worst = Math.max(worst, Math.abs(got - want) / want);
+  }
+  if (worst > LEN_TOL) {
+    if (FORESHORTEN_OK.has(ex.en)) { say('ⓘ', ex, `%${(worst * 100).toFixed(0)} kısalma — bilinçli foreshortening, beklenen`); }
+    else { say('✗', ex, `%${(worst * 100).toFixed(0)} uzunluk sapması — FK bozulmuş`); fails++; problem.push(ex.en); }
+  }
+}
+if (!problem.length) console.log(`  ✓ ${all.length} egzersizin tümünde uzuv uzunlukları sabit`);
+
+// ── 2. Eklem açısı insan aralığında mı? (uç pozlar VE ara pozlar) ────────────
+console.log(`\n2) EKLEM LİMİTİ (azami ${JOINT_MAX}° fleksiyon)`);
+let jointClean = true;
+for (const ex of all) {
+  let peak = { v: 0, t: 0, joint: '' };
+  for (let i = 0; i <= STEPS; i++) {
+    const t = i / STEPS, p = poseAt(ex.a, ex.b, t);
+    const joints = {
+      dirsek: norm(p.fa - p.ua),
+      dirsek2: norm((p.fa2 ?? p.fa) - (p.ua2 ?? p.ua)),
+      diz: norm(p.sh - p.th),
+      diz2: norm((p.sh2 ?? p.sh) - (p.th2 ?? p.th)),
+    };
+    for (const [name, v] of Object.entries(joints))
+      if (Math.abs(v) > Math.abs(peak.v)) peak = { v, t, joint: name };
+  }
+  if (Math.abs(peak.v) > JOINT_MAX) {
+    const where = peak.t === 0 ? 'BAŞLANGIÇ pozu' : peak.t === 1 ? 'BİTİŞ pozu' : `ara poz t=${peak.t.toFixed(2)}`;
+    say('✗', ex, `${peak.joint} ${Math.abs(peak.v).toFixed(0)}° @ ${where}`);
+    fails++; jointClean = false;
+  }
+}
+if (jointClean) console.log(`  ✓ tüm eklemler ${JOINT_MAX}° sınırının altında`);
+
+// ── 3. Açı sıçraması: uzuv kısa yoldan mı dönüyor? ──────────────────────────
+console.log('\n3) DÖNÜŞ YÖNÜ (|Δ| > 180° = uzuv uzun yoldan dolanıyor)');
+let spinClean = true;
+for (const ex of all) {
+  for (const k of ['torso', 'ua', 'fa', 'ua2', 'fa2', 'th', 'sh', 'th2', 'sh2']) {
+    if (ex.a[k] === undefined || ex.b[k] === undefined) continue;
+    const d = ex.b[k] - ex.a[k];
+    if (Math.abs(d) > 180) {
+      say('⚠', ex, `${k}: ${ex.a[k]}° → ${ex.b[k]}° (Δ=${d}°, kısa yol ${d > 0 ? d - 360 : d + 360}°)`);
+      warns++; spinClean = false;
+    }
+  }
+}
+if (spinClean) console.log('  ✓ tüm eklemler kısa yoldan dönüyor');
+
+// ── 4. Zemine basan ayak hareket boyunca yerinde kalıyor mu? ────────────────
+console.log('\n4) AYAK YERDE');
+let footClean = true;
+for (const ex of all) {
+  if (ex.nofoot || ex.top) continue;
+  const y0 = skeleton(ex.a, ex.view).ftA[1];
+  if (Math.abs(y0 - GROUND_Y) > 6) continue;        // zaten zeminde başlamıyor
+  let drift = 0;
+  for (let i = 0; i <= STEPS; i++)
+    drift = Math.max(drift, Math.abs(skeleton(poseAt(ex.a, ex.b, i / STEPS), ex.view).ftA[1] - y0));
+  if (drift > 3) { say('✗', ex, `ayak zeminden ${drift.toFixed(0)}px kayıyor`); fails++; footClean = false; }
+}
+if (footClean) console.log('  ✓ zemine basan ayaklar sabit');
+
+// ── 5. Veri tutarlılığı ────────────────────────────────────────────────────
+console.log('\n5) VERİ TUTARLILIĞI');
+let dataClean = true;
+const SET_TYPES = new Set(['weight_reps', 'time', 'cardio']);
+const byId = new Map();
+
+for (const ex of all) {
+  for (const f of ['id', 'setType', 'equipment', 'target', 'en', 'tr', 'sets', 'reps', 'view', 'mus', 'a', 'b', 'steps', 'tip'])
+    if (ex[f] === undefined) { say('✗', ex, `zorunlu alan eksik: ${f}`); fails++; dataClean = false; }
+
+  if (!SET_TYPES.has(ex.setType)) { say('✗', ex, `geçersiz setType: ${ex.setType}`); fails++; dataClean = false; }
+
+  // setType ile target aynı şeyi söylüyor mu?
+  const key = ex.setType === 'time' ? 'seconds' : ex.setType === 'cardio' ? 'minutes' : 'reps';
+  if (ex.target && ex.target[key] === undefined) {
+    say('✗', ex, `setType="${ex.setType}" ama target.${key} yok (${JSON.stringify(ex.target)})`); fails++; dataClean = false;
+  }
+
+  // Etiket ("2-3 × 12") gerçek veriyle örtüşüyor mu?
+  const m = ex.reps.match(/^(\d+)(?:-(\d+))?\s*×\s*(\d+)/);
+  if (m) {
+    const lo = +m[1], hi = m[2] ? +m[2] : +m[1], val = +m[3];
+    if (hi !== ex.sets || lo !== (ex.setsMin ?? ex.sets)) {
+      say('✗', ex, `etiket "${ex.reps}" ≠ veri (sets=${ex.sets}, setsMin=${ex.setsMin ?? ex.sets})`); fails++; dataClean = false;
+    }
+    if (ex.target[key] !== val) { say('✗', ex, `etiket ${val} diyor, target.${key}=${ex.target[key]}`); fails++; dataClean = false; }
+  }
+
+  // Aynı id iki yerde geçiyorsa (Plank) tanımları çelişmemeli — geçmiş ortak tutulacak
+  const prev = byId.get(ex.id);
+  if (prev && (prev.setType !== ex.setType || JSON.stringify(prev.target) !== JSON.stringify(ex.target)))
+    { say('✗', ex, `id="${ex.id}" iki farklı tanımla kullanılmış`); fails++; dataClean = false; }
+  byId.set(ex.id, ex);
+
+  if (ex.steps && ex.steps.length !== 4) { say('⚠', ex, `${ex.steps.length} adım (beklenen 4)`); warns++; dataClean = false; }
+}
+if (dataClean) console.log(`  ✓ ${all.length} egzersiz · ${byId.size} benzersiz id · alanlar, tipler ve etiketler tutarlı`);
+
+// ── Özet ───────────────────────────────────────────────────────────────────
+console.log(`\n${'─'.repeat(64)}`);
+console.log(`${all.length} egzersiz · ${fails} hata · ${warns} uyarı`);
+if (fails) console.log('✗ Anatomik olarak geçersiz poz var — düzeltilmeden yayınlama.');
+else if (warns) console.log('⚠ Hata yok, gözden geçirilecek uyarılar var.');
+else console.log('✓ Temiz.');
+process.exit(fails ? 1 : 0);
