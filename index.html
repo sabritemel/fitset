@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FitSet — Antrenman Defteri</title>
+<meta name="description" content="Salon antrenman defteri. Ağırlık ve tekrar kaydı, hareket anlatımları, çevrimdışı çalışır.">
+<meta name="theme-color" content="#2A32B8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<!-- fonts.css ve style.css PARALEL yüklenir; @import zinciri biçimsiz an yaratıyordu -->
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Salon defteri · 2 günlük döngü</p>
+    <!-- lang="en": lang="tr" altında uppercase yapılırsa i → İ olur -->
+    <h1 class="brand" lang="en">FitSet</h1>
+  </header>
+
+  <div class="today" id="today"></div>
+  <p class="upnext" id="upnext"></p>
+
+  <div class="prog"><b id="pnum">0 / 0</b><span id="ptxt">set tamamlandı</span></div>
+  <div class="bar"><i id="pbar"></i></div>
+
+  <div id="list"></div>
+  <div class="note" id="finisher"></div>
+
+  <footer>
+    <p id="foot"></p>
+    <button class="linkbtn" id="import">Yedekten geri yükle</button>
+    <input type="file" id="file" accept="application/json,.json" hidden>
+  </footer>
+</div>
+
+<div class="actions">
+  <button class="btn" id="backup">Yedek al</button>
+  <button class="btn primary" id="finish">Seansı bitir</button>
+</div>
+
+<script type="module" src="js/app.js"></script>
+<noscript><p class="wrap">Bu uygulama JavaScript gerektirir.</p></noscript>
+</body>
+</html>

@@ -1,0 +1,246 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   FitSet — tasarım katmanı
+   Kimlik: pembe defter kâğıdı · lacivert mürekkep · kırmızı vurgu
+   ══════════════════════════════════════════════════════════════════════════
+
+   ┌─ İKİ TASARIM KARARI ────────────────────────────────────────────────────┐
+   │ 1. ÇİZGİLİ KÂĞIT DESENİ VERİ ALANLARINDA YOK.                           │
+   │    Yatay çizgiler küçük mono rakamların altını keser ve salon ışığında  │
+   │    okunurluğu düşürür. Desen başlıklarda ve boş alanlarda yaşar; set    │
+   │    satırları ve sayı girişleri düz zemin üstünde durur.                 │
+   │                                                                          │
+   │ 2. KOYU TEMA PEMBEYİ KARARTARAK YAPILMAZ — çamur rengi çıkar.           │
+   │    Zemin nötr-sıcak koyuya döner, KIRMIZI VURGU AYNEN KORUNUR, lacivert │
+   │    mürekkep açık mürekkebe geçer. Kimlik zeminden değil vurgu renginden │
+   │    ve tipografiden taşınır.                                             │
+   └──────────────────────────────────────────────────────────────────────────┘ */
+
+/* NOT: fonts.css buradan @import EDİLMEZ. @import indirmeleri zincire sokar
+   (style.css inmeden fonts.css istenmez) ve stil geç uygulanır — sayfa bir an
+   biçimsiz görünür, kapalı olması gereken paneller açık görünür. index.html
+   ikisini de <link> ile PARALEL yükler. */
+
+:root {
+  --paper:      #F7DEE6;
+  --paper-deep: #EFCBD7;
+  --stage:      #FDF3F6;
+  --field:      #FFFFFF;   /* sayı girişleri — desen YOK, en yüksek kontrast */
+  --rule:       #E7ADBF;
+  --ink:        #2A32B8;
+  --ink-soft:   #7B82D8;
+  --ghost:      #BFC3EC;
+  --trail:      #E7A0B6;
+  --red:        #C81E4E;
+  --graphite:   #463F4C;
+  --muted:      #7B7280;
+  --equip:      #8A8090;
+  --ground:     #C9BFCE;
+
+  --line-h: 30px;
+  --touch: 52px;          /* asgari dokunma hedefi — terli/eldivenli parmak */
+  --wrap: 560px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #16131A;
+    --paper-deep: #221D28;
+    --stage:      #1E1A24;
+    --field:      #262030;
+    --rule:       #2E2736;
+    --ink:        #C4CBFF;
+    --ink-soft:   #7C84C8;
+    --ghost:      #4A4E78;
+    --trail:      #9E5C72;
+    --red:        #FF5C82;   /* koyu zeminde WCAG için açıldı, kimlik aynı */
+    --graphite:   #E4DEE8;
+    --muted:      #9A90A2;
+    --equip:      #8A8090;
+    --ground:     #4A4350;
+  }
+}
+/* Kullanıcı ayarlardan zorladıysa sistem tercihini ezer */
+:root[data-theme="dark"] {
+  --paper: #16131A; --paper-deep: #221D28; --stage: #1E1A24; --field: #262030;
+  --rule: #2E2736; --ink: #C4CBFF; --ink-soft: #7C84C8; --ghost: #4A4E78;
+  --trail: #9E5C72; --red: #FF5C82; --graphite: #E4DEE8; --muted: #9A90A2; --ground: #4A4350;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0 0 88px;                       /* alt aksiyon çubuğu için yer */
+  background: var(--paper);
+  /* Defter çizgileri — yalnızca gövde zemininde, veri alanlarında değil */
+  background-image: repeating-linear-gradient(to bottom, transparent 0,
+    transparent calc(var(--line-h) - 1px), var(--rule) calc(var(--line-h) - 1px), var(--rule) var(--line-h));
+  color: var(--graphite);
+  font-family: 'Karla', system-ui, -apple-system, sans-serif;
+  font-size: 17px; line-height: var(--line-h);
+}
+.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 16px; }
+
+/* Marka ve İngilizce egzersiz adları: lang="en" ile işaretli.
+   lang="tr" altında uppercase yapılırsa i → İ olur ("FİTSET", "PUSH DOWN" → "PUSH DOWN"). */
+.brand, [lang="en"] { text-transform: none; }
+
+/* ── Tipografi ─────────────────────────────────────────────────────────── */
+.eyebrow { font-family: 'Space Mono', ui-monospace, monospace; font-size: 12px;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--red); margin: 0; }
+h1 { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
+  font-size: clamp(34px, 9vw, 46px); line-height: .98; margin: 6px 0 8px;
+  color: var(--ink); letter-spacing: -.03em; }
+header { padding: 22px 0 2px; }
+
+/* ── Bugün kartı ───────────────────────────────────────────────────────── */
+.today { border: 1.5px solid var(--ink); background: var(--ink); color: var(--stage);
+  padding: 13px 15px; margin: 18px 0 0; }
+.today .lbl { font-family: 'Space Mono', ui-monospace, monospace; font-size: 11px;
+  letter-spacing: .16em; text-transform: uppercase; opacity: .78; display: block; }
+.today .big { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 700;
+  font-size: 20px; line-height: 1.25; display: block; margin-top: 3px; }
+.today .rest { font-size: 14.5px; line-height: 1.45; display: block; margin-top: 4px; opacity: .92; }
+.upnext { font-family: 'Space Mono', ui-monospace, monospace; font-size: 12px;
+  line-height: 1.9; margin: 8px 0 0; color: var(--muted); }
+
+/* ── İlerleme ──────────────────────────────────────────────────────────── */
+.prog { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 2px; }
+.prog b { font-family: 'Space Mono', ui-monospace, monospace; font-size: 22px; color: var(--ink); }
+.prog span { font-size: 14px; color: var(--muted); }
+.bar { height: 8px; background: var(--paper-deep); border: 1.5px solid var(--ink); margin: 6px 0 20px; }
+/* width DEĞİL transform animasyonu: width her karede yeniden yerleşim (layout)
+   tetikler; scaleX yalnız derleyici katmanında çalışır. Orta seviye Android'de
+   fark hissedilir — İP-2'deki animasyon önbelleğiyle aynı gerekçe. */
+.bar i { display: block; height: 100%; width: 100%; background: var(--ink);
+  transform: scaleX(0); transform-origin: left; transition: transform .35s ease; }
+
+/* ── Egzersiz kartı ────────────────────────────────────────────────────── */
+.card { border-top: 1.5px solid var(--ink); }
+.card:last-of-type { border-bottom: 1.5px solid var(--ink); }
+.row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 2px; cursor: pointer;
+  background: none; border: 0; width: 100%; text-align: left; font: inherit; color: inherit;
+  min-height: var(--touch); }
+.row:focus-visible { outline: 3px solid var(--red); outline-offset: -3px; }
+.num { font-family: 'Space Mono', ui-monospace, monospace; font-size: 13px; color: var(--red);
+  width: 22px; flex: none; padding-top: 3px; }
+.names { flex: 1; min-width: 0; }
+.en { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 700; font-size: 18px;
+  line-height: 1.2; color: var(--ink); display: block; }
+.tr { display: block; font-size: 14px; line-height: 1.35; color: var(--muted); margin-top: 1px; }
+.reps { font-family: 'Space Mono', ui-monospace, monospace; font-size: 13px; flex: none;
+  white-space: nowrap; padding-top: 4px; color: var(--muted); }
+.chev { flex: none; width: 12px; height: 12px; margin-top: 8px;
+  border-right: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink);
+  transform: rotate(45deg); transition: transform .2s ease; }
+.card.open .chev { transform: rotate(225deg); }
+.card.done .en { text-decoration: line-through; text-decoration-thickness: 2px; }
+.card.done .num::after { content: ' ✓'; }
+.panel { display: none; padding: 0 0 18px; }
+.card.open .panel { display: block; }
+
+/* ── Animasyon sahnesi ─────────────────────────────────────────────────── */
+.stage { position: relative; background: var(--stage); border: 1.5px solid var(--ink); margin-bottom: 10px; }
+.stage svg { display: block; width: 100%; height: auto; }
+.art { stroke: var(--ink); }
+.far { stroke: var(--ink-soft); }
+.ghost { stroke: var(--ghost); stroke-width: 3; stroke-dasharray: 5 5; }
+.trail { stroke: var(--trail); stroke-width: 2.5; fill: none; }
+.eq { stroke: var(--equip); stroke-width: 3; }
+.cbl { stroke: var(--equip); stroke-width: 2; stroke-dasharray: 5 4; }
+.gr { stroke: var(--ground); stroke-width: 3; }
+.ctrl { display: flex; align-items: center; gap: 12px; padding: 8px 11px 11px;
+  border-top: 1px dashed var(--rule); }
+.playbtn { flex: none; border: 1.5px solid var(--ink); background: var(--stage); color: var(--ink);
+  font-family: 'Space Mono', ui-monospace, monospace; font-size: 12px; padding: 10px 13px;
+  cursor: pointer; border-radius: 2px; min-height: 40px; }
+.scrub { flex: 1; min-width: 0; accent-color: var(--ink); height: 32px; }
+.phase { position: absolute; left: 11px; top: 9px; font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: .12em; color: var(--red); text-transform: uppercase; }
+.viewlbl { position: absolute; right: 11px; top: 9px; font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+
+/* ── Anlatım ───────────────────────────────────────────────────────────── */
+.mus { margin: 0 0 12px; font-size: 14px; line-height: 1.4; }
+.mus b { font-family: 'Space Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--red); display: block; }
+ol.steps { margin: 0 0 12px; padding-left: 24px; }
+ol.steps li { margin-bottom: 6px; line-height: 1.45; }
+ol.steps li::marker { font-family: 'Space Mono', ui-monospace, monospace; font-size: 13px; color: var(--ink); }
+.tip { border-left: 3px solid var(--red); padding: 2px 0 2px 12px; color: var(--red);
+  font-size: 15px; line-height: 1.45; margin-bottom: 16px; }
+.tip b { font-family: 'Space Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: .14em;
+  text-transform: uppercase; display: block; }
+
+/* ── Kayıt alanı — DESENSİZ ZEMİN, en yüksek okunurluk ─────────────────── */
+.log { background: var(--field); border: 1.5px solid var(--ink); padding: 12px; }
+.lasttime { font-family: 'Space Mono', ui-monospace, monospace; font-size: 12.5px;
+  color: var(--muted); margin: 0 0 10px; }
+.lasttime b { color: var(--ink); font-weight: 700; }
+.setlist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.setitem { display: flex; align-items: center; gap: 10px; font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+.setitem .k { color: var(--muted); font-size: 12px; width: 46px; flex: none; }
+.setitem .v { flex: 1; color: var(--graphite); }
+.setitem.warm .v { color: var(--muted); font-style: italic; }
+.setitem .undo { border: 0; background: none; color: var(--red); font: inherit; font-size: 12px;
+  text-decoration: underline; cursor: pointer; padding: 8px; min-height: 40px; }
+
+/* Sayı girişi — her alan TAM GENİŞLİK, etiket üstte.
+   Yan yana konduklarında sayı alanı 4px'e kadar eziliyordu (ölçüldü). */
+.entry { display: flex; flex-direction: column; gap: 12px; }
+.field { display: block; }
+.flab { display: block; font-family: 'Space Mono', ui-monospace, monospace; font-size: 11px;
+  letter-spacing: .13em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.stepper { display: flex; align-items: stretch; border: 2px solid var(--ink); border-radius: 3px;
+  overflow: hidden; background: var(--field); }
+.stepper button { width: 64px; flex: none; border: 0; background: var(--paper-deep);
+  color: var(--ink); font-size: 26px; font-weight: 700; cursor: pointer; line-height: 1; }
+.stepper button:active { background: var(--ink); color: var(--stage); }
+.stepper input { flex: 1; min-width: 3ch; border: 0; background: var(--field); color: var(--graphite);
+  font-family: 'Space Mono', ui-monospace, monospace; font-size: 22px; font-weight: 700;
+  text-align: center; padding: 13px 4px; -moz-appearance: textfield; }
+.stepper input::placeholder { color: var(--muted); font-weight: 400; }
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.add { min-height: var(--touch); border: 2px solid var(--ink); background: var(--ink);
+  color: var(--stage); font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 700;
+  font-size: 17px; cursor: pointer; border-radius: 3px; }
+.add:active { background: var(--red); border-color: var(--red); }
+.warmtog { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted);
+  margin-top: 10px; cursor: pointer; min-height: 40px; }
+.warmtog input { width: 22px; height: 22px; accent-color: var(--red); }
+
+/* ── Alt aksiyon çubuğu ────────────────────────────────────────────────── */
+.actions { position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper-deep);
+  border-top: 1.5px solid var(--ink); padding: 10px 16px; display: flex; gap: 10px;
+  justify-content: center; z-index: 20; }
+.actions > * { max-width: calc(var(--wrap) / 2); }
+.btn { flex: 1; min-height: var(--touch); border: 2px solid var(--ink); background: transparent;
+  color: var(--ink); font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 700;
+  font-size: 16px; border-radius: 3px; cursor: pointer; }
+.btn.primary { background: var(--ink); color: var(--stage); }
+.btn:disabled { opacity: .45; cursor: default; }
+
+/* ── Not / bilgi kutusu ────────────────────────────────────────────────── */
+.note { border: 1.5px dashed var(--ink); padding: 13px 15px; margin: 20px 0 0; }
+.note h3 { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; margin: 0 0 2px;
+  font-size: 17px; color: var(--ink); }
+.note p { margin: 0; font-size: 15px; line-height: 1.5; }
+.linkbtn { background: none; border: 0; color: var(--red); font: inherit; font-size: 14px;
+  text-decoration: underline; cursor: pointer; padding: 10px 0; min-height: 40px; }
+footer { margin-top: 22px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+
+/* ── Bildirim şeridi (güncelleme, geri alma, hata) ─────────────────────── */
+.toast { position: fixed; left: 12px; right: 12px; bottom: 84px; z-index: 30;
+  background: var(--ink); color: var(--stage); padding: 12px 14px; border-radius: 3px;
+  font-size: 15px; display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / .25); max-width: var(--wrap); margin: 0 auto; }
+.toast.warn { background: var(--red); }
+.toast button { border: 1.5px solid currentColor; background: none; color: inherit; font: inherit;
+  font-size: 14px; padding: 8px 12px; border-radius: 3px; cursor: pointer; min-height: 40px; flex: none; }
+
+*:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

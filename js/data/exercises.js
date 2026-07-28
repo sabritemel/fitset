@@ -95,7 +95,9 @@ export const EX=[[
  view:"front", top:true, nofoot:true, vl:"yukarıdan görünüm · göğüs pedde", mus:"Arka omuz · Üst sırt (kürek kasları)",
  a:{px:95,py:110,torso:0,ua:-90,fa:-90,ua2:90,fa2:90,th:180,sh:180,al:0.3},
  b:{px:95,py:110,torso:0,ua:-100,fa:-100,ua2:100,fa2:100,th:180,sh:180,al:1},
- eq:s=>rct(50,92,106,36)+grip(s.haA)+grip(s.haB),
+ // MAKİNE: sütun + iki pivotlu kol. Üstten görünümde makinenin kolları
+ // ellerle birlikte süpürür; hareketin aletle yapıldığı artık belli.
+ eq:s=>rct(50,92,106,36)+rct(170,88,12,44)+bar([176,122],s.haA)+bar([176,98],s.haB)+grip(s.haA)+grip(s.haB),
  steps:["Göğsün pede yaslanacak şekilde otur; ayaklar yere basar, göğüs pedden ayrılmaz.",
         "Tutamakları öne uzanmış, dirsekleri hafif bükülü kollarla omuz hizasında kavra.",
         "Önce kürek kemiklerini birbirine sık, sonra kolları geniş bir yayla arkaya-yanlara aç.",
@@ -131,7 +133,9 @@ export const EX=[[
 {
  id:"plank", setType:"time", equipment:"bodyweight", target:{"seconds":15},
  en:"Plank", tr:"Plank — karın duruşu", sets:3, reps:"3 × 15 sn",
- view:"side", face:1, nofoot:true, track:"P", mus:"Karın · Gövde stabilizasyonu",
+ // hold:true → izometrik. Oynatacak hareket yok; arayüz animasyon yerine
+ // GERİ SAYIM gösterir. Doğru çözüm hareketi zorlamak değil, ne olduğunu göstermek.
+ view:"side", face:1, nofoot:true, track:"P", hold:true, mus:"Karın · Gövde stabilizasyonu",
  a:{px:140,py:158,torso:10,ua:-75,fa:5,th:196,sh:196},
  b:{px:140,py:152,torso:12,ua:-75,fa:5,th:196,sh:196},
  eq:s=>grd(179)+bar(s.ftA,[s.ftA[0]+7,179]),
@@ -164,7 +168,8 @@ export const EX=[[
  en:"Two Arm Dumbbell Row", tr:"Çift dambıl kürek çekişi", sets:3, reps:"3 × 12",
  view:"side", face:-1, mus:"Sırt (orta) · Arka omuz · Biceps",
  a:{px:140,py:110,torso:128,ua:-88,fa:-88,th:-84,sh:-99},
- b:{px:140,py:110,torso:128,ua:-28,fa:-129,th:-84,sh:-99},
+ // Hareket açıklığı dar çizilmişti (yol 0.42); dambıl karın hizasına kadar çekiliyor.
+ b:{px:140,py:110,torso:128,ua:-18,fa:-140,th:-84,sh:-99},
  eq:s=>grd()+db(s.haA,false),
  steps:["Ayaklar kalça genişliğinde, dizler hafif bükük; kalçandan menteşe gibi öne eğil, gövden yere ~45°.",
         "Sırtın baştan sona düz kalsın, bakışın bir metre önüne; dambıllar kollar gergin şekilde aşağıda.",
@@ -220,8 +225,9 @@ export const EX=[[
  id:"machine_leg_press", setType:"weight_reps", equipment:"machine", target:{"reps":12},
  en:"Leg Press", tr:"Bacak presi makinesi", sets:3, reps:"3 × 12",
  view:"side", face:1, nofoot:true, track:"ftA", mus:"Uyluk ön (quadriceps) · Kalça",
- a:{px:96,py:130,torso:150,ua:-30,fa:-30,th:43,sh:16},
- b:{px:96,py:130,torso:150,ua:-30,fa:-30,th:80,sh:-23},
+ // OKUNURLUK: kollar bacaklarla örtüşüyordu (çakışma 1.00); koltuğun yanına indirildi.
+ a:{px:96,py:130,torso:150,ua:-90,fa:-100,th:43,sh:16},
+ b:{px:96,py:130,torso:150,ua:-90,fa:-100,th:80,sh:-23},
  eq:s=>{const dx=s.ftA[0]-s.P[0],dy=s.ftA[1]-s.P[1],m=Math.hypot(dx,dy)||1;
    const ux=dx/m,uy=dy/m,c=[s.ftA[0]+ux*7,s.ftA[1]+uy*7];
    return rct(74,136,44,10)+bar([96,141],[44,111])+bar([c[0]+uy*26,c[1]-ux*26],[c[0]-uy*26,c[1]+ux*26]);},
@@ -234,9 +240,12 @@ export const EX=[[
 {
  id:"lunge", setType:"weight_reps", equipment:"bodyweight", target:{"reps":12},
  en:"Lunge", tr:"Öne hamle (lunge)", sets:3, reps:"3 × 12",
- view:"side", face:1, track:"P", legs2:true, mus:"Uyluk ön · Kalça · Arka bacak",
- a:{px:130,py:118,torso:90,ua:-90,fa:-90,th:-53,sh:-83,th2:-127,sh2:-97},
- b:{px:130,py:134,torso:90,ua:-90,fa:-90,th:-24,sh:-102,th2:-81,sh2:-159},
+ view:"side", face:1, track:"knB", legs2:true, mus:"Uyluk ön · Kalça · Arka bacak",
+ // OKUNURLUK: kollar öndeki uylukla örtüşüyordu; hafif geriye alındı.
+ // İzlenen nokta da kalçadan ARKA DİZE taşındı (track) — kalça 16px iniyor,
+ // arka diz çok daha fazla yol alıyor; hareketi asıl anlatan o.
+ a:{px:130,py:118,torso:90,ua:-106,fa:-93,th:-53,sh:-83,th2:-127,sh2:-97},
+ b:{px:130,py:134,torso:90,ua:-106,fa:-93,th:-24,sh:-102,th2:-81,sh2:-159},
  eq:s=>grd(),
  steps:["Dik dur, karnını sık; bir ayağınla öne uzun bir adım at, arka topuk havada kalır.",
         "Gövden dik kalacak şekilde kalçanı düz aşağı indir — öne doğru eğilme.",
@@ -248,9 +257,12 @@ export const EX=[[
  id:"calf_raise", setType:"weight_reps", equipment:"bodyweight", target:{"reps":12},
  en:"Calf Raise", tr:"Topuk kaldırma (baldır)", sets:3, reps:"3 × 12",
  view:"side", face:1, nofoot:true, track:"P", mus:"Baldır",
- a:{px:130,py:110,torso:90,ua:-90,fa:-90,th:-90,sh:-90},
- b:{px:130,py:98,torso:90,ua:-90,fa:-90,th:-90,sh:-90},
- eq:s=>grd()+bar(s.ftA,[s.ftA[0]+20,186]),
+ // OKUNURLUK: kol eskiden bacakla TAM ÖRTÜŞÜYORDU (çakışma 1.00 — her karede).
+ // Denge için tutunulan bara uzatıldı; hem ipucundaki tavsiyeyi gösteriyor
+ // hem baldır hareketi artık serbest okunuyor.
+ a:{px:130,py:110,torso:90,ua:-55,fa:-15,th:-90,sh:-90},
+ b:{px:130,py:98,torso:90,ua:-55,fa:-15,th:-90,sh:-90},
+ eq:s=>grd()+bar(s.ftA,[s.ftA[0]+20,186])+bar([186,44],[186,186])+grip(s.haA),
  steps:["Ayak parmak uçlarını yere ya da bir basamağın kenarına bas, gövden dik, dizler hafif bükülü değil düz.",
         "Basamak kullanıyorsan topukları yavaşça aşağı bırak ve baldırında gerilme hisset.",
         "Parmak uçlarına yükselerek olabildiğince yukarı çık ve tepede 1 saniye sık.",
@@ -260,7 +272,9 @@ export const EX=[[
 {
  id:"plank", setType:"time", equipment:"bodyweight", target:{"seconds":15},
  en:"Plank", tr:"Plank — karın duruşu", sets:3, reps:"3 × 15 sn",
- view:"side", face:1, nofoot:true, track:"P", mus:"Karın · Gövde stabilizasyonu",
+ // hold:true → izometrik. Oynatacak hareket yok; arayüz animasyon yerine
+ // GERİ SAYIM gösterir. Doğru çözüm hareketi zorlamak değil, ne olduğunu göstermek.
+ view:"side", face:1, nofoot:true, track:"P", hold:true, mus:"Karın · Gövde stabilizasyonu",
  a:{px:140,py:158,torso:10,ua:-75,fa:5,th:196,sh:196},
  b:{px:140,py:152,torso:12,ua:-75,fa:5,th:196,sh:196},
  eq:s=>grd(179)+bar(s.ftA,[s.ftA[0]+7,179]),
