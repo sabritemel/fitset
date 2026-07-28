@@ -1,17 +1,20 @@
-# Cloudflare Pages başlık kuralları
+# Önbellek başlıkları — Cloudflare Pages / Netlify formatı.
+#
+# ⚠️ GitHub Pages bu dosyayı YOK SAYAR (özel başlık desteği yoktur).
+# Şu an yayın GitHub Pages'te olduğu için bu kurallar geçerli DEĞİL.
+# Sorun çıkarmıyor, çünkü tarayıcılar service worker betiğini zaten HTTP
+# önbelleğini atlayarak alır (registration.updateViaCache varsayılanı
+# "imports" — üst düzey sw.js önbellekten servis edilmez). Yani güncelleme
+# GitHub Pages'te de doğru çalışır.
+#
+# Dosya duruyor ki ileride Cloudflare/Netlify'a taşınırsa hazır olsun.
 
-# sw.js ASLA önbelleğe alınmamalı.
-# Tarayıcı service worker dosyasının kendisini önbelleğe alırsa yeni sürümü
-# hiç göremez ve telefonda eski uygulama servis edilmeye devam eder — PWA'ların
-# en yaygın hayal kırıklığı budur.
 /sw.js
   Cache-Control: no-cache, no-store, must-revalidate
 
-# manifest de güncellenebilmeli (ikon/ad değişiklikleri)
 /manifest.json
   Cache-Control: no-cache
 
-# Fontlar sürüm değiştirmez; uzun süre önbellekte kalabilir
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
 
