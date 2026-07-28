@@ -122,9 +122,29 @@ export const newSession = dayIndex => ({
 export const saveSession = s => driver.put('sessions', s);
 export const getSession = id => driver.get('sessions', id);
 
-/** Tüm seanslar, yeniden eskiye */
+/** Eşit zaman damgalarında sıralamanın rastgeleleşmemesi için son çare ayracı */
+const tieBreak = (a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+
+/** Tüm seanslar, BAŞLAMA zamanına göre yeniden eskiye */
 export async function allSessions() {
-  return (await driver.getAll('sessions')).sort((a, b) => b.startedAt - a.startedAt);
+  return (await driver.getAll('sessions')).sort((a, b) => (b.startedAt - a.startedAt) || tieBreak(a, b));
+}
+
+/**
+ * Bitmiş seanslar, EN SON BİTENDEN eskiye.
+ *
+ * ⚠️ Sıralama finishedAt'e göre, startedAt'e göre DEĞİL. Fark gerçek bir
+ * senaryoda ortaya çıkıyor: A seansını başlat, yarıda bırak → B seansını
+ * başlat ve bitir → sonra A'ya dönüp onu bitir. A daha ERKEN başladı ama
+ * daha GEÇ bitti; "son yapılan antrenman" A'dır. startedAt'e göre sıralarsak
+ * B seçilir ve kullanıcıya YANLIŞ gün gösterilir — A/B sırasının tamamı bu
+ * sorguya bağlı olduğu için bu sessiz ama can yakıcı bir hata olurdu.
+ */
+export async function doneSessions() {
+  return (await driver.getAll('sessions'))
+    .filter(s => s.status === 'done')
+    .sort((a, b) => ((b.finishedAt ?? b.startedAt) - (a.finishedAt ?? a.startedAt))
+      || (b.startedAt - a.startedAt) || tieBreak(a, b));
 }
 
 /** Yarıda kalmış seans (varsa) — uygulama açılışında "devam et" için */
@@ -134,7 +154,7 @@ export async function activeSession() {
 
 /** En son TAMAMLANMIŞ seans — A/B sırası bundan türetilir (takvimden değil) */
 export async function lastDoneSession() {
-  return (await allSessions()).find(s => s.status === 'done') || null;
+  return (await doneSessions())[0] || null;
 }
 
 /**
@@ -143,8 +163,8 @@ export async function lastDoneSession() {
  * @returns {{sets:Array, at:number, session:string}|null}
  */
 export async function lastPerformance(exerciseId, excludeSessionId = null) {
-  for (const s of await allSessions()) {
-    if (s.id === excludeSessionId || s.status !== 'done') continue;
+  for (const s of await doneSessions()) {          // bitiş zamanına göre sıralı
+    if (s.id === excludeSessionId) continue;
     const e = s.entries.find(x => x.exerciseId === exerciseId);
     const sets = e?.sets.filter(x => !x.warmup) ?? [];
     if (sets.length) return { sets, at: s.finishedAt ?? s.startedAt, session: s.id };

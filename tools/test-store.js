@@ -31,13 +31,40 @@ console.log('\n1) SEANS YAŞAM DÖNGÜSÜ');
 
 console.log('\n2) A/B SIRASI GEÇMİŞTEN TÜRETİLİYOR (takvimden değil)');
 {
-  const last = await S.lastDoneSession();
-  const next = last.dayIndex === 0 ? 1 : 0;
-  ok(next === 1, 'son seans 1. Gün ise sıradaki 2. Gün');
-  const s2 = S.newSession(next); s2.status = 'done'; s2.finishedAt = Date.now() + 1000;
-  await S.saveSession(s2);
+  // Sabit zaman damgaları kullanılıyor: Date.now() ile kurulan seanslar aynı
+  // milisaniyeye düşüp testi flaky yapıyordu (ve gerçek bir bug'ı maskeliyordu).
+  await S.driver.clear('sessions');
+  const T = 1_770_000_000_000, GUN = 86_400_000, SAAT = 3_600_000;
+  const mk = (dayIndex, started, finished) => {
+    const s = S.newSession(dayIndex);
+    s.startedAt = started; s.finishedAt = finished; s.status = 'done';
+    return s;
+  };
+  const sirada = async () => (await S.lastDoneSession()).dayIndex === 0 ? 1 : 0;
+
+  await S.saveSession(mk(0, T, T + SAAT));
+  ok(await sirada() === 1, '1. Gün yapıldıysa sıradaki 2. Gün');
+
+  await S.saveSession(mk(1, T + 2 * GUN, T + 2 * GUN + SAAT));
   ok((await S.lastDoneSession()).dayIndex === 1, 'en son biten seans doğru seçiliyor');
-  ok(((await S.lastDoneSession()).dayIndex === 0 ? 1 : 0) === 0, 'sıra geri dönüyor — kaçırılan seans sırayı bozamaz');
+  ok(await sirada() === 0, 'sıra geri dönüyor — kaçırılan seans sırayı bozamaz');
+
+  // ⭐ REGRESYON: bu bug'ı flaky test ortaya çıkardı.
+  // Seans A önce başladı ama sonra bitti → "son yapılan antrenman" A'dır.
+  // startedAt'e göre sıralanırsa B seçilir ve kullanıcıya YANLIŞ gün gösterilir.
+  await S.saveSession(mk(0, T + GUN, T + 5 * GUN));
+  ok((await S.lastDoneSession()).dayIndex === 0,
+     'erken başlayıp GEÇ biten seans "son yapılan" sayılıyor (finishedAt, startedAt değil)');
+
+  // Eşit zaman damgalarında sonuç ekleme sırasına göre değişmemeli
+  const a = mk(0, T, T), b = mk(1, T, T);
+  await S.driver.clear('sessions'); await S.saveSession(a); await S.saveSession(b);
+  const r1 = (await S.lastDoneSession()).id;
+  await S.driver.clear('sessions'); await S.saveSession(b); await S.saveSession(a);
+  const r2 = (await S.lastDoneSession()).id;
+  ok(r1 === r2, 'eşit zaman damgalarında sıralama EKLEME SIRASINDAN bağımsız (flaky testin kökü)');
+
+  await S.driver.clear('sessions');
 }
 
 console.log('\n3) "GEÇEN SEFER" SORGUSU');
