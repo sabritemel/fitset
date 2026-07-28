@@ -32,9 +32,17 @@ const old = new Function(`${engineSrc}\n${exSrc}\nreturn {skeleton,poseAt,figure
  *   endpointsSame: uç pozların (t=0 ve t=1) değişmemesi bekleniyor mu?
  */
 const EXPECTED = {
+  // — anatomi düzeltmeleri (İP-2, verify-poses.js ile bulundu) —
   'Close Grip Pull Down': { endpointsSame: true, why: 'ua −90°→270°: aynı yön, kısa yol (dirsek 179°→131°)' },
   'Cable Curl': { endpointsSame: false, why: 'fa 105→53, fa2 75→57: bitiş fleksiyonu 197°→145°' },
   'Dumbbell Hammer Curl': { endpointsSame: false, why: 'fa 100→53, fa2 80→57: bitiş fleksiyonu 192°→145°' },
+  // — okunurluk düzeltmeleri (audit-views.js ile bulundu, Sabri geri bildirimi) —
+  'Calf Raise': { endpointsSame: false, why: 'kol denge barına uzatıldı — bacakla çakışma 1.00→0.00' },
+  'Lunge': { endpointsSame: false, why: 'kollar geriye alındı (çakışma 1.00→0.00) + izlenen nokta kalça→arka diz' },
+  'Leg Press': { endpointsSame: false, why: 'kollar koltuğun yanına indirildi — çakışma 1.00→0.00' },
+  'Two Arm Dumbbell Row': { endpointsSame: false, why: 'hareket açıklığı genişletildi — yol 0.42→0.56' },
+  // — ekipman düzeltmesi (Sabri: "alet ile yapılıyor") —
+  'Reverse Pec Fly': { endpointsSame: true, why: 'MAKİNE eklendi; pozlara dokunulmadı, yalnız eq() değişti' },
 };
 
 const STEPS = 40;
