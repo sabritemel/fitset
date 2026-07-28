@@ -130,18 +130,38 @@ Artırmazsan telefonda eski sürüm servis edilmeye devam eder.
 
 ---
 
-## 6. Yayın kurulumu (bir kez)
+## 6. Yayın
 
-1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Pages**
-   → **Connect to Git**
-2. GitHub'ı yetkilendir, **fitset** deposunu seç (private olması sorun değil)
-3. Yapılandırma:
-   - **Framework preset:** `None`
-   - **Build command:** *boş bırak*
-   - **Build output directory:** `/`
-4. **Save and Deploy**
+**Adres:** https://sabritemel.github.io/fitset/
+**Depo:** https://github.com/sabritemel/fitset (public)
 
-Birkaç saniyede `https://fitset-xxxx.pages.dev` adresi verilir. Bundan sonra her `git push`
-otomatik yayınlanır.
+Yayın **GitHub Pages** üzerinde, `main` dalının kökünden. Kurulum tamamlandı; bundan sonra
+`git push` yeterli, birkaç dakika içinde canlıya çıkar.
 
-`_headers` dosyası `sw.js`'in önbelleğe alınmamasını sağlar — dokunma.
+**Derleme adımı yok** — saf HTML/CSS/JS, sıfır bağımlılık. Dosyalar olduğu gibi servis edilir.
+
+İki dosya bu yayına özel:
+
+| Dosya | Ne işe yarıyor |
+|---|---|
+| `.nojekyll` | GitHub Pages varsayılan olarak Jekyll çalıştırır ve alt çizgiyle başlayan dosyaları yok sayar. Bu dosya derlemeyi kapatır, her şey olduğu gibi servis edilir. |
+| `_headers` | Cloudflare/Netlify formatı — **GitHub Pages bunu yok sayar.** Sorun değil (aşağıya bak); ileride taşınırsa diye duruyor. |
+
+> **`_headers` geçersizken sw.js önbelleği sorun olmuyor mu?**
+> Olmuyor. Tarayıcılar service worker betiğinin kendisini zaten HTTP önbelleğini **atlayarak**
+> alır (`registration.updateViaCache` varsayılanı `"imports"`). Yani güncelleme kontrolü
+> GitHub Pages'te de doğru çalışır.
+
+⚠️ **Kod değiştirdiysen `sw.js` içindeki `CACHE` sürümünü artır** (`fitset-v4` → `v5`).
+Artırmazsan telefonda eski sürüm servis edilmeye devam eder.
+
+### Yayın doğrulaması (28 Tem 2026)
+
+```
+derleme            built
+sw kaydı           ✓  kapsam /fitset/  ·  durum activated
+önbellek           fitset-v4 · 25 dosya
+eksik kritik dosya YOK
+font (latin-ext)   8 ✓
+hareket            9 ✓
+```
