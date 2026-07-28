@@ -36,6 +36,7 @@
   --equip:      #8A8090;
   --ground:     #C9BFCE;
 
+  --fig-head: #FDF3F6;   /* kafa dairesi = ZEMİN rengi (boyun çizgisini maskeler) */
   --line-h: 30px;
   --touch: 52px;          /* asgari dokunma hedefi — terli/eldivenli parmak */
   --wrap: 560px;
@@ -53,6 +54,7 @@
     --ghost:      #4A4E78;
     --trail:      #9E5C72;
     --red:        #FF5C82;   /* koyu zeminde WCAG için açıldı, kimlik aynı */
+    --fig-head:   #1E1A24;   /* = --stage; kafa dairesi zemini maskeler */
     --graphite:   #E4DEE8;
     --muted:      #9A90A2;
     --equip:      #8A8090;
@@ -63,7 +65,7 @@
 :root[data-theme="dark"] {
   --paper: #16131A; --paper-deep: #221D28; --stage: #1E1A24; --field: #262030;
   --rule: #2E2736; --ink: #C4CBFF; --ink-soft: #7C84C8; --ghost: #4A4E78;
-  --trail: #9E5C72; --red: #FF5C82; --graphite: #E4DEE8; --muted: #9A90A2; --ground: #4A4350;
+  --trail: #9E5C72; --red: #FF5C82; --graphite: #E4DEE8; --muted: #9A90A2; --ground: #4A4350; --fig-head: #1E1A24;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }

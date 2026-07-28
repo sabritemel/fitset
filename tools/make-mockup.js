@@ -30,14 +30,14 @@ for (const [fam, w, stem] of [
 
 const ex = EX[0][0];
 const s = E.skeleton(E.poseAt(ex.a, ex.b, 0.58), ex.view);
-const FIG = `<svg viewBox="0 0 260 200" aria-hidden="true"><g fill="none" stroke-width="4"
+const FIG = `<svg viewBox="0 0 260 200" aria-hidden="true"><g class="art" stroke="currentColor" fill="none" stroke-width="4"
   stroke-linecap="round" stroke-linejoin="round">${ex.eq(s) + E.ghostOf(ex) + E.trailOf(ex) + E.figure(s, ex)}</g></svg>`;
 
 /* Plank — izometrik: oynatacak hareket yok ama görsel şart */
 const plank = EX[0].find(e => e.hold);
 const plankFig = v => {
   const sk = E.skeleton(v.pose, plank.view);
-  return `<svg viewBox="0 20 260 175" aria-hidden="true"><g fill="none" stroke-width="4"
+  return `<svg viewBox="0 20 260 175" aria-hidden="true"><g class="art" stroke="currentColor" fill="none" stroke-width="4"
     stroke-linecap="round" stroke-linejoin="round">${plank.eq(sk) + E.figure(sk, plank)}</g></svg>`;
 };
 
@@ -54,7 +54,8 @@ const cssA = `
   letter-spacing:-.025em;margin:12px 18px 0;text-wrap:balance}
 #a .sub{margin:5px 18px 0;color:var(--dim);font-size:14px}
 #a .viz{margin:14px 18px 0;background:var(--surf);border-radius:16px;padding:6px 0}
-#a .viz [stroke]{stroke:var(--tx)}#a .viz .eq,#a .viz .cbl{stroke:#5A6478}#a .viz .gr{stroke:#39414F}
+#a .viz{color:var(--tx);--fig-head:var(--surf)}
+#a .viz .eq,#a .viz .cbl{stroke:#5A6478}#a .viz .gr{stroke:#39414F}
 #a .viz .ghost{stroke:#3A4256}#a .viz .trail{stroke:#A8506A}
 #a .prev{margin:14px 18px 0;font-family:'Space Mono',monospace;font-size:12px;color:var(--dim)}
 #a .prev b{color:var(--tx);font-weight:400}
@@ -114,7 +115,8 @@ const cssB = `
 #b .ch.sel{background:var(--pan);box-shadow:inset 3px 0 0 var(--acc)}
 #b .panel{background:var(--pan);border-bottom:1px solid var(--ln);padding:14px 16px 16px}
 #b .viz{background:#0F1012;border:1px solid var(--ln);border-radius:4px;margin-bottom:13px}
-#b .viz [stroke]{stroke:var(--tx)}#b .viz .eq,#b .viz .cbl{stroke:#6B6F76}#b .viz .gr{stroke:#3A3E44}
+#b .viz{color:var(--tx);--fig-head:#0F1012}
+#b .viz .eq,#b .viz .cbl{stroke:#6B6F76}#b .viz .gr{stroke:#3A3E44}
 #b .lastline{font-family:'Space Mono',monospace;font-size:11px;color:var(--dim);margin:0 0 12px}
 #b .lastline b{color:var(--tx);font-weight:400}
 #b table{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:13px}
@@ -184,7 +186,8 @@ const cssC = `
 #c .crow p{color:var(--dim);font-size:14px;margin:2px 0 0}
 #c .ct{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--dim);white-space:nowrap;padding-top:3px}
 #c .viz{background:var(--soft);border-radius:12px;margin-top:14px}
-#c .viz [stroke]{stroke:var(--ink)}#c .viz .eq,#c .viz .cbl{stroke:#9A93A4}#c .viz .gr{stroke:#CFC7D2}
+#c .viz{color:var(--ink);--fig-head:var(--soft)}
+#c .viz .eq,#c .viz .cbl{stroke:#9A93A4}#c .viz .gr{stroke:#CFC7D2}
 #c .last{font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);margin:15px 0 12px}
 #c .last b{color:var(--ink);font-weight:400}
 #c .done{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -286,9 +289,9 @@ h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(
 .pv figure{margin:0;background:var(--pan);border:1px solid var(--ln);border-radius:12px;overflow:hidden}
 .pv figure.ok{border-color:#1F8F6B;box-shadow:0 0 0 1px #1F8F6B}
 .pv .fg{background:var(--bg)}
-.pv .fg [stroke]{stroke:var(--tx)}
+.pv .fg{color:var(--tx);--fig-head:var(--bg)}
 .pv .fg .gr{stroke:var(--dim);opacity:.5}
-.pv figure.no .fg [stroke]{stroke:var(--dim)}
+.pv figure.no .fg{color:var(--dim)}
 .pv figcaption{padding:12px 15px 15px}
 .pv figcaption b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:15px;margin-bottom:3px}
 .pv figure.ok figcaption b{color:#1F8F6B}

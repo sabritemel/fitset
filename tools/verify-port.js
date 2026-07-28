@@ -45,6 +45,13 @@ const EXPECTED = {
   'Reverse Pec Fly': { endpointsSame: true, why: 'MAKİNE eklendi; pozlara dokunulmadı, yalnız eq() değişti' },
 };
 
+/**
+ * Kafa dairesinin dolgusu sabit renkten (#FDF3F6) token'a çevrildi — koyu temada
+ * parlak nokta bırakıyordu. Bu bir TEMA düzeltmesi, geometri değişmedi; karşılaştırma
+ * anlamını korusun diye normalleştiriliyor.
+ */
+const normSVG = t => t.replace(/var\(--fig-head,#FDF3F6\)/g, '#FDF3F6');
+
 const STEPS = 40;
 let frames = 0, jointDiff = 0, svgDiff = 0;
 const bad = [];
@@ -87,7 +94,7 @@ for (const [d, day] of old.EX.entries()) {
         if (ax !== bx || ay !== by) { jointDiff++; bad.push(`${exOld.en} t=${t} ${k}: (${ax},${ay}) ≠ (${bx},${by})`); }
       }
       // çizilen SVG metni + ekipman katmanı
-      if (old.figure(sOld, exOld) !== neu.figure(sNew, exNew)) { svgDiff++; bad.push(`${exOld.en} t=${t}: figure() farklı`); }
+      if (old.figure(sOld, exOld) !== normSVG(neu.figure(sNew, exNew))) { svgDiff++; bad.push(`${exOld.en} t=${t}: figure() farklı`); }
       if (exOld.eq && exOld.eq(sOld) !== exNew.eq(sNew)) { svgDiff++; bad.push(`${exOld.en} t=${t}: eq() farklı`); }
     }
   }

@@ -86,7 +86,10 @@ export function figure(s, ex, ghost) {
       : poly([a[0] - 3 * f, a[1]], [a[0] + 11 * f, a[1]]);
     g += mk(s.ftA); if (s.view === 'front') g += mk(s.ftB);
   }
-  g += `<circle cx="${s.head[0].toFixed(1)}" cy="${s.head[1].toFixed(1)}" r="11" fill="${ghost ? 'none' : '#FDF3F6'}"/>`;
+  // Kafa, boyun çizgisini maskeleyen DOLU bir daire — yani rengi ZEMİN rengidir.
+  // Eskiden #FDF3F6 sabitiydi; koyu temada zeminin üstünde parlak bir nokta
+  // olarak kalıyordu. Artık token: her bağlam kendi zeminini verir.
+  g += `<circle cx="${s.head[0].toFixed(1)}" cy="${s.head[1].toFixed(1)}" r="11" fill="${ghost ? 'none' : 'var(--fig-head,#FDF3F6)'}"/>`;
   return g;
 }
 

@@ -47,9 +47,9 @@ h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(
 .pv figure{margin:0;background:var(--pan);border:1px solid var(--ln);border-radius:12px;overflow:hidden}
 .pv figure.ok{border-color:#1F8F6B;box-shadow:0 0 0 1px #1F8F6B}
 .pv .fg{background:var(--bg)}
-.pv .fg [stroke]{stroke:var(--tx)}
+.pv .fg{color:var(--tx);--fig-head:var(--bg)}
 .pv .fg .gr{stroke:var(--dim);opacity:.5}
-.pv figure.no .fg [stroke]{stroke:var(--dim)}
+.pv figure.no .fg{color:var(--dim)}
 .pv figcaption{padding:12px 15px 15px}
 .pv figcaption b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:15px;margin-bottom:3px}
 .pv figure.ok figcaption b{color:#1F8F6B}
@@ -71,7 +71,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset
   letter-spacing:-.025em;margin:12px 18px 0;text-wrap:balance}
 #a .sub{margin:5px 18px 0;color:var(--dim);font-size:14px}
 #a .viz{margin:14px 18px 0;background:var(--surf);border-radius:16px;padding:6px 0}
-#a .viz [stroke]{stroke:var(--tx)}#a .viz .eq,#a .viz .cbl{stroke:#5A6478}#a .viz .gr{stroke:#39414F}
+#a .viz{color:var(--tx);--fig-head:var(--surf)}
+#a .viz .eq,#a .viz .cbl{stroke:#5A6478}#a .viz .gr{stroke:#39414F}
 #a .viz .ghost{stroke:#3A4256}#a .viz .trail{stroke:#A8506A}
 #a .prev{margin:14px 18px 0;font-family:'Space Mono',monospace;font-size:12px;color:var(--dim)}
 #a .prev b{color:var(--tx);font-weight:400}
@@ -111,7 +112,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset
 #b .ch.sel{background:var(--pan);box-shadow:inset 3px 0 0 var(--acc)}
 #b .panel{background:var(--pan);border-bottom:1px solid var(--ln);padding:14px 16px 16px}
 #b .viz{background:#0F1012;border:1px solid var(--ln);border-radius:4px;margin-bottom:13px}
-#b .viz [stroke]{stroke:var(--tx)}#b .viz .eq,#b .viz .cbl{stroke:#6B6F76}#b .viz .gr{stroke:#3A3E44}
+#b .viz{color:var(--tx);--fig-head:#0F1012}
+#b .viz .eq,#b .viz .cbl{stroke:#6B6F76}#b .viz .gr{stroke:#3A3E44}
 #b .lastline{font-family:'Space Mono',monospace;font-size:11px;color:var(--dim);margin:0 0 12px}
 #b .lastline b{color:var(--tx);font-weight:400}
 #b table{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:13px}
@@ -152,7 +154,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset
 #c .crow p{color:var(--dim);font-size:14px;margin:2px 0 0}
 #c .ct{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--dim);white-space:nowrap;padding-top:3px}
 #c .viz{background:var(--soft);border-radius:12px;margin-top:14px}
-#c .viz [stroke]{stroke:var(--ink)}#c .viz .eq,#c .viz .cbl{stroke:#9A93A4}#c .viz .gr{stroke:#CFC7D2}
+#c .viz{color:var(--ink);--fig-head:var(--soft)}
+#c .viz .eq,#c .viz .cbl{stroke:#9A93A4}#c .viz .gr{stroke:#CFC7D2}
 #c .last{font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);margin:15px 0 12px}
 #c .last b{color:var(--ink);font-weight:400}
 #c .done{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -192,8 +195,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset
 <div class="top"><span>1. Gün · Göğüs</span><span>3 / 9</span></div>
 <h2 lang="en">Barbell Bench Press</h2>
 <p class="sub">Bar ile düz bench press · 3 set × 12</p>
-<div class="viz"><svg viewBox="0 0 260 200" aria-hidden="true"><g fill="none" stroke-width="4"
-  stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="186" x2="252" y2="186"/><line class="eq" x1="50.0" y1="128.0" x2="178.0" y2="128.0"/><line class="eq" x1="60.0" y1="128.0" x2="60.0" y2="186.0"/><line class="eq" x1="170.0" y1="128.0" x2="170.0" y2="186.0"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="13"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="4"/><g class="ghost"><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 131.5,134.1 144.6,108.3"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="none"/></g><g class="trail"><polyline points="144.6,108.3 142.8,104.7 141.3,101.1 140.2,97.5 139.4,93.8 139.0,90.1 139.0,86.6 139.3,83.1 139.9,79.8 140.9,76.7 142.2,73.8 143.8,71.2 145.6,68.8 147.6,66.8 149.9,65.1 152.3,63.7 154.8,62.8 157.4,62.2 160.0,62.0"/><polyline points="156.0,67.0 162.9,61.3 154.2,59.2"/></g><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 137.2,101.0 142.9,72.6"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="#FDF3F6"/></g></svg></div>
+<div class="viz"><svg viewBox="0 0 260 200" aria-hidden="true"><g class="art" stroke="currentColor" fill="none" stroke-width="4"
+  stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="186" x2="252" y2="186"/><line class="eq" x1="50.0" y1="128.0" x2="178.0" y2="128.0"/><line class="eq" x1="60.0" y1="128.0" x2="60.0" y2="186.0"/><line class="eq" x1="170.0" y1="128.0" x2="170.0" y2="186.0"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="13"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="4"/><g class="ghost"><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 131.5,134.1 144.6,108.3"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="none"/></g><g class="trail"><polyline points="144.6,108.3 142.8,104.7 141.3,101.1 140.2,97.5 139.4,93.8 139.0,90.1 139.0,86.6 139.3,83.1 139.9,79.8 140.9,76.7 142.2,73.8 143.8,71.2 145.6,68.8 147.6,66.8 149.9,65.1 152.3,63.7 154.8,62.8 157.4,62.2 160.0,62.0"/><polyline points="156.0,67.0 162.9,61.3 154.2,59.2"/></g><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 137.2,101.0 142.9,72.6"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="var(--fig-head,#FDF3F6)"/></g></svg></div>
 <p class="prev">Geçen sefer <b>40 kg × 12 · 40 × 12 · 40 × 10</b></p>
 <div class="chips"><span class="on">✓ 42,5 × 12</span><span class="on">✓ 42,5 × 11</span><span>3. set</span></div>
 <div class="pad"></div>
@@ -216,8 +219,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset
 <div class="ch sel"><span class="ix">01</span><span class="nm" lang="en">Barbell Bench Press</span>
   <span class="st"><i class="f"></i><i class="f"></i><i></i></span></div>
 <div class="panel">
-  <div class="viz"><svg viewBox="0 0 260 200" aria-hidden="true"><g fill="none" stroke-width="4"
-  stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="186" x2="252" y2="186"/><line class="eq" x1="50.0" y1="128.0" x2="178.0" y2="128.0"/><line class="eq" x1="60.0" y1="128.0" x2="60.0" y2="186.0"/><line class="eq" x1="170.0" y1="128.0" x2="170.0" y2="186.0"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="13"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="4"/><g class="ghost"><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 131.5,134.1 144.6,108.3"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="none"/></g><g class="trail"><polyline points="144.6,108.3 142.8,104.7 141.3,101.1 140.2,97.5 139.4,93.8 139.0,90.1 139.0,86.6 139.3,83.1 139.9,79.8 140.9,76.7 142.2,73.8 143.8,71.2 145.6,68.8 147.6,66.8 149.9,65.1 152.3,63.7 154.8,62.8 157.4,62.2 160.0,62.0"/><polyline points="156.0,67.0 162.9,61.3 154.2,59.2"/></g><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 137.2,101.0 142.9,72.6"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="#FDF3F6"/></g></svg></div>
+  <div class="viz"><svg viewBox="0 0 260 200" aria-hidden="true"><g class="art" stroke="currentColor" fill="none" stroke-width="4"
+  stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="186" x2="252" y2="186"/><line class="eq" x1="50.0" y1="128.0" x2="178.0" y2="128.0"/><line class="eq" x1="60.0" y1="128.0" x2="60.0" y2="186.0"/><line class="eq" x1="170.0" y1="128.0" x2="170.0" y2="186.0"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="13"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="4"/><g class="ghost"><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 131.5,134.1 144.6,108.3"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="none"/></g><g class="trail"><polyline points="144.6,108.3 142.8,104.7 141.3,101.1 140.2,97.5 139.4,93.8 139.0,90.1 139.0,86.6 139.3,83.1 139.9,79.8 140.9,76.7 142.2,73.8 143.8,71.2 145.6,68.8 147.6,66.8 149.9,65.1 152.3,63.7 154.8,62.8 157.4,62.2 160.0,62.0"/><polyline points="156.0,67.0 162.9,61.3 154.2,59.2"/></g><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 137.2,101.0 142.9,72.6"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="var(--fig-head,#FDF3F6)"/></g></svg></div>
   <p class="lastline">GEÇEN SEFER · 25.07 → <b>40×12 · 40×12 · 40×10</b> · hacim 1.360 kg</p>
   <table><thead><tr><th>Set</th><th>Ağırlık</th><th>Tekrar</th><th>Hacim</th></tr></thead><tbody>
     <tr class="warm"><td>ısınma</td><td>20,0</td><td>15</td><td>—</td></tr>
@@ -252,8 +255,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset
 <div class="card">
   <div class="crow"><div style="flex:1"><h3 lang="en">Barbell Bench Press</h3>
     <p>Bar ile düz bench press</p></div><span class="ct">2/3</span></div>
-  <div class="viz"><svg viewBox="0 0 260 200" aria-hidden="true"><g fill="none" stroke-width="4"
-  stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="186" x2="252" y2="186"/><line class="eq" x1="50.0" y1="128.0" x2="178.0" y2="128.0"/><line class="eq" x1="60.0" y1="128.0" x2="60.0" y2="186.0"/><line class="eq" x1="170.0" y1="128.0" x2="170.0" y2="186.0"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="13"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="4"/><g class="ghost"><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 131.5,134.1 144.6,108.3"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="none"/></g><g class="trail"><polyline points="144.6,108.3 142.8,104.7 141.3,101.1 140.2,97.5 139.4,93.8 139.0,90.1 139.0,86.6 139.3,83.1 139.9,79.8 140.9,76.7 142.2,73.8 143.8,71.2 145.6,68.8 147.6,66.8 149.9,65.1 152.3,63.7 154.8,62.8 157.4,62.2 160.0,62.0"/><polyline points="156.0,67.0 162.9,61.3 154.2,59.2"/></g><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 137.2,101.0 142.9,72.6"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="#FDF3F6"/></g></svg></div>
+  <div class="viz"><svg viewBox="0 0 260 200" aria-hidden="true"><g class="art" stroke="currentColor" fill="none" stroke-width="4"
+  stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="186" x2="252" y2="186"/><line class="eq" x1="50.0" y1="128.0" x2="178.0" y2="128.0"/><line class="eq" x1="60.0" y1="128.0" x2="60.0" y2="186.0"/><line class="eq" x1="170.0" y1="128.0" x2="170.0" y2="186.0"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="13"/><circle class="eq" fill="none" cx="142.9" cy="72.6" r="4"/><g class="ghost"><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 131.5,134.1 144.6,108.3"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="none"/></g><g class="trail"><polyline points="144.6,108.3 142.8,104.7 141.3,101.1 140.2,97.5 139.4,93.8 139.0,90.1 139.0,86.6 139.3,83.1 139.9,79.8 140.9,76.7 142.2,73.8 143.8,71.2 145.6,68.8 147.6,66.8 149.9,65.1 152.3,63.7 154.8,62.8 157.4,62.2 160.0,62.0"/><polyline points="156.0,67.0 162.9,61.3 154.2,59.2"/></g><polyline points="160.0,115.0 160.0,129.0"/><polyline points="100.0,116.0 100.0,128.0"/><polyline points="100.0,122.0 160.0,122.0"/><polyline points="160.0,122.0 137.2,101.0 142.9,72.6"/><polyline points="100.0,122.0 74.9,151.9 89.4,185.9"/><polyline points="92.4,185.9 78.4,185.9"/><circle cx="173.0" cy="122.0" r="11" fill="var(--fig-head,#FDF3F6)"/></g></svg></div>
   <p class="last">Geçen sefer · 3 gün önce · <b>40×12 · 40×12 · 40×10</b></p>
   <div class="done"><span class="w">ısınma 20×15</span><span>42,5 × 12</span><span>42,5 × 11</span></div>
   <div class="ent">
@@ -279,18 +282,18 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset
     <b>geri sayım</b> ve şu üç figür duracak.</p>
     <div class="pv">
       <figure class="ok">
-        <div class="fg"><svg viewBox="0 20 260 175" aria-hidden="true"><g fill="none" stroke-width="4"
-    stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="179" x2="252" y2="179"/><line class="eq" x1="66.9" y1="178.9" x2="73.9" y2="179.0"/><polyline points="198.0,141.1 200.3,154.9"/><polyline points="139.0,152.1 141.0,163.9"/><polyline points="140.0,158.0 199.2,148.0"/><polyline points="199.2,148.0 199.2,179.0 228.2,179.0"/><polyline points="140.0,158.0 102.5,168.7 66.9,178.9"/><circle cx="212.0" cy="145.8" r="11" fill="#FDF3F6"/></g></svg></div>
+        <div class="fg"><svg viewBox="0 20 260 175" aria-hidden="true"><g class="art" stroke="currentColor" fill="none" stroke-width="4"
+    stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="179" x2="252" y2="179"/><line class="eq" x1="66.9" y1="178.9" x2="73.9" y2="179.0"/><polyline points="198.0,141.1 200.3,154.9"/><polyline points="139.0,152.1 141.0,163.9"/><polyline points="140.0,158.0 199.2,148.0"/><polyline points="199.2,148.0 199.2,179.0 228.2,179.0"/><polyline points="140.0,158.0 102.5,168.7 66.9,178.9"/><circle cx="212.0" cy="145.8" r="11" fill="var(--fig-head,#FDF3F6)"/></g></svg></div>
         <figcaption><b>✓ Doğru</b><span>Baştan topuğa tek düz çizgi</span></figcaption>
       </figure>
       <figure class="no">
-        <div class="fg"><svg viewBox="0 20 260 175" aria-hidden="true"><g fill="none" stroke-width="4"
-    stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="179" x2="252" y2="179"/><line class="eq" x1="64.5" y1="179.0" x2="71.5" y2="179.0"/><polyline points="193.3,141.5 198.4,154.5"/><polyline points="137.8,164.4 142.2,175.6"/><polyline points="140.0,170.0 195.8,148.0"/><polyline points="195.8,148.0 195.8,179.0 224.8,179.0"/><polyline points="140.0,170.0 101.3,174.6 64.5,179.0"/><circle cx="207.9" cy="143.2" r="11" fill="#FDF3F6"/></g></svg></div>
+        <div class="fg"><svg viewBox="0 20 260 175" aria-hidden="true"><g class="art" stroke="currentColor" fill="none" stroke-width="4"
+    stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="179" x2="252" y2="179"/><line class="eq" x1="64.5" y1="179.0" x2="71.5" y2="179.0"/><polyline points="193.3,141.5 198.4,154.5"/><polyline points="137.8,164.4 142.2,175.6"/><polyline points="140.0,170.0 195.8,148.0"/><polyline points="195.8,148.0 195.8,179.0 224.8,179.0"/><polyline points="140.0,170.0 101.3,174.6 64.5,179.0"/><circle cx="207.9" cy="143.2" r="11" fill="var(--fig-head,#FDF3F6)"/></g></svg></div>
         <figcaption><b>✗ Kalça çökük</b><span>Bel çukurlaşır, yük omurgaya geçer — süre dolmadan bitir</span></figcaption>
       </figure>
       <figure class="no">
-        <div class="fg"><svg viewBox="0 20 260 175" aria-hidden="true"><g fill="none" stroke-width="4"
-    stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="179" x2="252" y2="179"/><line class="eq" x1="73.1" y1="179.0" x2="80.1" y2="179.0"/><polyline points="200.4,141.0 199.2,155.0"/><polyline points="140.5,137.0 139.5,149.0"/><polyline points="140.0,143.0 199.8,148.0"/><polyline points="199.8,148.0 199.8,179.0 228.8,179.0"/><polyline points="140.0,143.0 105.7,161.5 73.1,179.0"/><circle cx="212.7" cy="149.1" r="11" fill="#FDF3F6"/></g></svg></div>
+        <div class="fg"><svg viewBox="0 20 260 175" aria-hidden="true"><g class="art" stroke="currentColor" fill="none" stroke-width="4"
+    stroke-linecap="round" stroke-linejoin="round"><line class="gr" x1="8" y1="179" x2="252" y2="179"/><line class="eq" x1="73.1" y1="179.0" x2="80.1" y2="179.0"/><polyline points="200.4,141.0 199.2,155.0"/><polyline points="140.5,137.0 139.5,149.0"/><polyline points="140.0,143.0 199.8,148.0"/><polyline points="199.8,148.0 199.8,179.0 228.8,179.0"/><polyline points="140.0,143.0 105.7,161.5 73.1,179.0"/><circle cx="212.7" cy="149.1" r="11" fill="var(--fig-head,#FDF3F6)"/></g></svg></div>
         <figcaption><b>✗ Kalça yüksek</b><span>Kalça yukarı kaçar, karın devreden çıkar — hareket kolaylaşır</span></figcaption>
       </figure>
     </div>
