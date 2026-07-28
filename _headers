@@ -1,0 +1,19 @@
+# Cloudflare Pages başlık kuralları
+
+# sw.js ASLA önbelleğe alınmamalı.
+# Tarayıcı service worker dosyasının kendisini önbelleğe alırsa yeni sürümü
+# hiç göremez ve telefonda eski uygulama servis edilmeye devam eder — PWA'ların
+# en yaygın hayal kırıklığı budur.
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# manifest de güncellenebilmeli (ikon/ad değişiklikleri)
+/manifest.json
+  Cache-Control: no-cache
+
+# Fontlar sürüm değiştirmez; uzun süre önbellekte kalabilir
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/icons/*
+  Cache-Control: public, max-age=2592000
