@@ -33,6 +33,14 @@ const s = E.skeleton(E.poseAt(ex.a, ex.b, 0.58), ex.view);
 const FIG = `<svg viewBox="0 0 260 200" aria-hidden="true"><g fill="none" stroke-width="4"
   stroke-linecap="round" stroke-linejoin="round">${ex.eq(s) + E.ghostOf(ex) + E.trailOf(ex) + E.figure(s, ex)}</g></svg>`;
 
+/* Plank — izometrik: oynatacak hareket yok ama görsel şart */
+const plank = EX[0].find(e => e.hold);
+const plankFig = v => {
+  const sk = E.skeleton(v.pose, plank.view);
+  return `<svg viewBox="0 20 260 175" aria-hidden="true"><g fill="none" stroke-width="4"
+    stroke-linecap="round" stroke-linejoin="round">${plank.eq(sk) + E.figure(sk, plank)}</g></svg>`;
+};
+
 /* ── YÖN A · ODAK ─────────────────────────────────────────────────────── */
 const cssA = `
 #a{--bg:#0E1118;--surf:#161C27;--line:#232B3A;--tx:#ECE7DF;--dim:#7E889D;--acc:#FF4D6D;--ok:#46C7A8;
@@ -272,6 +280,22 @@ h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(
 .ask ul{margin:0;padding-left:20px;font-size:14.5px;color:var(--dim)}
 .ask li{margin-bottom:3px}
 .foot{margin-top:26px;font-family:'Space Mono',monospace;font-size:12px;color:var(--dim)}
+.plank{margin-top:52px;padding-top:36px;border-top:1px solid var(--ln)}
+.plank .lede{margin-bottom:24px}
+.pv{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.pv figure{margin:0;background:var(--pan);border:1px solid var(--ln);border-radius:12px;overflow:hidden}
+.pv figure.ok{border-color:#1F8F6B;box-shadow:0 0 0 1px #1F8F6B}
+.pv .fg{background:var(--bg)}
+.pv .fg [stroke]{stroke:var(--tx)}
+.pv .fg .gr{stroke:var(--dim);opacity:.5}
+.pv figure.no .fg [stroke]{stroke:var(--dim)}
+.pv figcaption{padding:12px 15px 15px}
+.pv figcaption b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:15px;margin-bottom:3px}
+.pv figure.ok figcaption b{color:#1F8F6B}
+.pv figure.no figcaption b{color:var(--acc)}
+.pv figcaption span{font-size:13.5px;color:var(--dim);line-height:1.45}
+.mini{margin-top:18px;font-size:13.5px;color:var(--dim)}
+.mini code{font-family:'Space Mono',monospace;font-size:12.5px}
 button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 ${DIRS.map(d => d.css).join('\n')}
@@ -293,6 +317,23 @@ ${DIRS.map(d => d.css).join('\n')}
       <ul class="con">${d.eks.map(x => `<li>${x}</li>`).join('')}</ul>
     </div>`).join('')}
   </div>
+
+  <section class="plank">
+    <div class="tag" style="margin-bottom:8px"><span class="k">İZOMETRİK</span><h2>Plank — animasyon yok, görsel var</h2></div>
+    <p class="lede">Plank'ta oynatacak bir hareket yok; ölçüm de bunu doğruladı (genlik 0.10, diğerlerinin
+    beşte biri). Ama <b>animasyon yok diye görsel de olmamalı değil</b> — kimsenin hareketi bildiğini
+    varsaymıyoruz. İzometrik bir harekette öğretici olan tek kare değil, <b>doğru ile yanlış arasındaki
+    fark</b>: Plank'ın tamamı gövde çizgisini korumaktan ibaret. Ekranda animasyon yerine
+    <b>geri sayım</b> ve şu üç figür duracak.</p>
+    <div class="pv">${plank.variants.map(v => `
+      <figure class="${v.ok ? 'ok' : 'no'}">
+        <div class="fg">${plankFig(v)}</div>
+        <figcaption><b>${v.ok ? '✓' : '✗'} ${v.label}</b><span>${v.note}</span></figcaption>
+      </figure>`).join('')}
+    </div>
+    <p class="mini">Üç duruşun da ön kolu ve ayak ucu <b>tam zeminde</b> — pozlar elle çizilmedi,
+    bu kısıttan çözüldü ve <code>verify-poses.js</code> her çalıştığında yeniden denetliyor.</p>
+  </section>
 
   <div class="ask">
     <h3>Hangi yön seçilirse seçilsin bunlar sabit</h3>

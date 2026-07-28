@@ -141,6 +141,34 @@ for (const ex of all) {
 }
 if (dataClean) console.log(`  ✓ ${all.length} egzersiz · ${byId.size} benzersiz id · alanlar, tipler ve etiketler tutarlı`);
 
+// ── 6. İzometrik hareketlerin görseli var mı, temas noktaları doğru mu? ─────
+console.log('\n6) İZOMETRİK (hold) HAREKETLER');
+let holdClean = true, holdCount = 0;
+for (const ex of all) {
+  if (!ex.hold) continue;
+  holdCount++;
+  if (!ex.variants?.length) {
+    // Animasyon yoksa görsel de yoksa kullanıcı hareketi hiç öğrenemez.
+    say('✗', ex, 'hold:true ama variants[] yok — izometrik harekette görsel ŞART');
+    fails++; holdClean = false; continue;
+  }
+  const doğru = ex.variants.filter(v => v.ok);
+  if (doğru.length !== 1) { say('✗', ex, `${doğru.length} adet "doğru" varyant (tam 1 olmalı)`); fails++; holdClean = false; }
+  for (const v of ex.variants) {
+    if (!v.label || !v.note) { say('✗', ex, 'varyantta label/note eksik'); fails++; holdClean = false; continue; }
+    const s = skeleton(v.pose, ex.view);
+    // Plank'ta temas noktaları yerde olmalı — havada duran bir figür öğretmez
+    for (const [ad, y] of [['ön kol', s.haA[1]], ['ayak', s.ftA[1]]])
+      if (Math.abs(y - 179) > 2) {
+        say('✗', ex, `"${v.label}": ${ad} zeminde değil (y=${y.toFixed(1)}, beklenen 179)`);
+        fails++; holdClean = false;
+      }
+  }
+}
+if (holdClean) console.log(holdCount
+  ? `  ✓ ${holdCount} izometrik hareket · doğru + hatalı duruş görselleri tam, temas noktaları yerinde`
+  : '  ⓘ izometrik hareket yok');
+
 // ── Özet ───────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(64)}`);
 console.log(`${all.length} egzersiz · ${fails} hata · ${warns} uyarı`);

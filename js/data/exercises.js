@@ -133,9 +133,24 @@ export const EX=[[
 {
  id:"plank", setType:"time", equipment:"bodyweight", target:{"seconds":15},
  en:"Plank", tr:"Plank — karın duruşu", sets:3, reps:"3 × 15 sn",
- // hold:true → izometrik. Oynatacak hareket yok; arayüz animasyon yerine
- // GERİ SAYIM gösterir. Doğru çözüm hareketi zorlamak değil, ne olduğunu göstermek.
+ // hold:true → izometrik: oynatacak hareket yok, arayüz GERİ SAYIM gösterir.
+ // Ama görsel yine ŞART — kimsenin hareketi bildiğini varsaymıyoruz. İzometrik
+ // bir harekette öğretici olan tek kare değil, DOĞRU ile YANLIŞ arasındaki fark:
+ // Plank'ta işin tamamı gövde çizgisini korumak. variants[] onu gösterir.
+ //
+ // Pozlar elle uydurulmadı, kısıtlardan ÇÖZÜLDÜ (ön kol ve ayak ucu zeminde):
+ //   sin(torso) = (py − 148) / 60      omuzu 148'e sabitler (dirsek zeminde)
+ //   sin(bacak) = (py − 179) / 76      ayağı zemine sabitler
+ // Kalça yüksekliği (py) tek serbest değişken: 158 doğru · 170 çökük · 143 yüksek.
  view:"side", face:1, nofoot:true, track:"P", hold:true, mus:"Karın · Gövde stabilizasyonu",
+ variants:[
+   {ok:true, label:"Doğru", note:"Baştan topuğa tek düz çizgi",
+    pose:{px:140,py:158,torso:9.6,ua:-90,fa:0,th:196,sh:196}},
+   {label:"Kalça çökük", note:"Bel çukurlaşır, yük omurgaya geçer — süre dolmadan bitir",
+    pose:{px:140,py:170,torso:21.5,ua:-90,fa:0,th:186.8,sh:186.8}},
+   {label:"Kalça yüksek", note:"Kalça yukarı kaçar, karın devreden çıkar — hareket kolaylaşır",
+    pose:{px:140,py:143,torso:-4.8,ua:-90,fa:0,th:208.3,sh:208.3}},
+ ],
  a:{px:140,py:158,torso:10,ua:-75,fa:5,th:196,sh:196},
  b:{px:140,py:152,torso:12,ua:-75,fa:5,th:196,sh:196},
  eq:s=>grd(179)+bar(s.ftA,[s.ftA[0]+7,179]),
@@ -272,9 +287,24 @@ export const EX=[[
 {
  id:"plank", setType:"time", equipment:"bodyweight", target:{"seconds":15},
  en:"Plank", tr:"Plank — karın duruşu", sets:3, reps:"3 × 15 sn",
- // hold:true → izometrik. Oynatacak hareket yok; arayüz animasyon yerine
- // GERİ SAYIM gösterir. Doğru çözüm hareketi zorlamak değil, ne olduğunu göstermek.
+ // hold:true → izometrik: oynatacak hareket yok, arayüz GERİ SAYIM gösterir.
+ // Ama görsel yine ŞART — kimsenin hareketi bildiğini varsaymıyoruz. İzometrik
+ // bir harekette öğretici olan tek kare değil, DOĞRU ile YANLIŞ arasındaki fark:
+ // Plank'ta işin tamamı gövde çizgisini korumak. variants[] onu gösterir.
+ //
+ // Pozlar elle uydurulmadı, kısıtlardan ÇÖZÜLDÜ (ön kol ve ayak ucu zeminde):
+ //   sin(torso) = (py − 148) / 60      omuzu 148'e sabitler (dirsek zeminde)
+ //   sin(bacak) = (py − 179) / 76      ayağı zemine sabitler
+ // Kalça yüksekliği (py) tek serbest değişken: 158 doğru · 170 çökük · 143 yüksek.
  view:"side", face:1, nofoot:true, track:"P", hold:true, mus:"Karın · Gövde stabilizasyonu",
+ variants:[
+   {ok:true, label:"Doğru", note:"Baştan topuğa tek düz çizgi",
+    pose:{px:140,py:158,torso:9.6,ua:-90,fa:0,th:196,sh:196}},
+   {label:"Kalça çökük", note:"Bel çukurlaşır, yük omurgaya geçer — süre dolmadan bitir",
+    pose:{px:140,py:170,torso:21.5,ua:-90,fa:0,th:186.8,sh:186.8}},
+   {label:"Kalça yüksek", note:"Kalça yukarı kaçar, karın devreden çıkar — hareket kolaylaşır",
+    pose:{px:140,py:143,torso:-4.8,ua:-90,fa:0,th:208.3,sh:208.3}},
+ ],
  a:{px:140,py:158,torso:10,ua:-75,fa:5,th:196,sh:196},
  b:{px:140,py:152,torso:12,ua:-75,fa:5,th:196,sh:196},
  eq:s=>grd(179)+bar(s.ftA,[s.ftA[0]+7,179]),
