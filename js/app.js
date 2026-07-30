@@ -79,12 +79,25 @@ function restSlot() {
   if (l) l.style.transform = `scaleX(${rest.running && rest.total ? rest.remaining / rest.total : 0})`;
 }
 
+/**
+ * Saat görünümünü tek yerden tazeler: rakam, "canlı" durumu ve düğme etiketi.
+ * Üç yerde ayrı ayrı güncellenirken biri unutuluyordu (durdurunca rakam eski
+ * kalıyordu) — tek fonksiyon olunca o hata sınıfı ortadan kalkıyor.
+ */
+function saatDurumu(ex) {
+  const c = $('clock'), b = $('clock-btn'), t = $('clock-time');
+  const çalışıyor = hold.running;
+  c?.classList.toggle('run', çalışıyor);
+  if (b) b.textContent = çalışıyor ? 'Durdur' : 'Başlat';
+  if (t && !çalışıyor) t.textContent = mmss(ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds);
+}
+
 /** Set süresi — izometrik hareketler (Plank) */
 const hold = new Countdown({
   onTick: k => { const e = $('clock-time'); if (e) e.textContent = mmss(k); },
   onDone: async () => {
-    $('clock')?.classList.remove('run');
-    const ex = curEx();
+    const ex0 = curEx(); saatDurumu(ex0);
+    const ex = ex0;
     await kaydet(ex, { type: 'time', seconds: ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds, warmup: !!ctx.draft.warmup });
     toast('Süre doldu — set kaydedildi.');
   },
@@ -146,7 +159,7 @@ function render() {
     focusEl.classList.add('on'); listEl.classList.remove('on');
     const ex = curEx();
     if (!ex.hold) { draw(ex, 0); if (!reduced) play(ex); }
-    if (hold.running) $('clock')?.classList.add('run');
+    saatDurumu(ex);
     // Yuva her çizimde tazelenmeli: yeniden çizim sonrası işaretleme boştaki
     // düğmeyi basıyor, ama sayaç hâlâ çalışıyor olabilir. Ayrıca kalan-süre
     // çizgisi eski değerinde takılı kalıyordu (ekranda kırmızı kalıntı).
@@ -197,11 +210,10 @@ async function kaydet(ex, veri) {
 
 async function kaydetTıklandı() {
   const ex = curEx();
-  const ısınma = $('warm')?.checked ?? false;
+  const ısınma = $('warm')?.getAttribute('aria-pressed') === 'true';
   if (ex.setType === 'time') {
     const sn = ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds;
-    hold.stop();
-    $('clock')?.classList.remove('run');
+    hold.stop(); saatDurumu(ex);
     return kaydet(ex, { type: 'time', seconds: sn, warmup: ısınma });
   }
   if (ex.setType === 'cardio') {
@@ -255,6 +267,12 @@ document.addEventListener('click', async e => {
   const ex = ctx.view === 'focus' ? curEx() : null;
 
   switch (a) {
+    case 'warm': {
+      const b = $('warm');
+      ctx.draft.warmup = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', String(ctx.draft.warmup));
+      break;
+    }
     case 'sheet-open': sheet(true); break;
     case 'sheet-close': sheet(false); break;
 
@@ -303,13 +321,13 @@ document.addEventListener('click', async e => {
     }
 
     case 'clock-start':
-      if (hold.running) { hold.stop(); $('clock').classList.remove('run'); $('clock-time').textContent = mmss(ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds); }
-      else { await hold.start(ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds); $('clock').classList.add('run'); }
+      if (hold.running) { hold.stop(); saatDurumu(ex); }
+      else { await hold.start(ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds); saatDurumu(ex); }
       break;
     case 'clock-plus': case 'clock-minus': {
       const d = a === 'clock-plus' ? 5 : -5;
       if (hold.running) hold.extend(d);
-      else { ctx.draft.seconds = Math.max(5, (ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds) + d); $('clock-time').textContent = mmss(ctx.draft.seconds); }
+      else { ctx.draft.seconds = Math.max(5, (ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds) + d); saatDurumu(ex); }
       break;
     }
 
@@ -327,7 +345,7 @@ document.addEventListener('click', async e => {
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'scrub') { stopAnim(); draw(curEx(), +t.value / 100); return; }
-  if (t.id === 'warm') { ctx.draft.warmup = t.checked; return; }
+  
   if (t.id?.startsWith('f-')) ctx.draft[t.id.slice(2)] = t.value === '' ? null : +t.value;
 });
 
