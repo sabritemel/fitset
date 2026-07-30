@@ -180,14 +180,16 @@ export const restSlotHTML = (settings, kalan = null) => kalan === null
 function entryHTML(ex, ctx) {
   if (ex.setType === 'time') {
     const sn = ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds;
+    // Süre ayarı ±5 sn: 15 sn'lik bir hedefte ±15 çok kaba bir adımdı
+    // (bir dokunuşta süreyi ikiye katlıyor ya da sıfırlıyordu).
     return `<div class="clock" id="clock">
       <span class="lbl">Hedef süre</span>
-      <span class="time" id="clock-time">${mmss(sn)}</span>
-      <div class="row">
-        <button data-act="clock-minus">−15 sn</button>
-        <button class="main" data-act="clock-start">Başlat</button>
-        <button data-act="clock-plus">+15 sn</button>
+      <div class="crow">
+        <button class="cadj" data-act="clock-minus" aria-label="5 saniye azalt">−5<span>sn</span></button>
+        <span class="time" id="clock-time">${mmss(sn)}</span>
+        <button class="cadj" data-act="clock-plus" aria-label="5 saniye ekle">+5<span>sn</span></button>
       </div>
+      <button class="main" data-act="clock-start">Başlat</button>
     </div>`;
   }
   if (ex.setType === 'cardio') {
@@ -219,15 +221,24 @@ function entryHTML(ex, ctx) {
     </div>`;
 }
 
-/** Tek bir sayı alanı. Sarmalamayı ÇAĞIRAN yapar — iç içe .nums yerleşimi bozuyordu. */
+/**
+ * Tek bir sayı alanı.
+ * +/− rakamın ALTINDA değil SAĞINDA, dikey yığın olarak: üstte artır, altta
+ * azalt. Alt alta iki geniş düğme için ayrılan satır 58px yiyordu; o alan
+ * artık animasyona gidiyor. Dikey dizilim ayrıca yönü kendiliğinden anlatıyor
+ * — yukarı = artır, aşağı = azalt.
+ * Sarmalamayı ÇAĞIRAN yapar: iç içe .nums yerleşimi bozuyordu.
+ */
 const num = (field, val, delta, unit) => `
   <div class="f">
     <span class="lbl">${unit}</span>
-    <input class="val mono" type="number" inputmode="decimal" step="${delta}" min="0"
-           id="f-${field}" value="${val ?? ''}" placeholder="—" aria-label="${unit}">
-    <div class="pm">
-      <button data-step="${field}:${-delta}" aria-label="${unit} azalt">−</button>
-      <button data-step="${field}:${delta}" aria-label="${unit} artır">+</button>
+    <div class="valrow">
+      <input class="val mono" type="number" inputmode="decimal" step="${delta}" min="0"
+             id="f-${field}" value="${val ?? ''}" placeholder="—" aria-label="${unit}">
+      <div class="pm">
+        <button data-step="${field}:${delta}" aria-label="${unit} artır">+</button>
+        <button data-step="${field}:${-delta}" aria-label="${unit} azalt">−</button>
+      </div>
     </div>
   </div>`;
 
@@ -273,7 +284,16 @@ export function focusHTML(ctx) {
       <p class="prev">${lastTime(ex, lastPerf, settings.unit, q.sets.length > 0)}</p>
       ${q.sets.length ? `<div class="chips">${chips}</div>` : ''}
       ${entryHTML(ex, ctx)}
-      <button class="go" data-act="save">${kaydetEtiketi}</button>
+      ${/* Hedef tamamlanınca düğme İKİYE bölünür: solda fazladan set, sağda
+            sıradaki harekete geçiş. Otomatik ilerlemek kontrolü elden alırdı;
+            burada karar hâlâ senin ama sıradakine geçmek tek dokunuş. */''}
+      ${q.tamam ? `<div class="gorow">
+          <button class="go" data-act="save">Fazladan set</button>
+          ${idx === exs.length - 1
+            ? `<button class="go next" data-act="to-list">Listeye dön<span class="ar">→</span></button>`
+            : `<button class="go next" data-act="next">Sonraki hareket<span class="ar">→</span></button>`}
+        </div>`
+        : `<div class="gorow"><button class="go" data-act="save">${kaydetEtiketi}</button></div>`}
       <div class="nav">
         <button class="side" data-act="prev" ${idx === 0 ? 'disabled' : ''}>‹ Önceki</button>
         <div class="restslot" id="restslot">${restSlotHTML(settings)}</div>

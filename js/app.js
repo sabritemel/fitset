@@ -147,6 +147,10 @@ function render() {
     const ex = curEx();
     if (!ex.hold) { draw(ex, 0); if (!reduced) play(ex); }
     if (hold.running) $('clock')?.classList.add('run');
+    // Yuva her çizimde tazelenmeli: yeniden çizim sonrası işaretleme boştaki
+    // düğmeyi basıyor, ama sayaç hâlâ çalışıyor olabilir. Ayrıca kalan-süre
+    // çizgisi eski değerinde takılı kalıyordu (ekranda kırmızı kalıntı).
+    restSlot();
   }
 }
 
@@ -303,7 +307,7 @@ document.addEventListener('click', async e => {
       else { await hold.start(ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds); $('clock').classList.add('run'); }
       break;
     case 'clock-plus': case 'clock-minus': {
-      const d = a === 'clock-plus' ? 15 : -15;
+      const d = a === 'clock-plus' ? 5 : -5;
       if (hold.running) hold.extend(d);
       else { ctx.draft.seconds = Math.max(5, (ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds) + d); $('clock-time').textContent = mmss(ctx.draft.seconds); }
       break;

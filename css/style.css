@@ -191,7 +191,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   #focus-screen .sub { display: none; }        /* hedef zaten üst şeritte yazıyor */
   #focus-screen .head { padding-top: 2px; }
   .viz { margin-top: 7px; }
-  .nums .val { font-size: 34px; }
+  .valrow .val { align-self: center; }
+.nums .val { font-size: 34px; }
   .pm button { height: 40px; }
   .pm { margin-top: 6px; }
   .go { height: 50px; margin-top: 8px; }
@@ -289,20 +290,36 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .nums .val::-webkit-outer-spin-button, .nums .val::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .nums .val::placeholder { color: var(--dim); }
 .nums .unit { font-size: 14px; color: var(--dim); }
-.pm { display: flex; gap: 9px; margin-top: 8px; }
-.pm button { flex: 1; height: 46px; border-radius: var(--r-sm); background: var(--surf); font-size: 22px; }
+/* Rakam solda, artır/azalt SAĞDA dikey yığın halinde.
+   Eskiden altta tam genişlik iki düğme vardı ve 58px yiyordu — o alan artık
+   animasyona gidiyor. Dikey dizilim yönü kendiliğinden anlatır. */
+/* Etiket RAKAMIN üstünde ortalanmalı; düğme sütununun genişliği kadar sağdan
+   pay verilmezse sağa kayıyor (gözle yakalandı). Tek yerden yönetilsin diye
+   sütun genişliği değişkene alındı. */
+.f { --pmw: 62px; }
+.nums.single .f { --pmw: 68px; }
+/* display:block ŞART — .lbl bir span; satır içiyken padding merkezlemeyi
+   etkilemez ve etiket rakamın sağına kayar (ölçümle yakalandı). */
+.f > .lbl { display: block; padding-right: calc(var(--pmw) + 10px); }
+.valrow { display: flex; align-items: stretch; gap: 10px; }
+.pm { display: flex; flex-direction: column; flex: none; width: var(--pmw);
+  border-radius: var(--r-sm); overflow: hidden; background: var(--surf); }
+.pm button { flex: 1; min-height: 42px; font-size: 24px; line-height: 1; color: var(--tx); }
+.pm button:first-child { box-shadow: inset 0 -1px 0 var(--line); }
 .pm button:active { background: var(--surf2); }
 /* İpucu ve ısınma tek satırda — her satır ekrandan yer çalıyor */
-.hintrow { display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 6px 18px 0; }
+.hintrow { display: flex; align-items: center; justify-content: center;
+  gap: 14px; padding: 6px 18px 0; }
+.hintrow .hint:not(:empty) { flex: 1; }
 .hint { font-size: 12px; color: var(--dim); }
 .warmtog { display: flex; align-items: center; gap: 7px; color: var(--dim);
   font-size: 13px; min-height: 36px; flex: none; }
 .warmtog input { width: 19px; height: 19px; accent-color: var(--acc); }
 
 /* Tek giriş: ağırlık. Tam genişlik, ekranın en büyük rakamı. */
-.nums.single .f .val { font-size: 52px; }
-.nums.single .pm button { height: 50px; }
+.nums.single .f .val { font-size: 54px; }
+
+.nums.single .pm button { min-height: 46px; font-size: 26px; }
 
 /* Tekrar satırı — hedeften gelir, sadece bu set için açılır */
 .repsline { display: flex; align-items: baseline; justify-content: center; gap: 10px;
@@ -316,12 +333,28 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .repsedit { padding-top: 2px; }
 .repsedit .nums { padding-top: 4px; }
 
-/* Kaydet: başparmak bölgesinde, ekranın en büyük hedefi */
-.go { margin: 10px 18px 0; height: 56px; border-radius: var(--r-md); background: var(--acc);
+/* Kaydet: başparmak bölgesinde, ekranın en büyük hedefi.
+   Hedef tamamlanınca satır ikiye bölünür — solda fazladan set, sağda ilerle. */
+.gorow { display: flex; gap: 9px; margin: 10px 18px 0; }
+.go { flex: 1; min-width: 0; height: 56px; border-radius: var(--r-md); background: var(--acc);
   color: #12060A; font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
-  font-size: 18px; letter-spacing: -.01em; width: calc(100% - 36px);
+  font-size: 18px; letter-spacing: -.01em;
   transition: transform .12s ease, filter .12s ease; }
 .go:active { transform: scale(.985); filter: brightness(.92); }
+/* Hedef tamamlandığında ASIL EYLEM ilerlemektir: 1/3 fazladan set, 2/3 sonraki.
+   Renk de buna uyuyor — YEŞİL, çünkü "tamamlandı" semantiğimiz o ve ilerlemek
+   olumlu eylem. Büyük düğmenin sönük, küçüğün parlak olması hiyerarşiyi kendi
+   içinde çelişkiye düşürürdü: baskın eylem baskın görünmeli.
+   Kırmızı vurgu burada KULLANILMIYOR; o "kaydet"in rengi, iki farklı işi aynı
+   renkle çağırmak ikisini de zayıflatır. */
+.gorow .go { flex: 1; }
+.gorow .go.next { flex: 2; background: var(--ok); color: #04211B;
+  font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; }
+.gorow .go.next .ar { font-family: 'Karla', system-ui, sans-serif; font-size: 22px; line-height: 1; }
+.gorow .go.next:active { filter: brightness(.92); }
+/* Fazladan set ikincil: yanlışlıkla basılması ilerlemekten daha maliyetli. */
+.gorow .go:not(.next) { background: var(--surf2); color: var(--tx); font-size: 15px; }
+.gorow .go:not(.next):active { background: var(--line); }
 
 /* ── Gezinme + dinlenme ────────────────────────────────────────────────────
    Sayaç AYRI BİR BANT AÇMIYOR: ortadaki "Dinlenme 90 sn" düğmesi yerinde
@@ -360,9 +393,18 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   display: block; margin: 6px 0 2px;
 }
 .clock.run .time { color: var(--acc); }
-.clock .row { display: flex; gap: 9px; margin-top: 13px; }
-.clock .row button { flex: 1; min-height: 46px; border-radius: var(--r-sm); background: var(--surf2); font-size: 15px; }
-.clock .row button.main { background: var(--acc); color: #12060A; font-weight: 700; }
+/* Süre satırı: ayar düğmeleri rakamın SOLUNDA ve SAĞINDA — başparmak
+   rakamı örtmeden iki yandan ayarlar. */
+.clock .crow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.clock .cadj { flex: none; min-width: 62px; min-height: 50px; border-radius: var(--r-sm);
+  background: var(--surf2); color: var(--tx);
+  font-family: 'Space Mono', ui-monospace, monospace; font-size: 16px; }
+.clock .cadj span { display: block; font-size: 9.5px; opacity: .55; letter-spacing: .1em; margin-top: 1px; }
+.clock .cadj:active { background: var(--line); }
+.clock .main { width: 100%; margin-top: 13px; min-height: var(--touch); border-radius: var(--r-sm);
+  background: var(--acc); color: #12060A;
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800; font-size: 17px; }
+.clock .main:active { filter: brightness(.92); }
 .clock .late { color: var(--warn); font-size: 13px; margin: 8px 0 0; }
 
 
