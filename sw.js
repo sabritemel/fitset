@@ -16,7 +16,7 @@
  * gelir → devralır → sayfa yenilenir. Kullanıcı antrenman ortasında sürüm
  * değiştirmez; kararı o verir.
  */
-const CACHE = 'fitset-192f5c8a37';
+const CACHE = 'fitset-d3b1dcd926';
 
 const ASSETS = [
   './',
@@ -65,13 +65,20 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
 
-  // Gezinme (sayfa açılışı): önce önbellek — uçak modunda da açılsın
+  // Gezinme (sayfa açılışı): önce İSTENEN sayfa, sonra ağ, en son index.html.
+  //
+  // ⚠️ Eskiden burada koşulsuz index.html dönülüyordu. Sonuç: /mockup.html
+  // istendiğinde de uygulama açılıyordu — yedek, kendisi olmayan her sayfayı
+  // yutuyordu. Yedek YALNIZ gerçekten bulunamadığında devreye girmeli.
   if (req.mode === 'navigate') {
-    e.respondWith((async () =>
-      (await caches.match('./index.html')) || fetch(req).catch(() => new Response(
+    e.respondWith((async () => {
+      const hit = await caches.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      try { const res = await fetch(req); if (res.ok) return res; } catch { /* çevrimdışı */ }
+      return (await caches.match('./index.html')) || new Response(
         '<meta charset=utf-8><p style="font:16px system-ui;padding:24px">FitSet çevrimdışı açılamadı. Bir kez internete bağlıyken açman gerekiyor.</p>',
-        { headers: { 'Content-Type': 'text/html; charset=utf-8' } }))
-    )());
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    })());
     return;
   }
 
