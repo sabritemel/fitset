@@ -33,6 +33,9 @@ export const DEFAULT_SETTINGS = {
   theme: 'auto',
   trainingDays: [2, 4, 6],       // 0=Pazar … 2=Salı, 4=Perşembe, 6=Cumartesi
   backupNagEvery: 8,             // kaç seansta bir yedek hatırlatması
+  // Egzersiz bazında kullanıcı hedefleri: { [exerciseId]: {sets, reps, seconds, weight} }
+  // Program dosyasına dokunmadan üzerine yazmayı sağlar; yedeğe de dahildir.
+  overrides: {},
 };
 
 /* ── Sürücüler ─────────────────────────────────────────────────────────── */
@@ -163,11 +166,20 @@ export async function lastDoneSession() {
  * @returns {{sets:Array, at:number, session:string}|null}
  */
 export async function lastPerformance(exerciseId, excludeSessionId = null) {
-  for (const s of await doneSessions()) {          // bitiş zamanına göre sıralı
-    if (s.id === excludeSessionId) continue;
+  const bul = s => {
+    if (s.id === excludeSessionId) return null;
     const e = s.entries.find(x => x.exerciseId === exerciseId);
     const sets = e?.sets.filter(x => !x.warmup) ?? [];
-    if (sets.length) return { sets, at: s.finishedAt ?? s.startedAt, session: s.id };
+    return sets.length ? { sets, at: s.finishedAt ?? s.startedAt, session: s.id } : null;
+  };
+  // 1) Bitmiş seanslar — bitiş zamanına göre yeniden eskiye
+  for (const s of await doneSessions()) { const r = bul(s); if (r) return r; }
+  // 2) Bulunamadıysa yarım kalmış eski seanslara da bak. Kullanıcı "bitir"e
+  //    basmayı unutmuş olabilir; girdiği ağırlık yine de geçerli bir referanstır.
+  //    (Bu olmadan, bir kez bile "bitir"e basılmamışsa kutular hep boş gelirdi.)
+  for (const s of await allSessions()) {
+    if (s.status === 'done') continue;
+    const r = bul(s); if (r) return r;
   }
   return null;
 }

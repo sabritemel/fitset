@@ -68,7 +68,7 @@ const hold = new Countdown({
   onDone: async () => {
     $('clock')?.classList.remove('run');
     const ex = curEx();
-    await kaydet(ex, { type: 'time', seconds: ctx.draft.seconds ?? ex.target.seconds, warmup: !!ctx.draft.warmup });
+    await kaydet(ex, { type: 'time', seconds: ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds, warmup: !!ctx.draft.warmup });
     toast('Süre doldu — set kaydedildi.');
   },
 });
@@ -86,6 +86,51 @@ function restBar(göster) {
     <button data-act="rest-skip">Geç</button>`;
   document.body.append(d);
 }
+
+/* ── Kayan panel ───────────────────────────────────────────────────────── */
+function sheet(aç) {
+  const s = $('sheet'), bg = document.querySelector('.sheet-bg');
+  if (!s || !bg) return;
+  if (aç) {
+    bg.hidden = false;
+    requestAnimationFrame(() => { bg.classList.add('on'); s.classList.add('on'); });
+    s.setAttribute('aria-hidden', 'false');
+  } else {
+    s.classList.remove('on'); bg.classList.remove('on');
+    s.setAttribute('aria-hidden', 'true');
+    s.style.transform = '';
+    setTimeout(() => { bg.hidden = true; }, 300);
+  }
+}
+const sheetAçık = () => $('sheet')?.classList.contains('on');
+
+/** Aşağı sürükleyerek kapatma — parmakla en doğal kapanış */
+let sy = 0, sürükle = false;
+document.addEventListener('touchstart', e => {
+  if (!sheetAçık()) return;
+  const s = $('sheet');
+  // Panel içeriği yukarı kaydırılmışsa sürükleme değil kaydırma istiyordur
+  if (e.target.closest('.sheet-in') && $('sheet').querySelector('.sheet-in').scrollTop > 0) return;
+  if (!e.target.closest('.sheet')) return;
+  sy = e.touches[0].clientY; sürükle = true; s.style.transition = 'none';
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!sürükle) return;
+  const d = e.touches[0].clientY - sy;
+  if (d > 0) $('sheet').style.transform = `translateY(${d}px)`;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if (!sürükle) return;
+  sürükle = false;
+  const s = $('sheet');
+  s.style.transition = '';
+  const d = e.changedTouches[0].clientY - sy;
+  if (d > 90) sheet(false); else s.style.transform = '';   // eşiği geçmediyse geri yerine
+});
+
+addEventListener('keydown', e => { if (e.key === 'Escape' && sheetAçık()) sheet(false); });
 
 /* ── Çizim ─────────────────────────────────────────────────────────────── */
 function render() {
@@ -129,7 +174,7 @@ const stopAnim = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
 /* ── Kayıt ─────────────────────────────────────────────────────────────── */
 function draftFor(ex) {
   const lp = ctx.lastPerf[ex.id];
-  const ö = N.suggestSet(ex, ctx.session, lp);
+  const ö = N.suggestSet(ex, ctx.session, lp, ctx.settings);
   return { ...ö, warmup: false };
 }
 
@@ -147,7 +192,7 @@ async function kaydetTıklandı() {
   const ex = curEx();
   const ısınma = $('warm')?.checked ?? false;
   if (ex.setType === 'time') {
-    const sn = ctx.draft.seconds ?? ex.target.seconds;
+    const sn = ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds;
     hold.stop();
     $('clock')?.classList.remove('run');
     return kaydet(ex, { type: 'time', seconds: sn, warmup: ısınma });
@@ -180,11 +225,50 @@ document.addEventListener('click', async e => {
     return;
   }
 
+  // Paneldeki hedef adımlayıcıları — taslağa değil, hedef alanlarına yazar
+  const gs = t.closest('[data-gstep]');
+  if (gs) {
+    const [field, d] = gs.dataset.gstep.split(':');
+    const inp = $('g-' + field);
+    inp.value = Math.max(0, Math.round(((+inp.value || 0) + +d) * 100) / 100);
+    return;
+  }
+
   const a = t.closest('[data-act]')?.dataset.act;
   if (!a) return;
   const ex = ctx.view === 'focus' ? curEx() : null;
 
   switch (a) {
+    case 'sheet-open': sheet(true); break;
+    case 'sheet-close': sheet(false); break;
+
+    case 'goal-save': {
+      // Boş bırakılan alan "override yok" demektir — programın değeri geçerli kalır
+      const al = f => { const el = $('g-' + f); if (!el) return undefined; const v = el.value.trim(); return v === '' ? undefined : +v; };
+      const o = {};
+      for (const f of ['sets', 'reps', 'seconds', 'minutes', 'weight']) {
+        const v = al(f);
+        if (v !== undefined && !Number.isNaN(v)) o[f] = v;
+      }
+      if (o.sets !== undefined) o.sets = Math.max(1, Math.round(o.sets));
+      const ov = { ...ctx.settings.overrides, [ex.id]: o };
+      ctx.settings = await S.saveSettings({ overrides: ov });
+      // Yeni hedef ağırlık girildiyse kutuya HEMEN yansısın: yeni plan,
+      // geçen seferki gerçekleşmeyi ezmeli (yoksa "kaydettim ama değişmedi" olur).
+      ctx.draft = draftFor(ex);
+      if (o.weight !== undefined) ctx.draft.weight = o.weight;
+      sheet(false); render();
+      toast(`Hedef güncellendi: ${N.repsLabel(ex, ctx.settings)}`);
+      break;
+    }
+    case 'goal-reset': {
+      const ov = { ...ctx.settings.overrides }; delete ov[ex.id];
+      ctx.settings = await S.saveSettings({ overrides: ov });
+      ctx.draft = draftFor(ex);
+      sheet(false); render();
+      toast('Programın kendi hedefine dönüldü.');
+      break;
+    }
     case 'to-list': stopAnim(); ctx.view = 'list'; render(); scrollTo(0, 0); break;
     case 'prev': git(ctx.idx - 1); break;
     case 'next': git(ctx.idx + 1); break;
@@ -203,13 +287,13 @@ document.addEventListener('click', async e => {
     }
 
     case 'clock-start':
-      if (hold.running) { hold.stop(); $('clock').classList.remove('run'); $('clock-time').textContent = mmss(ctx.draft.seconds ?? ex.target.seconds); }
-      else { await hold.start(ctx.draft.seconds ?? ex.target.seconds); $('clock').classList.add('run'); }
+      if (hold.running) { hold.stop(); $('clock').classList.remove('run'); $('clock-time').textContent = mmss(ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds); }
+      else { await hold.start(ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds); $('clock').classList.add('run'); }
       break;
     case 'clock-plus': case 'clock-minus': {
       const d = a === 'clock-plus' ? 15 : -15;
       if (hold.running) hold.extend(d);
-      else { ctx.draft.seconds = Math.max(5, (ctx.draft.seconds ?? ex.target.seconds) + d); $('clock-time').textContent = mmss(ctx.draft.seconds); }
+      else { ctx.draft.seconds = Math.max(5, (ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds) + d); $('clock-time').textContent = mmss(ctx.draft.seconds); }
       break;
     }
 

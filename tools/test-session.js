@@ -154,5 +154,68 @@ console.log('\n8) BİTİŞ ÖZETİ');
   ok((await N.nextDayIndex()) === 1, 'bitince sıradaki gün döndü');
 }
 
+console.log('\n9) ⭐ BAYAT SEANS KENDİLİĞİNDEN KAPANIR');
+{
+  // Gerçek kullanımdan çıkan hata: salondan "Seansı bitir"e basmadan çıkınca
+  // seans sonsuza kadar açık kalıyor, ertesi gün "geçen sefer" boş geliyordu.
+  await S.driver.clear('sessions');
+  const SAAT = 3_600_000;
+  const s = S.newSession(0);
+  s.startedAt = Date.now() - 9 * SAAT;
+  N.recordSet(s, 'bb_bench_press', { type: 'weight_reps', weight: 40, reps: 12, warmup: false });
+  s.entries[0].sets[0].ts = Date.now() - 8 * SAAT;      // son hareket 8 saat önce
+  await S.saveSession(s);
+
+  const r = await N.closeStaleSession();
+  ok(r?.action === 'closed', '8 saat dokunulmamış seans kapatıldı');
+  const kapali = await S.getSession(s.id);
+  ok(kapali.status === 'done', 'durumu "done" oldu');
+  ok(Math.abs(kapali.finishedAt - s.entries[0].sets[0].ts) < 1000,
+     'bitiş damgası SON HAREKET anı — "şimdi" olsaydı süre 8 saat görünürdü');
+  ok((await N.nextDayIndex()) === 1, 'kapandığı için A/B sırası ilerledi');
+  ok((await S.lastPerformance('bb_bench_press'))?.sets[0].weight === 40,
+     '"geçen sefer" artık dolu — asıl şikâyetin kökü buydu');
+
+  // Taze seans kapatılmamalı
+  await S.driver.clear('sessions');
+  const t = S.newSession(0);
+  N.recordSet(t, 'plank', { type: 'time', seconds: 15, warmup: false });
+  await S.saveSession(t);
+  ok((await N.closeStaleSession()) === null, 'devam eden taze seansa DOKUNULMAZ');
+
+  // Hiç set girilmemiş bayat seans kaydedilmez, atılır
+  await S.driver.clear('sessions');
+  const b = S.newSession(0); b.startedAt = Date.now() - 9 * SAAT;
+  await S.saveSession(b);
+  ok((await N.closeStaleSession())?.action === 'discarded', 'boş bayat seans geçmişe eklenmez, atılır');
+  ok((await S.allSessions()).length === 0, 'gerçekten silindi');
+}
+
+console.log('\n10) HEDEF ÜZERİNE YAZMA (kullanıcı/hoca değişikliği)');
+{
+  const bench = N.byId['bb_bench_press'], plank = N.byId['plank'];
+  const boş = { ...S.DEFAULT_SETTINGS, overrides: {} };
+  ok(N.effective(bench, boş).sets === 3, 'override yoksa programın hedefi geçerli');
+  ok(N.repsLabel(bench, boş) === '3 × 12', `etiket veriden türüyor: "${N.repsLabel(bench, boş)}"`);
+
+  const st = { ...S.DEFAULT_SETTINGS, overrides: { bb_bench_press: { sets: 4, reps: 10, weight: 45 } } };
+  const e = N.effective(bench, st);
+  ok(e.sets === 4 && e.reps === 10 && e.weight === 45, 'override uygulanıyor');
+  ok(e.edited === true, 'değiştirilmiş olarak işaretleniyor');
+  ok(N.repsLabel(bench, st) === '4 × 10', 'etiket de güncelleniyor');
+  ok(N.effective(plank, st).sets === 3, 'başka egzersiz etkilenmiyor');
+
+  await S.driver.clear('sessions');
+  const { session } = await N.startOrResume();
+  ok(N.progress(session, 0, st).total === 28, 'gün toplamı 27 → 28 (bench 3→4 set)');
+  ok(N.exerciseProgress(session, bench, st).hedef === 4, 'egzersiz hedefi 4');
+  ok(N.blankSet(bench, st).weight === 45, 'planlanan ağırlık kutuya ön-doldurulur');
+
+  const kısmi = { ...S.DEFAULT_SETTINGS, overrides: { bb_bench_press: { sets: 5 } } };
+  const k = N.effective(bench, kısmi);
+  ok(k.sets === 5 && k.reps === 12, 'kısmi override: yalnız verilen alan değişir, gerisi programdan');
+  ok(k.weight === null, 'ağırlık verilmediyse boş kalır (geçen sefer devreye girer)');
+}
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

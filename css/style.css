@@ -117,21 +117,40 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .btn.primary { background: var(--acc); color: #12060A; }
 .btn:disabled { opacity: .4; }
 
-/* ══ ODAK EKRANI ══════════════════════════════════════════════════════════ */
+/* ══ ODAK EKRANI ══════════════════════════════════════════════════════════
+   ⚠️ BU EKRAN KAYMAZ. Salonda ekranı kaydırmak, ıslak parmakla yanlış yere
+   dokunmak ve aradığını bulamamak demek. Yapı: sabit bantlar + ESNEYEN TEK
+   bir bölge (görsel). Yükseklik içerikten değil EKRANDAN geliyor; küçük
+   telefonda figür küçülür, büyükte büyür, hiçbirinde taşmaz.
+   Adımlar ve "dikkat" notu kayan panele (.sheet) taşındı. */
+#focus-screen {
+  height: 100vh; height: 100dvh;   /* dvh: tarayıcı çubuğu açılıp kapanınca zıplamasın */
+  overflow: hidden;
+}
 #focus-screen .top {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 18px 0; gap: 12px;
+  padding: 10px 18px 0; gap: 10px; flex: none;
 }
-#focus-screen .back { padding: 6px 0; min-height: 40px; color: var(--dim); font-size: 13px; }
+#focus-screen .back,
+#focus-screen .how { padding: 6px 0; min-height: 38px; color: var(--dim); font-size: 13px; flex: none; }
+#focus-screen .how { color: var(--acc); text-decoration: underline; }
+#focus-screen .top .lbl { flex: 1; text-align: center; }
+#focus-screen .head { flex: none; padding: 4px 18px 0; }
 #focus-screen h2 {
   font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
-  font-size: 27px; line-height: 1.05; letter-spacing: -.025em; margin: 12px 18px 0;
-  text-wrap: balance;
+  font-size: clamp(19px, 5.6vw, 26px); line-height: 1.06; letter-spacing: -.025em;
+  margin: 0; text-wrap: balance;
 }
-#focus-screen .sub { margin: 5px 18px 0; color: var(--dim); font-size: 14px; }
+#focus-screen .sub { margin: 2px 0 0; color: var(--dim); font-size: 13.5px; }
 
-.viz { margin: 13px 18px 0; background: var(--surf); border-radius: 16px; padding: 4px 0; position: relative; }
-.viz svg { display: block; width: 100%; height: auto; }
+/* Esneyen tek bölge: kalan boşluğun tamamını alır */
+.viz {
+  flex: 1 1 auto; min-height: 0; margin: 10px 18px 0; background: var(--surf);
+  border-radius: 16px; padding: 4px 0; position: relative;
+  display: flex; flex-direction: column;
+}
+.viz svg { flex: 1 1 auto; min-height: 0; display: block; width: 100%; }
+.foot-block { flex: none; }
 .art { stroke: var(--fig); }
 .far { stroke: #55607A; }
 .ghost { stroke: #3A4256; stroke-width: 3; stroke-dasharray: 5 5; }
@@ -143,8 +162,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .scrub { width: calc(100% - 28px); margin: 2px 14px 8px; accent-color: var(--acc); height: 30px; }
 
 /* Plank gibi izometrik hareketler: doğru duruş + yaygın hatalar yan yana */
-.variants { display: flex; gap: 8px; margin: 13px 18px 0; }
-.variants figure { flex: 1; margin: 0; background: var(--surf); border-radius: 12px; overflow: hidden; }
+.variants { display: flex; gap: 8px; margin: 10px 18px 0; flex: 1 1 auto; min-height: 0; }
+.variants figure { flex: 1; margin: 0; background: var(--surf); border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; }
+.variants figure svg { flex: 1 1 auto; min-height: 0; }
 .variants figure.ok { box-shadow: inset 0 0 0 1.5px var(--ok); }
 .variants svg { display: block; width: 100%; height: auto; }
 .variants figcaption { padding: 7px 9px 10px; }
@@ -153,15 +174,80 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .variants figure:not(.ok) b { color: var(--acc); }
 .variants figcaption span { font-size: 11.5px; color: var(--dim); line-height: 1.35; display: block; }
 
-.steps { margin: 14px 18px 0; padding-left: 20px; color: var(--dim); font-size: 14px; line-height: 1.5; }
-.steps li { margin-bottom: 5px; }
-.steps li::marker { color: var(--acc); font-family: 'Space Mono', monospace; font-size: 12px; }
-.tip { margin: 12px 18px 0; font-size: 14px; color: var(--warn); line-height: 1.45; }
-.tip b { display: block; margin-bottom: 2px; }
+/* KISA EKRAN: sabit bantlar yer açsın diye sıkışır.
+   Ölçüldü: 640px yükseklikte figür 149px'e, 568px'te 16px'e düşüyordu — taşma
+   yoktu ama figür kullanılamaz hale geliyordu. Burada ~65px kazanılıyor.
+   Kırpma DEĞİL küçültme: hiçbir kontrol kaybolmuyor, kaydet düğmesi yerinde. */
+@media (max-height: 720px) {
+  #focus-screen h2 { font-size: 19px; }
+  #focus-screen .sub { display: none; }        /* hedef zaten üst şeritte yazıyor */
+  #focus-screen .head { padding-top: 2px; }
+  .viz { margin-top: 7px; }
+  .nums .val { font-size: 34px; }
+  .pm button { height: 40px; }
+  .pm { margin-top: 6px; }
+  .go { height: 50px; margin-top: 8px; }
+  .prev { margin-top: 7px; }
+  .warmtog, .hintrow { min-height: 30px; }
+}
 
-.prev { margin: 14px 18px 0; font-size: 12.5px; color: var(--dim); }
+/* ── Kayan panel: anlatım + hareket ayarları ───────────────────────────────
+   Odak ekranından çıkarılan her şey buraya. Aşağıdan kayar, okunur, kapanır:
+   arka plana dokun, tutamağa dokun, aşağı sürükle ya da Escape. */
+.sheet-bg { position: fixed; inset: 0; z-index: 50; background: rgb(4 6 10 / .62);
+  opacity: 0; transition: opacity .22s ease; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.sheet-bg.on { opacity: 1; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 51;
+  max-width: var(--wrap); margin: 0 auto; max-height: 84dvh;
+  background: var(--surf2); border-radius: 22px 22px 0 0;
+  box-shadow: 0 -16px 46px rgb(0 0 0 / .55);
+  display: flex; flex-direction: column;
+  transform: translateY(101%);
+  transition: transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+.sheet.on { transform: none; }
+.grab { display: block; width: 100%; padding: 13px 0 7px; flex: none; }
+.grab::before { content: ''; display: block; width: 46px; height: 4px; border-radius: 2px;
+  background: var(--dim); opacity: .6; margin: 0 auto; }
+.sheet-in { overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 2px 20px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.sheet-in h3 { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
+  font-size: 21px; letter-spacing: -.02em; margin: 0; }
+.sheet-sub { margin: 2px 0 14px; color: var(--dim); font-size: 14px; }
+.sheet .mus { margin: 0 0 14px; font-size: 14.5px; }
+.sheet .mus .lbl { display: block; margin-bottom: 2px; color: var(--acc); }
+
+/* Hedef bloğu — programın üzerine yazma */
+.goal { background: var(--bg); border-radius: 14px; padding: 14px 15px 15px; margin: 0 0 18px; }
+.goal-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.reset-goal { color: var(--acc); font-size: 12.5px; text-decoration: underline; padding: 6px 0; min-height: 34px; }
+.goal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
+.gf .lbl { display: block; margin-bottom: 5px; }
+.gbox { display: flex; align-items: stretch; border: 1.5px solid var(--line); border-radius: 11px;
+  overflow: hidden; background: var(--surf); }
+.gbox button { width: 44px; flex: none; font-size: 20px; color: var(--acc); }
+.gbox button:active { background: var(--line); }
+.gbox input { flex: 1; min-width: 2ch; border: 0; background: none; color: var(--tx); text-align: center;
+  font-size: 19px; font-variant-numeric: tabular-nums; padding: 11px 2px; -moz-appearance: textfield; }
+.gbox input::-webkit-outer-spin-button, .gbox input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.gbox input::placeholder { color: var(--dim); }
+.goal-save { width: 100%; margin-top: 12px; min-height: var(--touch); border-radius: 12px;
+  background: var(--acc); color: #12060A;
+  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800; font-size: 16px; }
+.goal-note { margin: 10px 0 0; font-size: 12.5px; color: var(--dim); line-height: 1.45; }
+
+.steps { margin: 0 0 16px; padding-left: 20px; color: var(--tx); font-size: 14.5px; line-height: 1.55; }
+.steps li { margin-bottom: 8px; }
+.steps li::marker { color: var(--acc); font-family: 'Space Mono', monospace; font-size: 12px; }
+.tip { margin: 0; font-size: 14.5px; color: var(--warn); line-height: 1.5; }
+.tip .lbl { display: block; margin-bottom: 2px; color: var(--warn); }
+
+.prev { margin: 10px 18px 0; font-size: 12.5px; color: var(--dim); }
 .prev b { color: var(--tx); font-weight: 400; }
-.chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 11px 18px 0; }
+.chips { display: flex; gap: 6px; padding: 8px 18px 0; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chips > * { flex: none; }
 .chips span {
   padding: 7px 11px; border-radius: 9px; background: var(--surf); font-size: 12px;
   font-family: 'Space Mono', ui-monospace, monospace; color: var(--dim);
@@ -171,7 +257,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .chips button.undo { color: var(--acc); font-size: 12px; text-decoration: underline; padding: 7px 4px; min-height: 40px; }
 
 /* Sayı girişi — rakamlar sayfanın kahramanı */
-.nums { display: flex; gap: 12px; padding: 8px 18px 0; }
+.nums { display: flex; gap: 12px; padding: 6px 18px 0; }
 .nums .f { flex: 1; text-align: center; min-width: 0; }
 .nums .val {
   font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
@@ -186,17 +272,22 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .pm { display: flex; gap: 9px; margin-top: 8px; }
 .pm button { flex: 1; height: 46px; border-radius: 11px; background: var(--surf); font-size: 22px; }
 .pm button:active { background: var(--surf2); }
-.hint { margin: 9px 18px 0; text-align: center; font-size: 12.5px; color: var(--dim); }
-.warmtog { display: flex; align-items: center; justify-content: center; gap: 8px;
-  margin: 12px 18px 0; color: var(--dim); font-size: 13.5px; min-height: 40px; }
-.warmtog input { width: 20px; height: 20px; accent-color: var(--acc); }
+/* İpucu ve ısınma tek satırda — her satır ekrandan yer çalıyor */
+.hintrow { display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 6px 18px 0; }
+.hint { font-size: 12px; color: var(--dim); }
+.warmtog { display: flex; align-items: center; gap: 7px; color: var(--dim);
+  font-size: 13px; min-height: 36px; flex: none; }
+.warmtog input { width: 19px; height: 19px; accent-color: var(--acc); }
 
-.go { margin: 14px 18px 0; height: 58px; border-radius: 15px; background: var(--acc); color: #12060A;
+/* Kaydet: başparmak bölgesinde, ekranın en büyük hedefi */
+.go { margin: 10px 18px 0; height: 56px; border-radius: 15px; background: var(--acc); color: #12060A;
   font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800; font-size: 18px;
   width: calc(100% - 36px); }
+.go:active { filter: brightness(.9); }
 .nav { display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 18px calc(18px + env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--dim); }
-.nav button { padding: 10px 4px; min-height: 44px; color: var(--dim); }
+  padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--dim); }
+.nav button { padding: 10px 8px; min-height: 44px; color: var(--dim); }
 .nav button:disabled { opacity: .3; }
 
 /* ── Geri sayım ────────────────────────────────────────────────────────── */
@@ -225,7 +316,11 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .rest .l { flex: 1; font-size: 13px; color: var(--dim); }
 .rest button { padding: 10px 12px; border-radius: 9px; background: var(--surf); font-size: 13px; min-height: 44px; }
 
+/* Dinlenme şeridi sabit konumlu. Liste ekranı kaydığı için gövdeye pay eklenir;
+   odak ekranı kaymadığı için oraya padding verilir — bu, esneyen görsel
+   alanını kısaltır, yani şerit hiçbir şeyin üstünü örtmez. */
 body.resting { padding-bottom: 84px; }
+body.resting #focus-screen { padding-bottom: 64px; }
 
 /* ── Bildirim şeridi ───────────────────────────────────────────────────── */
 .toast {

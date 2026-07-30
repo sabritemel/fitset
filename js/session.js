@@ -25,15 +25,52 @@ export async function nextDayIndex() {
   return last ? (last.dayIndex === 0 ? 1 : 0) : 0;
 }
 
+/** Seansın son hareketi ne zamandı — bitiş damgası ve bayatlık bundan çıkar */
+export function lastActivity(s) {
+  let t = s.startedAt;
+  for (const e of s.entries) for (const x of e.sets) if (x.ts > t) t = x.ts;
+  return t;
+}
+
+export const STALE_HOURS = 6;
+
 /**
- * Uygulama açılışı: yarıda kalmış seans varsa ONA devam edilir, yoksa
- * sıradaki gün için yeni seans açılır (henüz kaydedilmez — kullanıcı ilk
- * seti işaretlediğinde kaydedilir ki boş seans geçmişi kirletmesin).
+ * BAYAT SEANSI KAPAT.
+ *
+ * Gerçek kullanımdan çıkan hata: kullanıcı salondan çıkarken "Seansı bitir"e
+ * basmayı unutuyor. Seans sonsuza kadar `active` kalıyor ve şu iki şey bozuluyor:
+ *   1. O seans hiç GEÇMİŞE geçmiyor → ertesi gün "geçen sefer" boş geliyor
+ *      ve ağırlık kutuları doldurulamıyor.
+ *   2. A/B sırası ilerlemiyor → hep aynı gün gösteriliyor.
+ *
+ * Çözüm: son SET girişinden STALE_HOURS geçmişse seans kendiliğinden kapanır.
+ * Bitiş damgası "şimdi" değil SON HAREKET anı — yoksa süre özeti saatlerce
+ * antrenman yapmışsın gibi görünürdü.
+ *
+ * Eşik neden 6 saat: gece yarısını geçen bir antrenmanı bölmemeli, ama ertesi
+ * gün uygulamayı açtığında dünkü seans kapanmış olmalı.
+ */
+export async function closeStaleSession(now = Date.now()) {
+  const a = await store.activeSession();
+  if (!a) return null;
+  if ((now - lastActivity(a)) / 3_600_000 < STALE_HOURS) return null;
+  if (!hasAnySet(a)) { await abandon(a); return { action: 'discarded' }; }
+  a.status = 'done';
+  a.finishedAt = lastActivity(a);
+  await store.saveSession(a);
+  return { action: 'closed', session: a };
+}
+
+/**
+ * Uygulama açılışı: bayat seans varsa önce kapatılır, sonra yarıda kalmış
+ * seans varsa ONA devam edilir, yoksa sıradaki gün için yeni seans açılır
+ * (henüz kaydedilmez — ilk set girilince kaydedilir ki boş seans geçmişi kirletmesin).
  */
 export async function startOrResume() {
+  const stale = await closeStaleSession();
   const active = await store.activeSession();
-  if (active) return { session: active, resumed: true };
-  return { session: store.newSession(await nextDayIndex()), resumed: false };
+  if (active) return { session: active, resumed: true, stale };
+  return { session: store.newSession(await nextDayIndex()), resumed: false, stale };
 }
 
 /* ── Kayıt işlemleri ───────────────────────────────────────────────────── */
@@ -46,11 +83,11 @@ export function entryFor(session, exerciseId) {
 }
 
 /** Egzersizin tipine göre boş bir set nesnesi — hedef değerlerle önceden dolu */
-export function blankSet(ex) {
-  const t = ex.setType;
-  if (t === 'time') return { type: 'time', seconds: ex.target.seconds, warmup: false };
-  if (t === 'cardio') return { type: 'cardio', minutes: ex.target.minutes, warmup: false };
-  return { type: 'weight_reps', weight: null, reps: ex.target.reps, warmup: false };
+export function blankSet(ex, settings) {
+  const t = effective(ex, settings);
+  if (ex.setType === 'time') return { type: 'time', seconds: t.seconds, warmup: false };
+  if (ex.setType === 'cardio') return { type: 'cardio', minutes: t.minutes, warmup: false };
+  return { type: 'weight_reps', weight: t.weight, reps: t.reps, warmup: false };
 }
 
 /**
@@ -59,10 +96,10 @@ export function blankSet(ex) {
  *          (2) geçen seferki son çalışma seti, (3) boş.
  * Bu bir TAVSİYE değil, tuş sayısını azaltan bir ön-doldurmadır.
  */
-export function suggestSet(ex, session, lastPerf) {
+export function suggestSet(ex, session, lastPerf, settings) {
   const mine = entryFor(session, ex.id).sets.filter(s => !s.warmup);
   const src = mine.at(-1) ?? lastPerf?.sets?.at(-1);
-  const base = blankSet(ex);
+  const base = blankSet(ex, settings);
   if (!src || src.type !== base.type) return base;
   return { ...base, ...(src.weight != null && { weight: src.weight }), reps: src.reps ?? base.reps };
 }
@@ -98,21 +135,53 @@ export const hasAnySet = session => session.entries.some(e => e.sets.length > 0)
 
 /* ── İlerleme ve bitiş ─────────────────────────────────────────────────── */
 
+/**
+ * ETKİN HEDEF — programın varsayılanı + kullanıcının kendi değişikliği.
+ *
+ * Program sabit değil: hoca "bench'i 4 sete çıkar" diyebilir, ya da sen bir
+ * hareketi 15 tekrara indirebilirsin. Kaynak dosyaya dokunmadan, egzersiz
+ * bazında üzerine yazılabilsin diye ayrı tutuluyor. Override yoksa program
+ * ne diyorsa o geçerli.
+ */
+export function effective(ex, settings) {
+  const o = settings?.overrides?.[ex.id] ?? {};
+  return {
+    sets: o.sets ?? ex.sets,
+    reps: o.reps ?? ex.target.reps,
+    seconds: o.seconds ?? ex.target.seconds,
+    minutes: o.minutes ?? ex.target.minutes,
+    weight: o.weight ?? null,          // planlanan ağırlık (isteğe bağlı)
+    edited: Object.keys(o).length > 0,
+  };
+}
+
+/** "3 × 12" / "3 × 15 sn" — etiket artık veriden türetiliyor, elle yazılmıyor */
+export function repsLabel(ex, settings) {
+  const t = effective(ex, settings);
+  const alt = ex.setsMin && ex.setsMin !== t.sets ? `${ex.setsMin}-${t.sets}` : `${t.sets}`;
+  if (ex.setType === 'time') return `${alt} × ${t.seconds} sn`;
+  if (ex.setType === 'cardio') return `${t.minutes} dk`;
+  return `${alt} × ${t.reps}`;
+}
+
 /** { done, total, pct } — hedef set sayısına göre ilerleme */
-export function progress(session, dayIndex) {
-  const total = exercisesFor(dayIndex).reduce((a, e) => a + e.sets, 0);
+export function progress(session, dayIndex, settings) {
+  const exs = exercisesFor(dayIndex);
+  const total = exs.reduce((a, e) => a + effective(e, settings).sets, 0);
   const done = session.entries.reduce((a, e) => {
     const ex = byId[e.exerciseId];
-    return a + Math.min(e.sets.length, ex?.sets ?? e.sets.length);   // fazla set ilerlemeyi >%100 yapmasın
+    const hedef = ex ? effective(ex, settings).sets : e.sets.length;
+    return a + Math.min(e.sets.filter(s => !s.warmup).length, hedef);  // fazla set >%100 yapmasın
   }, 0);
   return { done, total, pct: total ? Math.round(done / total * 100) : 0 };
 }
 
 /** Egzersiz bazında: kaç set girildi, hedefe ulaşıldı mı */
-export function exerciseProgress(session, ex) {
+export function exerciseProgress(session, ex, settings) {
   const sets = session.entries.find(x => x.exerciseId === ex.id)?.sets ?? [];
   const calisma = sets.filter(s => !s.warmup).length;
-  return { sets, calisma, hedef: ex.sets, tamam: calisma >= ex.sets };
+  const hedef = effective(ex, settings).sets;
+  return { sets, calisma, hedef, tamam: calisma >= hedef };
 }
 
 /** Seansı bitirir ve kaydeder. Hiç set yoksa kaydetmez — boş seans geçmişi kirletir. */

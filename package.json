@@ -5,9 +5,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "node tools/verify-poses.js && node tools/verify-port.js && node tools/test-store.js && node tools/test-session.js",
+    "test": "node tools/bump-sw.js && node tools/verify-poses.js && node tools/verify-port.js && node tools/test-store.js && node tools/test-session.js",
     "verify": "node tools/verify-poses.js",
     "icons": "node tools/make-icons.js",
-    "fonts": "node tools/fetch-fonts.js"
+    "fonts": "node tools/fetch-fonts.js",
+    "bump": "node tools/bump-sw.js"
   }
 }
