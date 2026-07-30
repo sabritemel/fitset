@@ -27,16 +27,30 @@
   --bg: #0A0B0D;
   --s1: #111316;
   --s2: #181B1F;
-  --line:  rgba(255, 255, 255, .08);
-  --line2: rgba(255, 255, 255, .14);
-  --ink:  #F4F5F6;
-  --ink2: #969CA4;
-  --ink3: #5C626A;
+  /* ── TON: kırık, kamaştırmayan ──────────────────────────────────────────
+     Saf beyaza yakın mürekkep karanlık salonda göze vuruyordu. Ama çözüm
+     her şeyi karartmak DEĞİL: fazla sönük yazı da göz yorar, çünkü okumak
+     için gözü zorlarsın. İki uçtan birden yaklaşıldı —
+       parlak uç indi   : #F4F5F6 → #CDD1D7   (18.4:1 → 12.5:1)
+       sönük uç yükseldi: #5C626A → #777E88   ( 2.9:1 →  4.6:1)
+     Hiçbir metin WCAG AA'nın (4.5:1) belirgin altına düşmüyor; azalan şey
+     kontrast değil PARLAKLIK. */
+  --line:  rgba(255, 255, 255, .07);
+  --line2: rgba(255, 255, 255, .12);
+  --ink:  #CDD1D7;
+  --ink2: #8D939C;
+  --ink3: #777E88;
 
-  --live: #FF3B4E;          /* yalnız canlı olan şey */
-  --warn: #E8B45C;          /* yalnız "dikkat" notu — eylem rengi değil */
+  /* Birincil dolgu ekranın EN BÜYÜK parlak alanı — o yüzden metinden bir
+     tık daha kırık. Yine de baskın; hiyerarşi bozulmuyor. */
+  --btn: #C8CCD3;
+  /* Figür geniş bir çizgi kümesi; aynı tonda olsa göz oraya çakılıyor. */
+  --fig-stroke: #BFC4CC;
 
-  --fig: var(--ink);
+  --live: #EE5568;          /* yalnız canlı olan şey — kırmızı da yumuşatıldı */
+  --warn: #D8AA5E;          /* yalnız "dikkat" notu — eylem rengi değil */
+
+  --fig: var(--fig-stroke);
   --fig-head: var(--bg);    /* kafa dairesi zemini maskeler; kart yok, zemin bu */
 
   --r1: 6px; --r2: 10px; --r3: 14px;
@@ -76,7 +90,7 @@ input { font: inherit; }
 
 /* ── Düğmeler: üç seviye, HİÇBİRİ altı çizili yazı değil ────────────────── */
 .b1 { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-  height: 54px; border-radius: var(--r2); background: var(--ink); color: #0A0B0D;
+  height: 54px; border-radius: var(--r2); background: var(--btn); color: #0A0B0D;
   font-size: 15.5px; font-weight: 600; letter-spacing: -.01em;
   transition: transform .12s ease, filter .12s ease; }
 .b1:active { transform: scale(.99); filter: brightness(.9); }
@@ -94,7 +108,7 @@ input { font: inherit; }
 /* ── İlerleme rayı: dolu/boş, renk yok (canlı olan hariç) ───────────────── */
 .rail { display: flex; gap: 3px; padding: 16px 20px 0; flex: none; }
 .rail i { flex: 1; height: 2px; background: var(--line2); border-radius: 1px; }
-.rail i.f { background: var(--ink); }
+.rail i.f { background: var(--ink2); }
 .rail i.c { background: var(--live); }
 
 /* ══ LİSTE EKRANI ═════════════════════════════════════════════════════════ */
@@ -116,7 +130,7 @@ input { font: inherit; }
 .li .nm .t-m { margin-top: 1px; display: block; }
 .li .pips { display: flex; gap: 3px; flex: none; }
 .li .pips i { width: 5px; height: 5px; border-radius: 999px; border: 1px solid var(--line2); }
-.li .pips i.f { background: var(--ink); border-color: var(--ink); }
+.li .pips i.f { background: var(--ink2); border-color: var(--ink2); }
 .li.done .t-h2 { color: var(--ink2); }
 .li.now { background: var(--s1); }
 .li.now .ix { color: var(--live); }
@@ -164,7 +178,7 @@ input { font: inherit; }
 .variants b { display: block; font-size: 12px; font-weight: 600; margin-bottom: 2px; }
 .variants figure.ok b { color: var(--ink); }
 .variants figure:not(.ok) b { color: var(--ink3); }
-.variants figure.ok figcaption { border-top-color: var(--ink); }
+.variants figure.ok figcaption { border-top-color: var(--ink2); }
 .variants figcaption span { display: block; font-size: 11px; line-height: 1.35; color: var(--ink3); }
 
 /* Rozetler: dolgu yok, kıl payı çerçeve — kayıt izi sessizdir */
