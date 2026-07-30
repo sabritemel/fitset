@@ -440,21 +440,51 @@ document.addEventListener('visibilitychange', () => {
   if (bugün !== bootDay) { bootDay = bugün; ctx.status = C.todayStatus(ctx.settings.trainingDays); render(); }
 });
 
-/* Service worker — güncelleme kullanıcının kararı, antrenman ortasında değil */
+/**
+ * ── GÜNCELLEME ────────────────────────────────────────────────────────────
+ *
+ * ⚠️ ÖNCEKİ SÜRÜMDEKİ DEFEKT: yalnız 'updatefound' olayı dinleniyordu. Ama
+ * yeni sürüm BİR ÖNCEKİ ziyarette indirilip beklemeye alınmışsa o olay bir
+ * daha ATEŞLENMEZ — kayıt doğrudan `waiting` durumunda açılır, şerit hiç
+ * görünmez ve kullanıcı eski sürümde SONSUZA KADAR takılı kalır.
+ * Gerçekte yaşandı: "sitede hâlâ eski versiyon var, yenile düğmesi çıkmıyor."
+ * Bu yüzden reg.waiting ayrıca kontrol ediliyor — hem açılışta hem her dönüşte.
+ *
+ * ⚠️ İKİNCİ KARAR: güncellemeyi kullanıcının bulmasına bırakmak kırılgan.
+ * Antrenman ortasında DEĞİLSEN (kaydedilmiş set yoksa) güncelleme sorulmadan
+ * uygulanır. Yalnız seans sürerken sorulur — o zaman kesintinin bedeli var.
+ */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  let yenilendi = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!yenilendi) { yenilendi = true; location.reload(); }
+  });
+
+  const kontrolEt = reg => {
+    const sw = reg.waiting;
+    if (!sw) return;
+    // Kaybedilecek bir şey yoksa sessizce uygula; varsa kararı kullanıcıya bırak
+    const güvenli = !ctx.session || !N.hasAnySet(ctx.session);
+    if (güvenli) { sw.postMessage('SKIP_WAITING'); return; }
+    toast('Yeni sürüm hazır — seansı bitirince kendiliğinden uygulanacak.', {
+      sticky: true, label: 'Şimdi yenile', action: () => sw.postMessage('SKIP_WAITING'),
+    });
+  };
+
   addEventListener('load', async () => {
     const reg = await navigator.serviceWorker.register('sw.js').catch(() => null);
     if (!reg) return;
+    kontrolEt(reg);                                    // ← zaten bekleyen sürüm
     reg.addEventListener('updatefound', () => {
       const yeni = reg.installing;
       yeni?.addEventListener('statechange', () => {
-        if (yeni.state === 'installed' && navigator.serviceWorker.controller)
-          toast('Yeni sürüm hazır.', { sticky: true, label: 'Yenile', action: () => yeni.postMessage('SKIP_WAITING') });
+        if (yeni.state === 'installed' && navigator.serviceWorker.controller) kontrolEt(reg);
       });
     });
-    let yenilendi = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!yenilendi) { yenilendi = true; location.reload(); }
+    // Uygulamaya her dönüşte yeni sürüm var mı diye bak
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      reg.update().then(() => kontrolEt(reg)).catch(() => {});
     });
   });
 }
