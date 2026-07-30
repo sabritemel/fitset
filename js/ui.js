@@ -16,9 +16,11 @@ const setLabel = (s, birim) =>
       : `${s.weight ?? '—'}${birim}×${s.reps}`;
 
 /** "Geçen sefer (3 gün önce): 40kg×12 · 40kg×10" */
-export function lastTime(ex, lastPerf, birim) {
+export function lastTime(ex, lastPerf, birim, bugünVar = false) {
   const lp = lastPerf[ex.id];
-  if (!lp) return 'Bu egzersizin ilk kaydı.';
+  // Bugün zaten set girilmişken "ilk kaydı" demek kafa karıştırıyordu —
+  // hemen altında dolu setler duruyor. Ayrım: GEÇEN SEFER ≠ bugün.
+  if (!lp) return bugünVar ? 'Bu hareketi ilk kez yapıyorsun.' : 'Bu egzersizin ilk kaydı.';
   return `Geçen sefer (${C.relativeLabel(new Date(lp.at))}) `
     + `<b>${lp.sets.map(s => setLabel(s, birim)).join(' · ')}</b>`;
 }
@@ -161,6 +163,19 @@ function sheetHTML(ex, settings) {
     </section>`;
 }
 
+/**
+ * Dinlenme yuvası — gezinme satırının ORTASI.
+ * Sayaç ayrı bir bant açmıyor: boşta "Dinlenme 90 sn" yazan yer, çalışırken
+ * canlı sayaca dönüşüyor. Ekranda yeni bir şerit belirmiyor, hiçbir şey
+ * yer değiştirmiyor — göz aynı noktaya bakmaya devam ediyor.
+ */
+export const restSlotHTML = (settings, kalan = null) => kalan === null
+  ? `<button class="restbtn" data-act="rest">Dinlenme ${settings.restSeconds} sn</button>`
+  : `<button class="restbtn run" data-act="rest-skip" aria-label="Dinlenmeyi geç">
+       <span class="rt mono" id="rest-time">${mmss(kalan)}</span><span class="rl">geç</span>
+     </button>
+     <button class="restadd" data-act="rest-plus" aria-label="30 saniye ekle">+30</button>`;
+
 /** Sayı girişi ya da geri sayım — egzersizin tipine göre */
 function entryHTML(ex, ctx) {
   if (ex.setType === 'time') {
@@ -183,10 +198,21 @@ function entryHTML(ex, ctx) {
   const ipucu = ex.equipment === 'dumbbell' ? 'tek dambıl · hacimde ×2'
     : ex.equipment === 'barbell' ? 'bar dahil toplam'
       : ex.equipment === 'machine' ? 'makinede seçili' : '';
-  return `<div class="nums">
+  const tekrar = ctx.draft.reps ?? N.effective(ex, ctx.settings).reps;
+
+  /* ÇALIŞMA EKRANINDA TEK GİRİŞ: AĞIRLIK.
+     Tekrar sayısı hedeften geliyor ve her sette değişmiyor; her seferinde
+     sormak gereksiz dokunuş. Ama hedef 12 iken 10 çıkarsa o seti 12 diye
+     kaydetmek veriyi yanlışlar — bu yüzden tekrar GÖRÜNÜR kalıyor ve üstüne
+     dokununca YALNIZ BU SET için açılıyor. Kalıcı değişiklik panelden. */
+  return `<div class="nums single">
       ${num('weight', ctx.draft.weight, 2.5, ctx.settings.unit)}
-      ${num('reps', ctx.draft.reps, 1, 'tekrar')}
     </div>
+    <button class="repsline" data-act="reps-edit" aria-expanded="false">
+      <span>× <b id="reps-show">${tekrar}</b> tekrar</span>
+      <span class="edit">bu sette değiştir</span>
+    </button>
+    <div class="repsedit" id="repsedit" hidden>${num('reps', tekrar, 1, 'tekrar')}</div>
     <div class="hintrow">
       <span class="hint">${ipucu}</span>
       <label class="warmtog"><input type="checkbox" id="warm" ${ctx.draft.warmup ? 'checked' : ''}>ısınma</label>
@@ -211,9 +237,11 @@ export function focusHTML(ctx) {
   const ex = exs[idx];
   const q = N.exerciseProgress(session, ex, settings);
 
+  let no = 0;
   const chips = q.sets.map((s, i) => {
     const son = i === q.sets.length - 1;
-    return `<span class="${s.warmup ? 'warm' : 'on'}">${s.warmup ? 'ısınma ' : ''}${setLabel(s, settings.unit)}</span>`
+    const et = s.warmup ? 'ıs' : `${++no}`;
+    return `<span class="${s.warmup ? 'warm' : 'on'}"><i>${et}</i>${setLabel(s, settings.unit)}</span>`
       + (son ? `<button class="undo" data-act="undo">geri al</button>` : '');
   }).join('');
 
@@ -242,15 +270,16 @@ export function focusHTML(ctx) {
     </div>
     ${vizHTML(ex)}
     <div class="foot-block">
-      <p class="prev">${lastTime(ex, lastPerf, settings.unit)}</p>
+      <p class="prev">${lastTime(ex, lastPerf, settings.unit, q.sets.length > 0)}</p>
       ${q.sets.length ? `<div class="chips">${chips}</div>` : ''}
       ${entryHTML(ex, ctx)}
       <button class="go" data-act="save">${kaydetEtiketi}</button>
       <div class="nav">
-        <button data-act="prev" ${idx === 0 ? 'disabled' : ''}>‹ Önceki</button>
-        <button data-act="rest">Dinlenme ${settings.restSeconds} sn</button>
-        <button data-act="next" ${idx === exs.length - 1 ? 'disabled' : ''}>Sonraki ›</button>
+        <button class="side" data-act="prev" ${idx === 0 ? 'disabled' : ''}>‹ Önceki</button>
+        <div class="restslot" id="restslot">${restSlotHTML(settings)}</div>
+        <button class="side" data-act="next" ${idx === exs.length - 1 ? 'disabled' : ''}>Sonraki ›</button>
       </div>
+      <div class="restline"><i id="restline"></i></div>
     </div>
     ${sheetHTML(ex, settings)}`;
 }

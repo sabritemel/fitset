@@ -51,16 +51,33 @@ function toast(msg, { action, label, warn, sticky } = {}) {
 
 /* ── Sayaçlar ──────────────────────────────────────────────────────────── */
 
-/** Dinlenme — ekranın altına yapışan şerit, akışı kesmez */
+/**
+ * Dinlenme — gezinme satırının ortasında, ayrı bant AÇMADAN.
+ * Yeni bir şerit belirse ekranda her şey kayar; boşta zaten orada duran
+ * "Dinlenme 90 sn" düğmesi canlı sayaca dönüşüyor, göz aynı noktada kalıyor.
+ */
 const rest = new Countdown({
-  onTick: k => { const e = $('rest-time'); if (e) e.textContent = mmss(k); },
+  onTick: (k, toplam) => {
+    const e = $('rest-time'); if (e) e.textContent = mmss(k);
+    const l = $('restline'); if (l) l.style.transform = `scaleX(${toplam ? k / toplam : 0})`;
+  },
   onDone: gecikme => {
-    restBar(false);
+    restSlot();
+    if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
     toast(gecikme > 2
       ? `Dinlenme ${Math.round(gecikme)} sn önce bitti.`   // dürüst: kaçırdıysa söyler
       : 'Dinlenme bitti — sıradaki set.');
   },
 });
+
+/** Yuvayı mevcut duruma göre tazeler (boşta düğme / çalışırken sayaç) */
+function restSlot() {
+  const slot = $('restslot');
+  if (!slot) return;
+  slot.innerHTML = UI.restSlotHTML(ctx.settings, rest.running ? rest.remaining : null);
+  const l = $('restline');
+  if (l) l.style.transform = `scaleX(${rest.running && rest.total ? rest.remaining / rest.total : 0})`;
+}
 
 /** Set süresi — izometrik hareketler (Plank) */
 const hold = new Countdown({
@@ -73,19 +90,6 @@ const hold = new Countdown({
   },
 });
 
-function restBar(göster) {
-  document.querySelector('.rest')?.remove();
-  // Şerit sabit konumlu: altındaki metni örtmesin diye gövdeye pay eklenir
-  document.body.classList.toggle('resting', göster);
-  if (!göster) return;
-  const d = document.createElement('div');
-  d.className = 'rest';
-  d.innerHTML = `<span class="t" id="rest-time">${mmss(rest.remaining)}</span>
-    <span class="l">dinlenme</span>
-    <button data-act="rest-plus">+30 sn</button>
-    <button data-act="rest-skip">Geç</button>`;
-  document.body.append(d);
-}
 
 /* ── Kayan panel ───────────────────────────────────────────────────────── */
 function sheet(aç) {
@@ -144,7 +148,6 @@ function render() {
     if (!ex.hold) { draw(ex, 0); if (!reduced) play(ex); }
     if (hold.running) $('clock')?.classList.add('run');
   }
-  if (rest.running) restBar(true);
 }
 
 /* ── Animasyon ─────────────────────────────────────────────────────────── */
@@ -185,7 +188,7 @@ async function kaydet(ex, veri) {
   render();
   if (navigator.vibrate) navigator.vibrate(15);
   // Dinlenme kendiliğinden başlar — seansta ~27 kez elle başlatmak angarya
-  if (ctx.settings.restSeconds > 0) { await rest.start(ctx.settings.restSeconds); restBar(true); }
+  if (ctx.settings.restSeconds > 0) { await rest.start(ctx.settings.restSeconds); restSlot(); }
 }
 
 async function kaydetTıklandı() {
@@ -222,6 +225,15 @@ document.addEventListener('click', async e => {
     const inp = $('f-' + field);
     inp.value = Math.max(0, Math.round(((+inp.value || 0) + +d) * 100) / 100);
     ctx.draft[field] = +inp.value;
+    if (field === 'reps') { const s = $('reps-show'); if (s) s.textContent = inp.value; }
+    return;
+  }
+
+  // Tekrar satırı: hedeften geliyor, ama bu sete özel değiştirilebilsin
+  if (t.closest('[data-act="reps-edit"]')) {
+    const ed = $('repsedit'), btn = t.closest('[data-act="reps-edit"]');
+    ed.hidden = !ed.hidden;
+    btn.setAttribute('aria-expanded', String(!ed.hidden));
     return;
   }
 
@@ -297,9 +309,9 @@ document.addEventListener('click', async e => {
       break;
     }
 
-    case 'rest': await rest.start(ctx.settings.restSeconds); restBar(true); break;
+    case 'rest': await rest.start(ctx.settings.restSeconds); restSlot(); break;
     case 'rest-plus': rest.extend(30); break;
-    case 'rest-skip': rest.stop(); restBar(false); break;
+    case 'rest-skip': rest.stop(); restSlot(); break;
 
     case 'finish': await bitir(); break;
     case 'backup': await yedekAl(); break;

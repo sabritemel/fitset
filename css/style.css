@@ -34,6 +34,14 @@
   --fig-head: var(--surf);   /* kafa dairesi boyun çizgisini maskeler = zemin rengi */
   --touch: 52px;             /* asgari dokunma hedefi — terli/eldivenli parmak */
   --wrap: 520px;
+
+  /* Köşe yarıçapı ÖLÇEĞİ — her yerde aynı üç değer. Rastgele yarıçaplar
+     arayüzü amatörleştiren en sessiz şeydir; ölçek disiplini premium hissin
+     görünmeyen yarısı. Küçük öğe küçük yarıçap alır. */
+  --r-xs: 8px;
+  --r-sm: 11px;
+  --r-md: 14px;
+  --r-lg: 18px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -72,7 +80,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 #list-screen .resting { color: var(--warn); font-size: 14px; margin: 8px 0 0; }
 
 .sum { display: flex; gap: 9px; padding: 16px 18px 6px; }
-.sum div { flex: 1; background: var(--surf); border-radius: 13px; padding: 12px 13px; }
+.sum div { flex: 1; background: var(--surf); border-radius: var(--r-md); padding: 12px 13px; }
 .sum span { display: block; margin-bottom: 2px; }
 .sum b {
   font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-size: 21px;
@@ -83,7 +91,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .items { padding: 8px 18px 0; display: flex; flex-direction: column; gap: 8px; }
 .item {
   display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
-  background: var(--surf); border-radius: 13px; padding: 13px 15px; min-height: 64px;
+  background: var(--surf); border-radius: var(--r-md); padding: 13px 15px; min-height: 64px;
 }
 .item:active { background: var(--surf2); }
 .item .ix { font-size: 11px; color: var(--dim); width: 18px; flex: none; }
@@ -100,7 +108,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .item.done .en { color: var(--ok); }
 
 .finisher {
-  margin: 14px 18px 0; border: 1px dashed var(--line); border-radius: 13px; padding: 14px 16px;
+  margin: 14px 18px 0; border: 1px dashed var(--line); border-radius: var(--r-md); padding: 14px 16px;
 }
 .finisher h3 { font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-size: 15.5px; margin: 0 0 3px; }
 .finisher p { margin: 0; font-size: 14px; color: var(--dim); line-height: 1.45; }
@@ -111,7 +119,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 .bar { display: flex; gap: 10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
 .btn {
-  flex: 1; min-height: var(--touch); border-radius: 13px; background: var(--surf);
+  flex: 1; min-height: var(--touch); border-radius: var(--r-md); background: var(--surf);
   font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800; font-size: 16px;
 }
 .btn.primary { background: var(--acc); color: #12060A; }
@@ -146,7 +154,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 /* Esneyen tek bölge: kalan boşluğun tamamını alır */
 .viz {
   flex: 1 1 auto; min-height: 0; margin: 10px 18px 0; background: var(--surf);
-  border-radius: 16px; padding: 4px 0; position: relative;
+  border-radius: var(--r-lg); padding: 4px 0; position: relative;
   display: flex; flex-direction: column;
 }
 .viz svg { flex: 1 1 auto; min-height: 0; display: block; width: 100%; }
@@ -163,7 +171,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 /* Plank gibi izometrik hareketler: doğru duruş + yaygın hatalar yan yana */
 .variants { display: flex; gap: 8px; margin: 10px 18px 0; flex: 1 1 auto; min-height: 0; }
-.variants figure { flex: 1; margin: 0; background: var(--surf); border-radius: 12px; overflow: hidden;
+.variants figure { flex: 1; margin: 0; background: var(--surf); border-radius: var(--r-sm); overflow: hidden;
   display: flex; flex-direction: column; }
 .variants figure svg { flex: 1 1 auto; min-height: 0; }
 .variants figure.ok { box-shadow: inset 0 0 0 1.5px var(--ok); }
@@ -224,7 +232,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .reset-goal { color: var(--acc); font-size: 12.5px; text-decoration: underline; padding: 6px 0; min-height: 34px; }
 .goal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
 .gf .lbl { display: block; margin-bottom: 5px; }
-.gbox { display: flex; align-items: stretch; border: 1.5px solid var(--line); border-radius: 11px;
+.gbox { display: flex; align-items: stretch; border: 1.5px solid var(--line); border-radius: var(--r-sm);
   overflow: hidden; background: var(--surf); }
 .gbox button { width: 44px; flex: none; font-size: 20px; color: var(--acc); }
 .gbox button:active { background: var(--line); }
@@ -232,7 +240,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   font-size: 19px; font-variant-numeric: tabular-nums; padding: 11px 2px; -moz-appearance: textfield; }
 .gbox input::-webkit-outer-spin-button, .gbox input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .gbox input::placeholder { color: var(--dim); }
-.goal-save { width: 100%; margin-top: 12px; min-height: var(--touch); border-radius: 12px;
+.goal-save { width: 100%; margin-top: 12px; min-height: var(--touch); border-radius: var(--r-sm);
   background: var(--acc); color: #12060A;
   font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800; font-size: 16px; }
 .goal-note { margin: 10px 0 0; font-size: 12.5px; color: var(--dim); line-height: 1.45; }
@@ -245,9 +253,21 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 .prev { margin: 10px 18px 0; font-size: 12.5px; color: var(--dim); }
 .prev b { color: var(--tx); font-weight: 400; }
-.chips { display: flex; gap: 6px; padding: 8px 18px 0; overflow-x: auto; scrollbar-width: none; }
+/* Kaydedilen setler — KÜÇÜK ve okunur. Bunlar birer kayıt izi, kontrol değil;
+   ekranın dikkatini almamalılar. Sıra numarası öne alındı: kaçıncı sette
+   olduğunu saymadan görebilmek için. */
+.chips { display: flex; align-items: center; gap: 5px; padding: 7px 18px 0;
+  overflow-x: auto; scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
 .chips > * { flex: none; }
+.chips span { display: inline-flex; align-items: baseline; gap: 5px;
+  padding: 4px 8px; border-radius: var(--r-xs); background: rgb(70 199 168 / .12);
+  font-family: 'Space Mono', ui-monospace, monospace; font-size: 11.5px;
+  line-height: 1.5; color: var(--ok); }
+.chips span i { font-style: normal; font-size: 9.5px; opacity: .65; letter-spacing: .06em; }
+.chips span.warm { background: rgb(126 136 157 / .14); color: var(--dim); }
+.chips button.undo { color: var(--dim); font-size: 11.5px; text-decoration: underline;
+  text-underline-offset: 2px; padding: 6px 4px; min-height: 32px; }
 .chips span {
   padding: 7px 11px; border-radius: 9px; background: var(--surf); font-size: 12px;
   font-family: 'Space Mono', ui-monospace, monospace; color: var(--dim);
@@ -270,7 +290,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .nums .val::placeholder { color: var(--dim); }
 .nums .unit { font-size: 14px; color: var(--dim); }
 .pm { display: flex; gap: 9px; margin-top: 8px; }
-.pm button { flex: 1; height: 46px; border-radius: 11px; background: var(--surf); font-size: 22px; }
+.pm button { flex: 1; height: 46px; border-radius: var(--r-sm); background: var(--surf); font-size: 22px; }
 .pm button:active { background: var(--surf2); }
 /* İpucu ve ısınma tek satırda — her satır ekrandan yer çalıyor */
 .hintrow { display: flex; align-items: center; justify-content: space-between;
@@ -280,18 +300,60 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   font-size: 13px; min-height: 36px; flex: none; }
 .warmtog input { width: 19px; height: 19px; accent-color: var(--acc); }
 
+/* Tek giriş: ağırlık. Tam genişlik, ekranın en büyük rakamı. */
+.nums.single .f .val { font-size: 52px; }
+.nums.single .pm button { height: 50px; }
+
+/* Tekrar satırı — hedeften gelir, sadece bu set için açılır */
+.repsline { display: flex; align-items: baseline; justify-content: center; gap: 10px;
+  width: 100%; padding: 8px 18px 0; min-height: 38px; }
+.repsline b { font-family: 'Space Mono', ui-monospace, monospace; font-size: 17px;
+  font-weight: 700; color: var(--tx); font-variant-numeric: tabular-nums; }
+.repsline > span:first-child { color: var(--dim); font-size: 14px; }
+.repsline .edit { font-size: 11.5px; color: var(--acc); text-decoration: underline;
+  text-underline-offset: 2px; }
+.repsline[aria-expanded="true"] .edit { color: var(--dim); }
+.repsedit { padding-top: 2px; }
+.repsedit .nums { padding-top: 4px; }
+
 /* Kaydet: başparmak bölgesinde, ekranın en büyük hedefi */
-.go { margin: 10px 18px 0; height: 56px; border-radius: 15px; background: var(--acc); color: #12060A;
-  font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800; font-size: 18px;
-  width: calc(100% - 36px); }
-.go:active { filter: brightness(.9); }
-.nav { display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--dim); }
-.nav button { padding: 10px 8px; min-height: 44px; color: var(--dim); }
-.nav button:disabled { opacity: .3; }
+.go { margin: 10px 18px 0; height: 56px; border-radius: var(--r-md); background: var(--acc);
+  color: #12060A; font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
+  font-size: 18px; letter-spacing: -.01em; width: calc(100% - 36px);
+  transition: transform .12s ease, filter .12s ease; }
+.go:active { transform: scale(.985); filter: brightness(.92); }
+
+/* ── Gezinme + dinlenme ────────────────────────────────────────────────────
+   Sayaç AYRI BİR BANT AÇMIYOR: ortadaki "Dinlenme 90 sn" düğmesi yerinde
+   canlı sayaca dönüşüyor. Ekranda hiçbir şey yer değiştirmiyor, göz aynı
+   noktaya bakmaya devam ediyor. Kalan süre alttaki ince çizgiden okunur. */
+.nav { display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px 0; font-size: 13px; color: var(--dim); }
+.nav .side { padding: 11px 8px; min-height: 46px; color: var(--dim); flex: none;
+  border-radius: var(--r-sm); font-size: 13.5px; }
+.nav .side:active { background: var(--surf); }
+.nav .side:disabled { opacity: .28; }
+.restslot { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.restbtn { flex: 1; min-width: 0; min-height: 46px; border-radius: var(--r-sm);
+  background: var(--surf); color: var(--dim); font-size: 13.5px; padding: 0 10px; }
+.restbtn:active { background: var(--surf2); }
+.restbtn.run { display: flex; align-items: baseline; justify-content: center; gap: 8px;
+  background: rgb(255 77 109 / .13); color: var(--acc); }
+.restbtn .rt { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em; }
+.restbtn .rl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .75; }
+.restadd { flex: none; min-height: 46px; padding: 0 12px; border-radius: var(--r-sm);
+  background: var(--surf); color: var(--tx); font-size: 13px;
+  font-family: 'Space Mono', ui-monospace, monospace; }
+.restadd:active { background: var(--surf2); }
+
+/* Kalan süre çizgisi — ekranın en altında, yer kaplamayan bir gösterge */
+.restline { height: 3px; margin: 6px 0 calc(4px + env(safe-area-inset-bottom, 0px)); background: transparent; }
+.restline i { display: block; height: 100%; width: 100%; background: var(--acc);
+  transform: scaleX(0); transform-origin: left; transition: transform .25s linear; }
 
 /* ── Geri sayım ────────────────────────────────────────────────────────── */
-.clock { margin: 16px 18px 0; background: var(--surf); border-radius: 16px; padding: 18px; text-align: center; }
+.clock { margin: 16px 18px 0; background: var(--surf); border-radius: var(--r-lg); padding: 18px; text-align: center; }
 .clock .time {
   font-family: 'Bricolage Grotesque', 'Karla', sans-serif; font-weight: 800;
   font-size: 62px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums;
@@ -299,34 +361,16 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 }
 .clock.run .time { color: var(--acc); }
 .clock .row { display: flex; gap: 9px; margin-top: 13px; }
-.clock .row button { flex: 1; min-height: 46px; border-radius: 11px; background: var(--surf2); font-size: 15px; }
+.clock .row button { flex: 1; min-height: 46px; border-radius: var(--r-sm); background: var(--surf2); font-size: 15px; }
 .clock .row button.main { background: var(--acc); color: #12060A; font-weight: 700; }
 .clock .late { color: var(--warn); font-size: 13px; margin: 8px 0 0; }
 
-/* Dinlenme şeridi — ekranın altına yapışır, akışı kesmez */
-.rest {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  background: var(--surf2); border-top: 1px solid var(--line);
-  padding: 11px 18px calc(11px + env(safe-area-inset-bottom, 0px));
-  display: flex; align-items: center; gap: 12px;
-  max-width: var(--wrap); margin: 0 auto;
-}
-.rest .t { font-family: 'Space Mono', ui-monospace, monospace; font-size: 22px;
-  font-variant-numeric: tabular-nums; color: var(--acc); min-width: 62px; }
-.rest .l { flex: 1; font-size: 13px; color: var(--dim); }
-.rest button { padding: 10px 12px; border-radius: 9px; background: var(--surf); font-size: 13px; min-height: 44px; }
-
-/* Dinlenme şeridi sabit konumlu. Liste ekranı kaydığı için gövdeye pay eklenir;
-   odak ekranı kaymadığı için oraya padding verilir — bu, esneyen görsel
-   alanını kısaltır, yani şerit hiçbir şeyin üstünü örtmez. */
-body.resting { padding-bottom: 84px; }
-body.resting #focus-screen { padding-bottom: 64px; }
 
 /* ── Bildirim şeridi ───────────────────────────────────────────────────── */
 .toast {
   position: fixed; left: 12px; right: 12px; bottom: 88px; z-index: 40;
   background: var(--surf2); border: 1px solid var(--line); color: var(--tx);
-  padding: 13px 15px; border-radius: 12px; font-size: 14.5px;
+  padding: 13px 15px; border-radius: var(--r-sm); font-size: 14.5px;
   display: flex; align-items: center; gap: 12px;
   max-width: calc(var(--wrap) - 24px); margin: 0 auto;
   box-shadow: 0 10px 34px rgb(0 0 0 / .5);
