@@ -149,9 +149,61 @@ document.addEventListener('touchend', e => {
 
 addEventListener('keydown', e => { if (e.key === 'Escape' && sheetAçık()) sheet(false); });
 
+/* ── Isınma animasyonu — SIRAYLA, tek seferde bir figür ────────────────────
+   Beşini birden oynatmak hem görsel gürültü hem gereksiz maliyet olurdu
+   (5 SVG × 60fps yeniden çizim orta seviye telefonda hissedilir). Sıralı
+   oynatma maliyeti tek figüre indiriyor ve gözü ısınma sırasında yukarıdan
+   aşağı gezdiriyor. Dokununca o hareket hemen öne alınır. */
+const isinmaAnim = { raf: 0, hangi: 0, t0: 0 };
+const DONGU = 2400;
+
+function isinmaOynat() {
+  isinmaDur();
+  const adımlar = N.warmupFor(ctx.dayIndex);
+  if (!adımlar.length) return;
+
+  const çiz = (w, t) => {
+    const g = document.querySelector(`[data-anim="${w.id}"] g`);
+    if (!g) return;
+    const k = w.ref ? N.byId[w.ref] : w;
+    const s = E.skeleton(E.poseAt(k.a, k.b, t), k.view);
+    g.innerHTML = (k.eq ? k.eq(s) : '') + E.figure(s, k);
+  };
+
+  // Hepsini durağan kareyle bir kez çiz — animasyon sırası gelmeden de görünsünler
+  adımlar.forEach(w => çiz(w, 0.55));
+  if (reduced) return;
+
+  const adım = now => {
+    if (!isinmaAnim.t0) isinmaAnim.t0 = now;
+    const e = (now - isinmaAnim.t0) / DONGU;
+    const w = adımlar[isinmaAnim.hangi % adımlar.length];
+    if (e >= 1) {
+      çiz(w, 0.55);                                  // durağan kareye dön
+      isinmaAnim.hangi++; isinmaAnim.t0 = now;
+    } else {
+      çiz(w, (1 - Math.cos(2 * Math.PI * e)) / 2);   // 0→1→0, zıplamadan
+    }
+    isinmaAnim.raf = requestAnimationFrame(adım);
+  };
+  isinmaAnim.raf = requestAnimationFrame(adım);
+}
+function isinmaDur() {
+  if (isinmaAnim.raf) cancelAnimationFrame(isinmaAnim.raf);
+  isinmaAnim.raf = 0; isinmaAnim.t0 = 0;
+}
+
 /* ── Çizim ─────────────────────────────────────────────────────────────── */
 function render() {
-  if (ctx.view === 'list') {
+  const warmEl = $('warmup-screen');
+  if (ctx.view !== 'warmup') isinmaDur();
+  warmEl.classList.toggle('on', ctx.view === 'warmup');
+
+  if (ctx.view === 'warmup') {
+    warmEl.innerHTML = UI.warmupHTML(ctx);
+    listEl.classList.remove('on'); focusEl.classList.remove('on');
+    isinmaOynat();
+  } else if (ctx.view === 'list') {
     listEl.innerHTML = UI.listHTML(ctx);
     listEl.classList.add('on'); focusEl.classList.remove('on');
   } else {
@@ -232,6 +284,14 @@ document.addEventListener('click', async e => {
   primeAudio();                                  // ses bağlamı ilk dokunuşta açılır
   const t = e.target;
 
+  // Isinma figurune dokununca sirasini beklemeden one al
+  const wa = t.closest('[data-warm]');
+  if (wa && ctx.view === 'warmup') {
+    const i = N.warmupFor(ctx.dayIndex).findIndex(w => w.id === wa.dataset.warm);
+    if (i >= 0) { isinmaAnim.hangi = i; isinmaAnim.t0 = 0; }
+    return;
+  }
+
   const go = t.closest('[data-go]');
   if (go) { git(+go.dataset.go); return; }
 
@@ -271,6 +331,16 @@ document.addEventListener('click', async e => {
       const b = $('warm');
       ctx.draft.warmup = b.getAttribute('aria-pressed') !== 'true';
       b.setAttribute('aria-pressed', String(ctx.draft.warmup));
+      break;
+    }
+    case 'warmup': stopAnim(); ctx.view = 'warmup'; render(); scrollTo(0, 0); break;
+    case 'warmup-done': {
+      // Tıpkı normal hareketlerdeki gibi doğrudan 1. harekete geç — listeye
+      // dönüp oradan seçtirmek akışı kesiyordu.
+      N.setWarmupDone(ctx.session);
+      await N.persist(ctx.session);
+      isinmaDur();
+      git(0);
       break;
     }
     case 'sheet-open': sheet(true); break;

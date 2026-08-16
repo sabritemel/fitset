@@ -58,6 +58,17 @@ export function listHTML(ctx) {
 
   const f = N.finisherFor(dayIndex);
 
+  /* ISINMA — numarasız İLK satır.
+     Numaralar KAYDEDİLEN hareketler için; ısınmaya numara vermek onu programın
+     parçası gibi gösterir ve set sayımını yanlışlar. Elmas işareti ve hafif
+     vurgu, üstte olduğunu numara vermeden söylüyor. */
+  const isinma = `<button class="li warm${session.warmupDone ? ' done' : ''}" data-act="warmup">
+    <span class="ix">◆</span>
+    <span class="nm"><span class="t-h2">Isınma</span>
+      <span class="t-m">${N.warmupFor(dayIndex).length + 1} adım · ${N.WARMUP_SURE[dayIndex]}</span></span>
+    <span class="chip">${session.warmupDone ? 'yapıldı' : 'başla'}</span>
+  </button>`;
+
   return `
     ${railHTML(exs, session, settings)}
     <div class="hd">
@@ -73,7 +84,7 @@ export function listHTML(ctx) {
       <div><span class="t-l">Hacim</span><b>${v.kg.toLocaleString('tr-TR')}<i>${settings.unit}</i></b></div>
       <div><span class="t-l">Süre</span><b>${dk}<i>dk</i></b></div>
     </div>
-    <div class="lst">${items}</div>
+    <div class="lst">${isinma}${items}</div>
     <div class="finisher"><h3>${f.h}</h3><p>${f.p}</p></div>
     <div class="note">
       <p>Veri yalnız bu telefonda; sunucuya hiçbir şey gönderilmez — bu yüzden düzenli yedek al.
@@ -227,6 +238,47 @@ function girisHTML(ex, ctx) {
       <button class="b3" id="warm" data-act="warm" aria-pressed="${!!ctx.draft.warmup}">Isınma seti</button>
     </div>
     <div class="repsedit" id="repsedit" hidden>${entry('reps', tekrar, 1, 'tekrar')}</div>`;
+}
+
+/* ══ ISINMA EKRANI ════════════════════════════════════════════════════════
+   Sayaç YOK, işaret YOK, ilerleme YOK — ekran yalnız GÖSTERİR. Isınmayı
+   saymak gereksiz iş yaratır: kol çevirirken telefona dokunmazsın.
+   Satırlar liste ekranındaki hareket satırının AYNI bileşeni; bütünlük yeni
+   desen icat ederek değil var olanı kullanarak kuruluyor. flex:1 ile eşit
+   dağılıp ekranı dolduruyorlar — odak ekranıyla aynı "kaymaz" kuralı. */
+export function warmupHTML(ctx) {
+  const { dayIndex } = ctx;
+  const adımlar = N.warmupFor(dayIndex);
+  const kaslar = N.DAY_NAMES[dayIndex].split(' — ')[1];
+
+  const satır = adımlar.map(w => `<div class="li" data-warm="${w.id}">
+      <span class="nm"><span class="t-h2">${w.ad}</span><span class="t-m">${w.not}</span></span>
+      <span class="amt">${w.miktar}</span>
+      <svg class="mini" data-anim="${w.id}" viewBox="10 25 240 170"
+           preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></g>
+      </svg>
+    </div>`).join('');
+
+  return `
+    <div class="top">
+      <button class="icb" data-act="to-list" aria-label="Listeye dön">←</button>
+      <span class="mid t-l">ısınma</span>
+      <span style="width:36px"></span>
+    </div>
+    <div class="title">
+      <h1 class="t-h1">Isınma</h1>
+      <p class="t-m">${kaslar} · ${N.WARMUP_SURE[dayIndex]}</p>
+    </div>
+    <div class="cardio">
+      <span class="nm"><b>${N.KARDIYO.ad}</b><span>${N.KARDIYO.not}</span></span>
+      <span class="amt">${N.KARDIYO.miktar}</span>
+    </div>
+    <div class="wlist">${satır}</div>
+    <div class="foot">
+      <button class="b1" data-act="warmup-done">Isınma bitti — 1. harekete geç →</button>
+      <p class="t-m" style="text-align:center">Sete ve hacme sayılmaz.</p>
+    </div>`;
 }
 
 export function focusHTML(ctx) {

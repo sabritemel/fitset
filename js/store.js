@@ -124,6 +124,9 @@ export const newSession = dayIndex => ({
   finishedAt: null,
   status: 'active',
   entries: [],
+  // Isinma KAYDEDILEN bir hareket degil: tek bayrak. Agirlik/tekrar/hacim
+  // tutulmuyor, set sayimina girmiyor — grafikler ve 'gecen sefer' temiz kaliyor.
+  warmupDone: false,
 });
 
 export const saveSession = s => driver.put('sessions', s);

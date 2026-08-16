@@ -16,7 +16,7 @@
  * gelir → devralır → sayfa yenilenir. Kullanıcı antrenman ortasında sürüm
  * değiştirmez; kararı o verir.
  */
-const CACHE = 'fitset-c624d4b473';
+const CACHE = 'fitset-620fe681ed';
 
 const ASSETS = [
   './',
@@ -33,6 +33,7 @@ const ASSETS = [
   './js/anim/engine.js',
   './js/anim/equipment.js',
   './js/data/exercises.js',
+  './js/data/warmup.js',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',

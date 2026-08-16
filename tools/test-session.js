@@ -217,5 +217,29 @@ console.log('\n10) HEDEF ÜZERİNE YAZMA (kullanıcı/hoca değişikliği)');
   ok(k.weight === null, 'ağırlık verilmediyse boş kalır (geçen sefer devreye girer)');
 }
 
+console.log('\n11) ISINMA — tek bayrak, sete ve hacme karışmaz');
+{
+  await S.driver.clear('sessions');
+  const { session } = await N.startOrResume();
+  ok(session.warmupDone === false, 'yeni seansta ısınma işareti kapalı');
+  ok(N.warmupFor(0).length > 0 && N.warmupFor(1).length > 0, 'iki gün için de ısınma tanımlı');
+
+  N.setWarmupDone(session);
+  ok(session.warmupDone === true, 'işaret konuluyor');
+
+  // ⭐ REGRESYON: persist yalnız hasAnySet'e baksaydı bu kayıt DİSKE YAZILMAZDI
+  // ve kullanıcı uygulamayı kapatıp açınca ısınma işareti kaybolurdu.
+  await N.persist(session);
+  const geri = await S.getSession(session.id);
+  ok(geri?.warmupDone === true, 'set girilmeden de diske YAZILIYOR (işaret kaybolmuyor)');
+
+  ok(N.progress(session, 0).done === 0, 'ısınma set sayımına girmiyor');
+  ok(S.sessionVolume(session, N.byId).kg === 0, 'ısınma hacme girmiyor');
+
+  // Yalnız ısınma yapılmış gün "bitmiş antrenman" sayılmamalı — yoksa A/B kayar
+  ok(await N.finish(session) === null, 'yalnız ısınma yapılan seans TAMAMLANMIŞ sayılmıyor');
+  ok(await N.nextDayIndex() === 0, 'A/B sırası ilerlemiyor');
+}
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

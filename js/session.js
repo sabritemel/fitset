@@ -3,6 +3,7 @@
  * Saf mantık: DOM'a dokunmaz, bu yüzden Node'da test edilebilir.
  */
 import { EX, FIN } from './data/exercises.js';
+import { WARMUP, KARDIYO, SURE } from './data/warmup.js';
 import * as store from './store.js';
 
 export const DAY_NAMES = [
@@ -14,6 +15,16 @@ export const DAY_NAMES = [
 export const byId = Object.fromEntries(EX.flat().map(e => [e.id, e]));
 
 export const exercisesFor = dayIndex => EX[dayIndex];
+
+/** O gunun isinma adimlari — numarasiz, sete ve hacme sayilmaz */
+export const warmupFor = dayIndex => WARMUP[dayIndex] ?? [];
+export { KARDIYO, SURE as WARMUP_SURE };
+
+/** Isinma yapildi isareti — tek bayrak, baska hicbir sey tutulmuyor */
+export function setWarmupDone(session, done = true) {
+  session.warmupDone = done;
+  return session;
+}
 export const finisherFor = dayIndex => FIN[dayIndex];
 
 /**
@@ -199,8 +210,20 @@ export async function abandon(session) {
 }
 
 /** Kısmi seansı diske yazar — her set girişinden sonra çağrılır */
+/**
+ * Kaydedilmeye değer bir şey var mı?
+ *
+ * ⚠️ Yalnız `hasAnySet` bakmak YETMİYOR: ısınma işaretlendiğinde henüz hiç set
+ * yok, dolayısıyla seans diske yazılmıyordu. Kullanıcı ısınmayı yapıyor,
+ * uygulamayı kapatıp açıyor ve işaret KAYBOLMUŞ oluyordu.
+ * (Yine de "bitmiş antrenman" sayılmaz — finish() ve bayat-seans temizliği
+ *  hâlâ hasAnySet'e bakar, yoksa yalnız ısınma yapılan gün A/B sırasını
+ *  yanlış ilerletirdi.)
+ */
+export const hasAnyRecord = session => hasAnySet(session) || !!session.warmupDone;
+
 export async function persist(session) {
-  if (!hasAnySet(session)) return;          // boş seans yazma
+  if (!hasAnyRecord(session)) return;       // gerçekten boş seansı yazma
   await store.saveSession(session);
 }
 
