@@ -87,45 +87,32 @@ button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}
   border-radius:999px;padding:3px 9px}
 .li.warm.done .chip{border-color:var(--ink2);color:var(--ink2)}
 
-/* ── Isınma ekranı ── */
-.wsteps{flex:1;min-height:0;overflow-y:auto;border-top:1px solid var(--line);margin-top:14px}
-.ws{display:flex;align-items:center;gap:13px;padding:13px 20px;border-bottom:1px solid var(--line)}
-.ws .no{width:22px;height:22px;flex:none;border-radius:999px;border:1px solid var(--line2);
-  display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink3)}
-.ws.on{background:var(--s1)}
-.ws.on .no{border-color:var(--live);color:var(--live)}
-.ws.ok .no{background:var(--ink2);border-color:var(--ink2);color:#0A0B0D}
-.ws .nm{flex:1;min-width:0}
-.ws .nm b{display:block;font-size:14.5px;font-weight:550;letter-spacing:-.01em}
-.ws .nm span{display:block;font-size:11.5px;color:var(--ink3);margin-top:1px;line-height:1.35}
-.ws .dur{flex:none;font-size:13px;font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
-.ws.on .dur{color:var(--live)}
-.faz{padding:14px 20px 6px;display:flex;align-items:center;gap:9px}
-.faz span{flex:none}
-.faz i{flex:1;height:1px;background:var(--line)}
+/* ── Isınma ekranı ──────────────────────────────────────────────────────
+   Sayaç YOK, işaret YOK, ilerleme YOK. Ekran yalnız GÖSTERİR.
+   Satırlar liste ekranındaki hareket satırının AYNI bileşeni (.li) — bütünlük
+   yeni bir desen icat ederek değil, var olanı yeniden kullanarak kurulur.
+   Satırlar flex:1 ile eşit dağılıp ekranı dolduruyor; kaydırma yok. */
+.wlist{flex:1;min-height:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.wlist .li{flex:1;align-items:center}
+.wlist .li .amt{flex:none;font-size:13px;font-weight:600;color:var(--ink2);
+  font-variant-numeric:tabular-nums}
+/* Koşu ayrı: hareket değil, ısı yükseltme. Üstte ve kendi bloğunda duruyor. */
+.cardio{display:flex;align-items:center;gap:13px;margin:14px 20px 0;padding:13px 15px;
+  border:1px solid var(--line2);border-radius:var(--r2)}
+.cardio .nm{flex:1;min-width:0}
+.cardio .nm b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.cardio .nm span{display:block;font-size:11.5px;color:var(--ink3);margin-top:1px}
+.cardio .amt{flex:none;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
 .wfoot{padding:14px 20px 16px;display:flex;flex-direction:column;gap:9px}
-.wnote{font-size:12px;color:var(--ink3);line-height:1.45;margin:0}
-.clock{display:flex;align-items:baseline;justify-content:center;gap:10px;padding:2px 0 4px}
-.clock b{font-size:44px;font-weight:600;font-stretch:112%;letter-spacing:-.04em;
-  font-variant-numeric:tabular-nums;line-height:1;color:var(--live)}
-.clock span{font-size:12.5px;color:var(--ink3)}
+.wnote{font-size:12px;color:var(--ink3);line-height:1.45;margin:0;text-align:center}
 `;
 
-const wsHTML = (d, aktif) => {
-  const a = ISINMA[d].adımlar;
-  let çıktı = '', sonFaz = '';
-  const fazAd = { genel: 'genel ısınma', hareketlilik: 'hareketlilik', hazırlık: 'hazırlık seti' };
-  a.forEach(([ad, süre, faz, not], i) => {
-    if (faz !== sonFaz) { çıktı += `<div class="faz"><span class="t-l">${fazAd[faz]}</span><i></i></div>`; sonFaz = faz; }
-    const durum = i < aktif ? 'ok' : i === aktif ? 'on' : '';
-    çıktı += `<div class="ws ${durum}">
-      <span class="no">${i < aktif ? '✓' : i + 1}</span>
-      <span class="nm"><b>${ad}</b><span>${not}</span></span>
-      <span class="dur">${süre}</span>
-    </div>`;
-  });
-  return çıktı;
-};
+/** Koşu dışındaki adımlar — liste satırının aynı bileşeniyle, ekranı doldurarak */
+const wlistHTML = d => ISINMA[d].adımlar.filter(([, , faz]) => faz !== 'genel')
+  .map(([ad, miktar, , not]) => `<div class="li">
+      <span class="nm"><span class="t-h2">${ad}</span><span class="t-m">${not}</span></span>
+      <span class="amt">${miktar}</span>
+    </div>`).join('');
 
 const ekranListe = `<div class="ph">
   <div class="rail">${Array.from({ length: 9 }, (_, i) => `<i class="${i === 0 ? 'c' : ''}"></i>`).join('')}</div>
@@ -153,19 +140,21 @@ const ekranListe = `<div class="ph">
 const ekranIsinma = `<div class="ph">
   <div class="top">
     <button class="icb">←</button>
-    <span class="mid t-l">ısınma · 3/6</span>
-    <button class="icb">?</button>
+    <span class="mid t-l">ısınma</span>
+    <span style="width:36px"></span>
   </div>
   <div style="padding:14px 20px 0">
     <h1 class="t-h1">Isınma</h1>
     <p class="t-m" style="margin:3px 0 0">${ISINMA[1].gün.split(' · ').slice(1).join(' · ')} · ~7 dk</p>
   </div>
-  <div class="wsteps">${wsHTML(1, 2)}</div>
+  <div class="cardio">
+    <span class="nm"><b>Koşu bandı ya da bisiklet</b><span>Konuşabildiğin tempo. Amaç ter değil, ısı.</span></span>
+    <span class="amt">3 dk</span>
+  </div>
+  <div class="wlist">${wlistHTML(1)}</div>
   <div class="wfoot">
-    <div class="clock"><b>0:38</b><span>vücut ağırlığıyla squat</span></div>
-    <button class="b1">Sonraki hareket →</button>
-    <p class="wnote">Sayaç adımları sırayla yürütür; istersen dokunarak da geçebilirsin.
-      Isınma sete ve hacme sayılmaz.</p>
+    <button class="b1">Isınma bitti →</button>
+    <p class="wnote">Sete ve hacme sayılmaz.</p>
   </div>
 </div>`;
 
@@ -226,11 +215,13 @@ figcaption{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:va
       bir parçası gibi gösterir ve "6/28 set" gibi yanlış sayımlara yol açar. Elmas işareti
       ve hafif vurgu, üstte olduğunu numara vermeden söylüyor.</p></div>
     <div class="card"><h3>Neden tek ekran?</h3>
-      <p>Isınma hareketleri kısa ve <b>akış hâlinde</b> yapılır — 20 saniyelik bir hareket için
-      ekran değiştirmek akışı bozar. Liste görünür kalıyor, nerede olduğunu kaydırmadan görüyorsun.</p></div>
-    <div class="card"><h3>Sayaç ne yapıyor?</h3>
-      <p>Tek dokunuşla <b>adımları sırayla yürütür</b>: süre bitince bipler ve sıradakine geçer.
-      Tekrar sayılı adımlarda beklemez, sen geçersin. Zaten var olan geri sayım bileşeni kullanılıyor.</p></div>
+      <p>Isınma hareketleri kısa ve <b>akış hâlinde</b> yapılır. Satırlar liste ekranındaki hareket
+      satırının <b>aynı bileşeni</b> — bütünlük yeni desen icat ederek değil, var olanı yeniden
+      kullanarak kuruluyor. Eşit dağılıp ekranı dolduruyorlar; kaydırma yok.</p></div>
+    <div class="card"><h3>Neden sayaç yok?</h3>
+      <p>Isınmayı <b>saymak gereksiz iş yaratır</b>: kol çevirirken telefona dokunmazsın.
+      Ekran yalnız gösteriyor — ne sayaç, ne işaret kutusu, ne ilerleme. Tek dokunuş var,
+      o da çıkarken.</p></div>
     <div class="card"><h3>Hazırlık seti neden burada?</h3>
       <p>Sonuncu adım o günün <b>ilk ağır hareketi, hafif ağırlıkla</b>. Sinir sistemini uyandıran
       ve ilk seti kurtaran şey bu — ve en çok atlanan şey de bu. Program değişirse otomatik uyar.</p></div>
@@ -247,7 +238,7 @@ figcaption{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:va
     <ul>
       <li><code>js/data/warmup.js</code> — iki günün ısınma programı, aynı veri disipliniyle</li>
       <li>Liste ekranına numarasız ısınma satırı</li>
-      <li>Isınma ekranı + mevcut geri sayım bileşenine bağlanan sıralı sayaç</li>
+      <li>Isınma ekranı — sayaçsız, liste satırı bileşeniyle, kaydırmasız</li>
       <li>Seans kaydına tek bir <code>warmupDone</code> işareti — sete ve hacme karışmaz</li>
     </ul>
   </div>
