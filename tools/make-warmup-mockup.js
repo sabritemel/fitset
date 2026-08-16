@@ -33,7 +33,10 @@ function mini(w) {
 
 const SYS = `
 :root{--bg:#0A0B0D;--s1:#111316;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.12);
-  --ink:#CDD1D7;--ink2:#8D939C;--ink3:#777E88;--btn:#C8CCD3;--live:#EE5568;--r2:10px}
+  --ink:#CDD1D7;--ink2:#8D939C;--ink3:#777E88;--btn:#C8CCD3;--live:#EE5568;--r2:10px;
+  /* Kafa dairesi boyun çizgisini maskeleyen DOLU dairedir — rengi ZEMİN olmalı.
+     Tanımlanmazsa motor #FDF3F6'ya düşer ve koyu zeminde parlak nokta kalır. */
+  --fig-head:#0A0B0D}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 .ph *{font-family:'Archivo',system-ui,sans-serif}
 button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}
@@ -77,7 +80,7 @@ button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}
 .wlist{flex:1;min-height:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
 .wlist .li{flex:1}
 .amt{flex:none;font-size:13px;font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
-.mini{flex:none;width:62px;height:46px;color:var(--ink);stroke:currentColor;opacity:.92}
+.mini{flex:none;width:80px;height:62px;color:var(--ink);stroke:currentColor;opacity:.92}
 .mini .eq,.mini .cbl{stroke:#4A5058}.mini .gr{stroke:#242A30}
 /* Koşu ayrı: hareket değil, ısı yükseltme — kendi bloğunda, çizimsiz. */
 .cardio{display:flex;align-items:center;gap:13px;margin:14px 20px 0;padding:12px 15px;
@@ -140,7 +143,7 @@ const ekranIsinma = `<div class="ph">
   </div>
 </div>`;
 
-const page = `<style>${FONTS}
+const page = `<style>${FONTS}${SYS}
 :root{--pg:#F2EFF2;--pn:#FFF;--ln:#E1DBE3;--tx:#231F26;--dm:#6B6472;--ac:#C81E4E}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --pg:#121016;--pn:#1A171D;--ln:#2B2630;--tx:#EAE5EC;--dm:#9B92A2;--ac:#FF5C82}}
@@ -222,5 +225,26 @@ code{font-size:13px;background:rgb(128 128 128/.14);padding:1px 5px;border-radiu
   </div>
 </div>`;
 
+/* ── ÇIKTI DENETİMİ ────────────────────────────────────────────────────────
+   Bu betik bir kez ${SYS}'i sayfaya koymayı ATLADI: telefon ekranlarının TÜM
+   stil sayfası eksik yayınlandı, satırlar çöktü, figürlerden yalnız kafa
+   daireleri göründü. Sayfa "üretildi" dediği için hata sessiz kaldı.
+   Artık üretim, beklenen KURALLARIN ve çizim öğelerinin varlığını doğruluyor. */
+const gövde = page.replace(/base64,[A-Za-z0-9+/=]+/g, 'base64,…');
+const eksik = [];
+for (const kural of ['.wlist{', '.mini{', '.li{', '.cardio{', '.ph{', '--fig-head'])
+  if (!gövde.includes(kural)) eksik.push(kural);
+
+const polyline = (gövde.match(/<polyline/g) || []).length;
+const svg = (gövde.match(/<svg class="mini"/g) || []).length;
+if (svg === 0) eksik.push('minik figür üretilmemiş');
+if (polyline < svg * 3) eksik.push(`figürlerde gövde çizgisi yok (${polyline} polyline / ${svg} figür)`);
+
+if (eksik.length) {
+  console.error('✗ Çıktı eksik: ' + eksik.join(' · '));
+  process.exit(1);
+}
+
 fs.writeFileSync(path.join(ROOT, 'mockup-isinma.html'), page, 'utf8');
 console.log(`✓ mockup-isinma.html — ${(Buffer.byteLength(page) / 1024).toFixed(0)} KB`);
+console.log(`  denetim: ${svg} figür · ${polyline} gövde çizgisi · stil kuralları yerinde`);
