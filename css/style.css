@@ -219,6 +219,9 @@ input { font: inherit; }
   color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; line-height: 26px; }
 .tag b { color: var(--ink); font-weight: 550; }
 .tag.w { border-style: dashed; color: var(--ink3); }
+/* Katlanmış rozetler: "+2" / "az". Sayı DEĞİL kontrol olduğu için sönük ve
+   dolgusuz — göz önce gerçek setlere, sonra buna gitsin. */
+.tag.more { color: var(--ink3); border-color: var(--line); padding: 0 9px; }
 .tags .undo { flex: none; height: 28px; padding: 0 4px; color: var(--ink3); font-size: 12px; }
 
 /* Sayı girişi: rakam kahraman, adımlayıcı dikey ve sessiz */

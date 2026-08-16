@@ -14,6 +14,9 @@ import { mmss } from './timer.js';
 
 /* ── Yardımcılar ───────────────────────────────────────────────────────── */
 
+/** Odak ekranında aynı anda duran set rozeti sayısı; gerisi "+N" ardında. */
+export const GORUNUR_ROZET = 3;
+
 const setLabel = (s, birim) =>
   s.type === 'time' ? `${s.seconds} sn`
     : s.type === 'cardio' ? `${s.minutes} dk`
@@ -287,13 +290,24 @@ export function focusHTML(ctx) {
   const ex = exs[idx];
   const q = N.exerciseProgress(session, ex, settings);
 
+  /* Rozetler: yalnız SON 3'ü durur. Uzun hareketlerde (3 çalışma + ısınma
+     setleri + yeniden girilen setler) sıra taşıp kontrolleri sıkıştırıyordu.
+     Gizlemek veriyi ERİŞİLMEZ yapmasın diye "+N" dokununca hepsi açılır.
+     Numaralar TÜM setler üzerinden sayılır — gizlenen set numarayı kaydırmaz. */
   let no = 0;
-  const tags = q.sets.map((s, i) => {
+  const hepsi = q.sets.map((s, i) => {
     const son = i === q.sets.length - 1;
     const et = s.warmup ? 'ısınma' : `${++no}`;
     return `<span class="tag${s.warmup ? ' w' : ''}">${et} <b>${setLabel(s, settings.unit)}</b></span>`
       + (son ? `<button class="undo" data-act="undo">geri al</button>` : '');
-  }).join('');
+  });
+  const gizli = ctx.tumRozetler ? 0 : Math.max(0, hepsi.length - GORUNUR_ROZET);
+  const katla = hepsi.length > GORUNUR_ROZET
+    ? (gizli
+        ? `<button class="tag more" data-act="rozet-hepsi" aria-label="${gizli} önceki seti göster">+${gizli}</button>`
+        : `<button class="tag more" data-act="rozet-az" aria-label="Yalnız son ${GORUNUR_ROZET} seti göster">az</button>`)
+    : '';
+  const tags = katla + hepsi.slice(gizli).join('');
 
   const kaydet = ex.setType === 'time' ? 'Süreyi kaydet' : `${q.calisma + 1}. seti kaydet`;
 

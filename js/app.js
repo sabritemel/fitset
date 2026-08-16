@@ -20,6 +20,7 @@ const ctx = {
   session: null, dayIndex: 0, idx: 0,
   lastPerf: {}, settings: S.DEFAULT_SETTINGS, status: null,
   draft: {},                 // o an ekranda duran, henüz kaydedilmemiş değerler
+  tumRozetler: false,        // "+N" açıldı mı — harekete özel, geçicidir
   view: 'list',
 };
 let bootDay = C.dayNumber(new Date());
@@ -378,6 +379,9 @@ document.addEventListener('click', async e => {
     case 'next': git(ctx.idx + 1); break;
     case 'save': await kaydetTıklandı(); break;
 
+    case 'rozet-hepsi': ctx.tumRozetler = true;  render(); break;
+    case 'rozet-az':    ctx.tumRozetler = false; render(); break;
+
     case 'undo': {
       const geri = N.undoLastSet(ctx.session, ex.id);
       if (!geri) break;
@@ -424,6 +428,7 @@ function git(i) {
   if (i < 0 || i >= exs.length) return;
   stopAnim(); hold.stop();
   ctx.idx = i; ctx.view = 'focus'; ctx.draft = draftFor(exs[i]);
+  ctx.tumRozetler = false;        // her harekete katlanmış başla
   render(); scrollTo(0, 0);
 }
 
