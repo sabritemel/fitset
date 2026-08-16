@@ -28,7 +28,7 @@ const STORES = { sessions: 'id', settings: 'key' };
 
 export const DEFAULT_SETTINGS = {
   key: 'config',
-  restSeconds: 90,
+  restSeconds: 60,
   unit: 'kg',
   theme: 'auto',
   trainingDays: [2, 4, 6],       // 0=Pazar … 2=Salı, 4=Perşembe, 6=Cumartesi
@@ -94,7 +94,11 @@ export const driver = typeof indexedDB !== 'undefined' ? new IDBDriver() : new M
 /* ── Ayarlar ───────────────────────────────────────────────────────────── */
 
 export async function getSettings() {
-  return { ...DEFAULT_SETTINGS, ...(await driver.get('settings', 'config') || {}) };
+  const kayitli = await driver.get('settings', 'config') || {};
+  // 90 sn yalnizca ESKI VARSAYILANDI ve degistirilecek bir arayuz hic olmadi;
+  // yani 90 goren herkes varsayilani goruyor. Yeni varsayilana tasi.
+  if (kayitli.restSeconds === 90) kayitli.restSeconds = 60;
+  return { ...DEFAULT_SETTINGS, ...kayitli };
 }
 export async function saveSettings(patch) {
   const next = { ...(await getSettings()), ...patch, key: 'config' };

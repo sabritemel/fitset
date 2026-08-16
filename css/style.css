@@ -316,7 +316,13 @@ input { font: inherit; }
 .tip .t-l { display: block; margin-bottom: 3px; color: var(--warn); opacity: .8; }
 
 /* ── Bildirim ───────────────────────────────────────────────────────────── */
-.toast { position: fixed; left: 16px; right: 16px; bottom: 84px; z-index: 60;
+/* ⚠️ İKİ SORUN BİRDEN: şerit hem düğmelerin ÜSTÜNE biniyordu hem de
+   kapanana kadar altındaki düğmelere BASILAMIYORDU.
+   · bottom yükseltildi: alt segment + kaydet bloğunun üstünde duruyor
+   · pointer-events:none — üzerinden geçen dokunuş ALTA ULAŞIR; yalnız
+     şeridin kendi düğmesi tıklanabilir. Örtse bile engellemiyor. */
+.toast { position: fixed; left: 16px; right: 16px; bottom: 168px; z-index: 60;
+  pointer-events: none;
   background: var(--s2); border: 1px solid var(--line2); color: var(--ink);
   padding: 13px 15px; border-radius: var(--r2); font-size: 14px;
   display: flex; align-items: center; gap: 12px;
@@ -324,5 +330,5 @@ input { font: inherit; }
   box-shadow: 0 12px 40px rgb(0 0 0 / .6); }
 .toast.warn { border-color: var(--live); }
 .toast span { flex: 1; }
-.toast button { flex: none; border: 1px solid var(--line2); padding: 8px 12px;
+.toast button { pointer-events: auto; flex: none; border: 1px solid var(--line2); padding: 8px 12px;
   border-radius: var(--r1); font-size: 13px; min-height: 38px; }

@@ -38,9 +38,10 @@ const EXPECTED = {
   'Dumbbell Hammer Curl': { endpointsSame: false, why: 'fa 100→53, fa2 80→57: bitiş fleksiyonu 192°→145°' },
   // — okunurluk düzeltmeleri (audit-views.js ile bulundu, Sabri geri bildirimi) —
   'Calf Raise': { endpointsSame: false, why: 'kol denge barına uzatıldı — bacakla çakışma 1.00→0.00' },
-  'Lunge': { endpointsSame: false, why: 'kollar geriye alındı (çakışma 1.00→0.00) + izlenen nokta kalça→arka diz' },
+  'Lunge': { endpointsSame: false, why: 'kollar geriye (çakışma 1.00→0.00) + izlenen nokta arka diz + ARKA BACAK ters kinematikle yeniden çözüldü (diz2 yanlış IK dalındaydı, düz konumu geçip ters kıvrılıyordu)' },
   'Leg Press': { endpointsSame: false, why: 'kollar koltuğun yanına indirildi — çakışma 1.00→0.00' },
   'Two Arm Dumbbell Row': { endpointsSame: false, why: 'hareket açıklığı genişletildi — yol 0.42→0.56' },
+  'Seated Cable Row': { endpointsSame: false, why: 'başlangıçta dirsek −16° ile TERS bükülüydü; hareket boyunca işaret değiştiriyordu. fa −17→9 (hafif fleksiyon)' },
   // — ekipman düzeltmesi (Sabri: "alet ile yapılıyor") —
   'Reverse Pec Fly': { endpointsSame: true, why: 'MAKİNE eklendi; pozlara dokunulmadı, yalnız eq() değişti' },
 };

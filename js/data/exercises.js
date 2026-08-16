@@ -196,7 +196,9 @@ export const EX=[[
  id:"cable_seated_row", setType:"weight_reps", equipment:"cable", target:{"reps":12},
  en:"Seated Cable Row", tr:"Oturarak kablo kürek çekişi", sets:3, reps:"3 × 12",
  view:"side", face:1, mus:"Sırt (orta) · Kürek kasları · Biceps",
- a:{px:118,py:140,torso:76,ua:-1,fa:-17,th:3,sh:-19},
+ // Baslangicta dirsek -16 ile hafif TERS bukuluydu ve hareket boyunca
+ // isaret degistiriyordu. Kollar one uzanmis = dirsek hafif FLEKSIYONDA.
+ a:{px:118,py:140,torso:76,ua:-1,fa:9,th:3,sh:-19},
  b:{px:118,py:140,torso:96,ua:-137,fa:-9,th:3,sh:-19},
  eq:s=>rct(84,146,54,10)+rct(194,120,12,42)+cbl([196,132],s.haA)+grip(s.haA),
  steps:["Otur, ayaklarını platforma bas, dizleri hafif bükük tut; tutamağı kolların uzanmış şekilde kavra.",
@@ -259,8 +261,13 @@ export const EX=[[
  // OKUNURLUK: kollar öndeki uylukla örtüşüyordu; hafif geriye alındı.
  // İzlenen nokta da kalçadan ARKA DİZE taşındı (track) — kalça 16px iniyor,
  // arka diz çok daha fazla yol alıyor; hareketi asıl anlatan o.
- a:{px:130,py:118,torso:90,ua:-106,fa:-93,th:-53,sh:-83,th2:-127,sh2:-97},
- b:{px:130,py:134,torso:90,ua:-106,fa:-93,th:-24,sh:-102,th2:-81,sh2:-159},
+ // ARKA BACAK ters kinematikle cozuldu. Onceki hali a pozunda YANLIS IK
+ // dalindaydi (diz2 +24 -> -76): bacak hareket ortasinda duz konumu gecip
+ // ters tarafa kiviriliyordu. Kisit: arka ayak ucu (100,186) SABIT, kalca
+ // iner, diz bukulme yonu degismez. Dogru dal arka dizi yere indiriyor
+ // (y 156 -> 173); yanlis dal havada tutuyordu.
+ a:{px:130,py:118,torso:90,ua:-106,fa:-93,th:-53,sh:-83,th2:-102.1,sh2:-126.2},
+ b:{px:130,py:134,torso:90,ua:-106,fa:-93,th:-24,sh:-102,th2:-83.3,sh2:-159},
  eq:s=>grd(),
  steps:["Dik dur, karnını sık; bir ayağınla öne uzun bir adım at, arka topuk havada kalır.",
         "Gövden dik kalacak şekilde kalçanı düz aşağı indir — öne doğru eğilme.",
