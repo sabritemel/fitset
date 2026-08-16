@@ -169,6 +169,52 @@ if (holdClean) console.log(holdCount
   ? `  ✓ ${holdCount} izometrik hareket · doğru + hatalı duruş görselleri tam, temas noktaları yerinde`
   : '  ⓘ izometrik hareket yok');
 
+// ── 7. Isınma hareketleri de AYNI denetimden geçer ──────────────────────────
+console.log('\n7) ISINMA HAREKETLERİ');
+{
+  const { WARMUP } = await import('../js/data/warmup.js');
+  const kendi = WARMUP.flat().filter(w => !w.ref);      // ref olanlar egzersizin pozunu ödünç alır
+  const ödünç = WARMUP.flat().filter(w => w.ref);
+  let temiz = true;
+
+  for (const w of kendi) {
+    for (const f of ['id', 'ad', 'miktar', 'not', 'view', 'a', 'b', 'eq'])
+      if (w[f] === undefined) { console.log(`  ✗ ${w.ad}: zorunlu alan eksik: ${f}`); fails++; temiz = false; }
+    if (!w.a) continue;
+
+    for (let i = 0; i <= 20; i++) {
+      const p = poseAt(w.a, w.b, i / 20);
+      const s = skeleton(p, w.view);
+      // uzuv uzunluğu
+      for (const [got, want] of [[dist(s.shA, s.elA), L.ua], [dist(s.elA, s.haA), L.fa],
+                                 [dist(s.hipA, s.knA), L.th], [dist(s.knA, s.ftA), L.sh]])
+        if (Math.abs(got - want) / want > 0.01) { console.log(`  ✗ ${w.ad}: uzuv uzunluğu sapıyor`); fails++; temiz = false; i = 99; break; }
+      // eklem limiti
+      const dirsek = norm(p.fa - p.ua), diz = norm(p.sh - p.th);
+      if (Math.abs(dirsek) > 150 || Math.abs(diz) > 150) {
+        console.log(`  ✗ ${w.ad} @t=${(i / 20).toFixed(2)}: eklem limiti aşıldı (dirsek ${dirsek.toFixed(0)}°, diz ${diz.toFixed(0)}°)`);
+        fails++; temiz = false; break;
+      }
+    }
+    // dönüş yönü: eklem işareti hareket boyunca değişmemeli
+    for (const [ad, üst, alt] of [['dirsek', 'ua', 'fa'], ['diz', 'th', 'sh'],
+                                  ['dirsek2', 'ua2', 'fa2'], ['diz2', 'th2', 'sh2']]) {
+      if (w.a[üst] === undefined) continue;
+      const seri = Array.from({ length: 21 }, (_, i) => {
+        const p = poseAt(w.a, w.b, i / 20);
+        return norm((p[alt] ?? p[alt.replace('2', '')]) - p[üst]);
+      });
+      const mn = Math.min(...seri), mx = Math.max(...seri);
+      if (mn < -6 && mx > 6) {
+        console.log(`  ✗ ${w.ad}: ${ad} TERS KIVRILIYOR (${mn.toFixed(0)}° … ${mx.toFixed(0)}°)`);
+        fails++; temiz = false;
+      }
+    }
+  }
+  if (temiz) console.log(`  ✓ ${kendi.length} kendi pozlu hareket · uzuv, eklem limiti ve dönüş yönü temiz`);
+  console.log(`  ⓘ ${ödünç.length} hazırlık adımı egzersizin pozunu ödünç alıyor (ayrıca denetlenmiş)`);
+}
+
 // ── Özet ───────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(64)}`);
 console.log(`${all.length} egzersiz · ${fails} hata · ${warns} uyarı`);

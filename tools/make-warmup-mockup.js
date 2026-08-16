@@ -1,15 +1,16 @@
 /**
  * ISINMA MOKAP'I —  node tools/make-warmup-mockup.js
  *
- * Sabri: "günlük programın ilk hareketi ısınma olsun, tüm ısınma hareketleri
- * tek sayfada olabilir... bu uygun mu? en makul nasıl olabilir?"
- *
- * Bu dosya öneriyi GÖSTERİR, uygulamaya bir şey eklemez. Onaydan sonra
- * js/data/warmup.js + bir ekran yazılacak.
+ * Öneriyi GÖSTERİR; uygulamaya bir şey eklemez. Veri gerçek (js/data/warmup.js),
+ * çizimler gerçek motorla (js/anim/engine.js) üretiliyor — yani onaylanan şey
+ * doğrudan uygulanabilir.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { WARMUP, KARDIYO, SURE } from '../js/data/warmup.js';
+import { EX } from '../js/data/exercises.js';
+import * as E from '../js/anim/engine.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const b64 = f => fs.readFileSync(path.join(ROOT, 'fonts', f)).toString('base64');
@@ -19,38 +20,20 @@ const FONTS = ['archivo-latin.woff2', 'archivo-latin-ext.woff2'].map((f, i) =>
   + `unicode-range:${i ? 'U+0100-02BA,U+1E00-1EFF,U+2020,U+20A0-20AB,U+2113,U+2C60-2C7F,U+A720-A7FF'
     : 'U+0000-00FF,U+0131,U+2000-206F,U+2122,U+2191,U+2193,U+2212,U+2215'}}`).join('\n');
 
-/* ── Isınma programı — öneri ──────────────────────────────────────────────
-   Üç aşama. Sıra rastgele değil: önce vücut ısısı, sonra eklem açıklığı,
-   en son o günün ilk ağır hareketine özel hazırlık seti. */
-const ISINMA = {
-  0: {
-    gün: '1. Gün · Göğüs · Omuz · Triceps',
-    adımlar: [
-      ['Koşu bandı ya da bisiklet', '3 dk', 'genel', 'Konuşabildiğin tempo. Amaç ter değil, ısı.'],
-      ['Kol çevirme — öne / geriye', '10 + 10', 'hareketlilik', 'Küçükten büyüğe daireler.'],
-      ['Omuz dış rotasyon (lastik/hafif)', '12', 'hareketlilik', 'Dirsek gövdede sabit, ön kolu dışa aç.'],
-      ['Diz üstü ya da duvar şınavı', '10', 'hareketlilik', 'Göğüs ve triceps kan alsın.'],
-      ['Göğüs açma — dinamik', '20 sn', 'hareketlilik', 'Kolları geriye aç-kapa; germede bekleme.'],
-      ['Bench press — boş bar', '1 × 12', 'hazırlık', 'İlk ağır hareketin sinir sistemini uyandırır.'],
-    ],
-  },
-  1: {
-    gün: '2. Gün · Sırt · Biceps · Bacak',
-    adımlar: [
-      ['Koşu bandı ya da bisiklet', '3 dk', 'genel', 'Konuşabildiğin tempo. Amaç ter değil, ısı.'],
-      ['Kalça çemberi', '8 + 8', 'hareketlilik', 'Her iki yöne, kontrollü.'],
-      ['Vücut ağırlığıyla squat', '12', 'hareketlilik', 'Tam derinlik, ağırlıksız.'],
-      ['Yürüyen lunge', '8 adım', 'hareketlilik', 'Dizler ve kalça açılsın.'],
-      ['Kabloyla hafif kürek çekişi', '12', 'hareketlilik', 'Kürek kemiklerini hissederek.'],
-      ['Lat çekişi — hafif ağırlık', '1 × 12', 'hazırlık', 'İlk ağır hareketin hazırlık seti.'],
-    ],
-  },
-};
+const byId = Object.fromEntries(EX.flat().map(e => [e.id, e]));
+
+/** Minik figür — Plank varyantlarındaki gibi, hareketin ortasından tek kare */
+function mini(w) {
+  const k = w.ref ? byId[w.ref] : w;
+  const s = E.skeleton(E.poseAt(k.a, k.b, 0.55), k.view);
+  return `<svg class="mini" viewBox="10 25 240 170" preserveAspectRatio="xMidYMid meet" aria-hidden="true">`
+    + `<g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">`
+    + `${k.eq ? k.eq(s) : ''}${E.figure(s, k)}</g></svg>`;
+}
 
 const SYS = `
-:root{--bg:#0A0B0D;--s1:#111316;--s2:#181B1F;--line:rgba(255,255,255,.07);
-  --line2:rgba(255,255,255,.12);--ink:#CDD1D7;--ink2:#8D939C;--ink3:#777E88;
-  --btn:#C8CCD3;--live:#EE5568;--r1:6px;--r2:10px}
+:root{--bg:#0A0B0D;--s1:#111316;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.12);
+  --ink:#CDD1D7;--ink2:#8D939C;--ink3:#777E88;--btn:#C8CCD3;--live:#EE5568;--r2:10px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 .ph *{font-family:'Archivo',system-ui,sans-serif}
 button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}
@@ -73,46 +56,45 @@ button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}
 .hd{padding:22px 20px 0}
 .hd h2{font-size:27px;font-weight:600;letter-spacing:-.025em;margin:7px 0 3px}
 .lst{margin-top:20px;border-top:1px solid var(--line)}
-.li{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--line);
+.li{display:flex;align-items:center;gap:13px;padding:14px 20px;border-bottom:1px solid var(--line);
   width:100%;text-align:left}
 .li .ix{width:16px;flex:none;font-size:11.5px;color:var(--ink3)}
 .li .nm{flex:1;min-width:0}
 .li .nm .t-m{display:block;margin-top:1px}
 .li .pips{display:flex;gap:3px;flex:none}
 .li .pips i{width:5px;height:5px;border-radius:999px;border:1px solid var(--line2)}
-/* ISINMA SATIRI — numarasız, üstte, kendi işaretiyle */
 .li.warm{background:linear-gradient(90deg,rgba(238,85,104,.07),transparent 60%)}
 .li.warm .ix{color:var(--live);font-size:13px}
 .li.warm .chip{flex:none;font-size:11px;color:var(--ink3);border:1px solid var(--line);
   border-radius:999px;padding:3px 9px}
-.li.warm.done .chip{border-color:var(--ink2);color:var(--ink2)}
 
 /* ── Isınma ekranı ──────────────────────────────────────────────────────
-   Sayaç YOK, işaret YOK, ilerleme YOK. Ekran yalnız GÖSTERİR.
-   Satırlar liste ekranındaki hareket satırının AYNI bileşeni (.li) — bütünlük
-   yeni bir desen icat ederek değil, var olanı yeniden kullanarak kurulur.
-   Satırlar flex:1 ile eşit dağılıp ekranı dolduruyor; kaydırma yok. */
+   Sayaç YOK, işaret YOK, ilerleme YOK — ekran yalnız GÖSTERİR.
+   Satırlar liste ekranındaki hareket satırının AYNI bileşeni (.li); bütünlük
+   yeni desen icat ederek değil var olanı kullanarak kuruluyor. flex:1 ile
+   eşit dağılıp ekranı dolduruyorlar, kaydırma yok.
+   Her satırın SONUNDA minik çizim — Plank varyantlarındaki gibi. */
 .wlist{flex:1;min-height:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
-.wlist .li{flex:1;align-items:center}
-.wlist .li .amt{flex:none;font-size:13px;font-weight:600;color:var(--ink2);
-  font-variant-numeric:tabular-nums}
-/* Koşu ayrı: hareket değil, ısı yükseltme. Üstte ve kendi bloğunda duruyor. */
-.cardio{display:flex;align-items:center;gap:13px;margin:14px 20px 0;padding:13px 15px;
+.wlist .li{flex:1}
+.amt{flex:none;font-size:13px;font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
+.mini{flex:none;width:62px;height:46px;color:var(--ink);stroke:currentColor;opacity:.92}
+.mini .eq,.mini .cbl{stroke:#4A5058}.mini .gr{stroke:#242A30}
+/* Koşu ayrı: hareket değil, ısı yükseltme — kendi bloğunda, çizimsiz. */
+.cardio{display:flex;align-items:center;gap:13px;margin:14px 20px 0;padding:12px 15px;
   border:1px solid var(--line2);border-radius:var(--r2)}
 .cardio .nm{flex:1;min-width:0}
 .cardio .nm b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
 .cardio .nm span{display:block;font-size:11.5px;color:var(--ink3);margin-top:1px}
-.cardio .amt{flex:none;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.cardio .amt{font-size:17px;color:var(--ink)}
 .wfoot{padding:14px 20px 16px;display:flex;flex-direction:column;gap:9px}
 .wnote{font-size:12px;color:var(--ink3);line-height:1.45;margin:0;text-align:center}
 `;
 
-/** Koşu dışındaki adımlar — liste satırının aynı bileşeniyle, ekranı doldurarak */
-const wlistHTML = d => ISINMA[d].adımlar.filter(([, , faz]) => faz !== 'genel')
-  .map(([ad, miktar, , not]) => `<div class="li">
-      <span class="nm"><span class="t-h2">${ad}</span><span class="t-m">${not}</span></span>
-      <span class="amt">${miktar}</span>
-    </div>`).join('');
+const wlistHTML = d => WARMUP[d].map(w => `<div class="li">
+    <span class="nm"><span class="t-h2">${w.ad}</span><span class="t-m">${w.not}</span></span>
+    <span class="amt">${w.miktar}</span>
+    ${mini(w)}
+  </div>`).join('');
 
 const ekranListe = `<div class="ph">
   <div class="rail">${Array.from({ length: 9 }, (_, i) => `<i class="${i === 0 ? 'c' : ''}"></i>`).join('')}</div>
@@ -122,7 +104,7 @@ const ekranListe = `<div class="ph">
   <div class="lst">
     <button class="li warm">
       <span class="ix">◆</span>
-      <span class="nm"><span class="t-h2">Isınma</span><span class="t-m">6 hareket · ~7 dk</span></span>
+      <span class="nm"><span class="t-h2">Isınma</span><span class="t-m">${WARMUP[1].length + 1} adım · ${SURE[1]}</span></span>
       <span class="chip">başla</span>
     </button>
     ${[['01', 'Close Grip Pull Down', 'Dar tutuş lat çekişi'],
@@ -145,15 +127,15 @@ const ekranIsinma = `<div class="ph">
   </div>
   <div style="padding:14px 20px 0">
     <h1 class="t-h1">Isınma</h1>
-    <p class="t-m" style="margin:3px 0 0">${ISINMA[1].gün.split(' · ').slice(1).join(' · ')} · ~7 dk</p>
+    <p class="t-m" style="margin:3px 0 0">Sırt · Biceps · Bacak · ${SURE[1]}</p>
   </div>
   <div class="cardio">
-    <span class="nm"><b>Koşu bandı ya da bisiklet</b><span>Konuşabildiğin tempo. Amaç ter değil, ısı.</span></span>
-    <span class="amt">3 dk</span>
+    <span class="nm"><b>${KARDIYO.ad}</b><span>${KARDIYO.not}</span></span>
+    <span class="amt">${KARDIYO.miktar}</span>
   </div>
   <div class="wlist">${wlistHTML(1)}</div>
   <div class="wfoot">
-    <button class="b1">Isınma bitti →</button>
+    <button class="b1">Isınma bitti — 1. harekete geç →</button>
     <p class="wnote">Sete ve hacme sayılmaz.</p>
   </div>
 </div>`;
@@ -187,16 +169,15 @@ figcaption{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:va
 .ask h3{font-size:17px;margin:0 0 8px;font-weight:700}
 .ask ul{margin:0;padding-left:20px;font-size:14.5px;color:var(--dm)}
 .ask li{margin-bottom:6px}
+code{font-size:13px;background:rgb(128 128 128/.14);padding:1px 5px;border-radius:4px}
 </style>
 <div class="pg">
   <p class="eb">FitSet · ısınma önerisi</p>
   <h1>Isınma, listenin numarasız ilk satırı</h1>
-  <p class="lede">Sorunun cevabı <b>evet, uygun</b> — hatta eksik olan en değerli parça bu.
-  Ama iki şeyi ayırmak gerekiyor: ısınma <b>kaydedilen bir hareket değil</b>, bir hazırlık.
-  Bu yüzden numara almıyor, sete ve hacme sayılmıyor, ve <b>hepsi tek ekranda</b> duruyor —
-  altı ayrı ekran açtırmak, çözmek istediğimiz sorunun ta kendisi olurdu.</p>
+  <p class="lede">Isınma <b>kaydedilen bir hareket değil</b>, bir hazırlık. Bu yüzden numara almıyor,
+  sete ve hacme sayılmıyor, ağırlık/tekrar tutulmuyor — ve <b>hepsi tek ekranda</b> duruyor.</p>
   <p class="lede">Sıra rastgele değil: <b>ısı → eklem açıklığı → hazırlık seti.</b>
-  Üçüncüsü en çok atlanan ve en çok işe yarayan kısım.</p>
+  Üçüncüsü en çok atlanan ve en çok işe yarayan kısım — o günün ilk ağır hareketi, hafif ağırlıkla.</p>
 
   <div class="frames">
     <figure>
@@ -205,45 +186,41 @@ figcaption{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:va
     </figure>
     <figure>
       <div class="phone">${ekranIsinma}</div>
-      <figcaption>Isınma — hepsi tek ekranda, sayaç sırayı yürütür</figcaption>
+      <figcaption>Isınma — tek ekran, her satırda minik çizim</figcaption>
     </figure>
   </div>
 
   <div class="why">
     <div class="card"><h3>Neden numarasız?</h3>
-      <p>Numaralar <b>kaydedilen</b> hareketler için. Isınmaya numara vermek onu programın
-      bir parçası gibi gösterir ve "6/28 set" gibi yanlış sayımlara yol açar. Elmas işareti
-      ve hafif vurgu, üstte olduğunu numara vermeden söylüyor.</p></div>
-    <div class="card"><h3>Neden tek ekran?</h3>
-      <p>Isınma hareketleri kısa ve <b>akış hâlinde</b> yapılır. Satırlar liste ekranındaki hareket
-      satırının <b>aynı bileşeni</b> — bütünlük yeni desen icat ederek değil, var olanı yeniden
-      kullanarak kuruluyor. Eşit dağılıp ekranı dolduruyorlar; kaydırma yok.</p></div>
+      <p>Numaralar <b>kaydedilen</b> hareketler için. Isınmaya numara vermek onu programın parçası
+      gibi gösterir ve "6/28 set" gibi yanlış sayımlara yol açar.</p></div>
     <div class="card"><h3>Neden sayaç yok?</h3>
-      <p>Isınmayı <b>saymak gereksiz iş yaratır</b>: kol çevirirken telefona dokunmazsın.
-      Ekran yalnız gösteriyor — ne sayaç, ne işaret kutusu, ne ilerleme. Tek dokunuş var,
-      o da çıkarken.</p></div>
-    <div class="card"><h3>Hazırlık seti neden burada?</h3>
-      <p>Sonuncu adım o günün <b>ilk ağır hareketi, hafif ağırlıkla</b>. Sinir sistemini uyandıran
-      ve ilk seti kurtaran şey bu — ve en çok atlanan şey de bu. Program değişirse otomatik uyar.</p></div>
+      <p>Isınmayı saymak <b>gereksiz iş yaratır</b> — kol çevirirken telefona dokunmazsın. Ekran
+      yalnız gösteriyor. Tek dokunuş var, o da çıkarken.</p></div>
+    <div class="card"><h3>Minik çizimler</h3>
+      <p>Her satırın sonunda hareketin bir karesi — <b>Plank varyantlarındaki gibi</b>. Aynı motor,
+      aynı denetim: uzuv uzunluğu, eklem limiti ve dönüş yönü <code>verify-poses.js</code>'te
+      kontrol ediliyor.</p></div>
+    <div class="card"><h3>Neden tek ekran?</h3>
+      <p>Satırlar liste ekranındaki hareket satırının <b>aynı bileşeni</b>. Eşit dağılıp ekranı
+      dolduruyorlar; kaydırma yok — odak ekranıyla aynı kural.</p></div>
+    <div class="card"><h3>"Bitti" ne yapıyor?</h3>
+      <p>Tıpkı normal hareketlerdeki gibi <b>doğrudan 1. harekete geçiyor</b>. Listeye dönüp
+      oradan seçmene gerek yok; akış kesilmiyor.</p></div>
     <div class="card"><h3>Kaydediliyor mu?</h3>
-      <p>Yalnızca <b>"yapıldı" işareti</b>. Ağırlık, tekrar, hacim tutulmuyor; ısınma performans
-      verisi değil. Böylece grafikler ve "geçen sefer" referansı temiz kalıyor.</p></div>
-    <div class="card"><h3>Ne kadar sürüyor?</h3>
-      <p><b>~7 dakika.</b> Daha uzun olsa atlanır, daha kısa olsa işe yaramaz. Kardiyo 3 dk,
-      hareketlilik ~3 dk, hazırlık seti ~1 dk.</p></div>
+      <p>Yalnızca <b>"yapıldı" işareti</b>. Ağırlık, tekrar, hacim tutulmuyor — grafikler ve
+      "geçen sefer" referansı temiz kalıyor.</p></div>
   </div>
 
   <div class="ask">
-    <h3>Onaylarsan bunlar yazılacak</h3>
+    <h3>Durum</h3>
     <ul>
-      <li><code>js/data/warmup.js</code> — iki günün ısınma programı, aynı veri disipliniyle</li>
-      <li>Liste ekranına numarasız ısınma satırı</li>
-      <li>Isınma ekranı — sayaçsız, liste satırı bileşeniyle, kaydırmasız</li>
-      <li>Seans kaydına tek bir <code>warmupDone</code> işareti — sete ve hacme karışmaz</li>
+      <li><code>js/data/warmup.js</code> — <b>yazıldı</b>, 5 kendi pozlu hareket + 3 hazırlık adımı</li>
+      <li>Pozlar <code>verify-poses.js</code> bölüm 7'den geçiyor: uzuv, eklem limiti, dönüş yönü ✓</li>
+      <li>Kalan: liste satırı + ısınma ekranı + <code>warmupDone</code> işareti</li>
     </ul>
   </div>
 </div>`;
 
-const out = path.join(ROOT, 'mockup-isinma.html');
-fs.writeFileSync(out, page, 'utf8');
+fs.writeFileSync(path.join(ROOT, 'mockup-isinma.html'), page, 'utf8');
 console.log(`✓ mockup-isinma.html — ${(Buffer.byteLength(page) / 1024).toFixed(0)} KB`);
