@@ -215,6 +215,43 @@ console.log('\n7) ISINMA HAREKETLERİ');
   console.log(`  ⓘ ${ödünç.length} hazırlık adımı egzersizin pozunu ödünç alıyor (ayrıca denetlenmiş)`);
 }
 
+// ── 8. Diz FLEKSİYON YÖNÜ: işaret değişmiyor diye doğru demek değil ─────────
+// Bölüm 2 büyüklüğe bakar, bölüm 7 işaretin DEĞİŞMESİNE. İkisi de "baştan sona
+// yanlış yöne bükülü" dizi kaçırır — Two Arm Dumbbell Row tam olarak öyleydi:
+// diz sabit −15°, hiç değişmiyor, ama face:-1 için ters yön.
+//
+// Sözleşme: `face` ayak ucunun baktığı yöndür. Diz FLEKSİYONU dizi ileri iter,
+// yani işaretli diz açısı (sh − th) sağa bakanda ≤ 0, sola bakanda ≥ 0 olmalı.
+console.log('\n8) DİZ FLEKSİYON YÖNÜ (face ile uyum — hiperekstansiyon)');
+{
+  const { WARMUP } = await import('../js/data/warmup.js');
+  const hepsi = [...all.map(ex => ({ ad: `${ex.tr}`, ex })),
+                 ...WARMUP.flat().filter(w => !w.ref && w.a)
+                   .map(w => ({ ad: `ısınma · ${w.ad}`, ex: w }))];
+  const DÜZ = 4;                                    // ±4° = düz bacak, yönsüz
+  let temiz = true;
+
+  for (const { ad, ex } of hepsi) {
+    if ((ex.view ?? 'side') === 'front') continue;   // önden görünümde yön okunmaz
+    const f = ex.face ?? 1;
+    const bekle = f === 1 ? 'negatif (diz sağa/ileri)' : 'pozitif (diz sola/ileri)';
+    for (const [ad2, ü, a] of [['diz', 'th', 'sh'], ['diz2', 'th2', 'sh2']]) {
+      if (ex.a[ü] === undefined) continue;
+      const seri = Array.from({ length: 21 }, (_, i) => {
+        const p = poseAt(ex.a, ex.b, i / 20);
+        return norm((p[a] ?? p[a.replace('2', '')]) - (p[ü] ?? p[ü.replace('2', '')]));
+      });
+      const ters = seri.filter(v => Math.abs(v) > DÜZ && (f === 1 ? v > 0 : v < 0));
+      if (ters.length) {
+        const en = ters.reduce((x, y) => Math.abs(y) > Math.abs(x) ? y : x);
+        console.log(`  ✗ ${ad}: ${ad2} TERS YÖNE bükülü — ${en.toFixed(0)}°, beklenen ${bekle} (face=${f})`);
+        fails++; temiz = false;
+      }
+    }
+  }
+  if (temiz) console.log(`  ✓ ${hepsi.length} hareketin tüm dizleri face yönüyle uyumlu`);
+}
+
 // ── Özet ───────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(64)}`);
 console.log(`${all.length} egzersiz · ${fails} hata · ${warns} uyarı`);

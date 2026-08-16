@@ -182,9 +182,13 @@ export const EX=[[
  id:"db_two_arm_row", setType:"weight_reps", equipment:"dumbbell", target:{"reps":12},
  en:"Two Arm Dumbbell Row", tr:"Çift dambıl kürek çekişi", sets:3, reps:"3 × 12",
  view:"side", face:-1, mus:"Sırt (orta) · Arka omuz · Biceps",
- a:{px:140,py:110,torso:128,ua:-88,fa:-88,th:-84,sh:-99},
+ // Diz TERS kıvrılıyordu: face:-1 (sola bakan) figürde diz SOLA çıkmalıyken
+ // th=-84 / sh=-99 dizi sağa, yani GERİYE itiyordu (hiperekstansiyon). Yön
+ // denetimi kaçırmıştı: işaret hiç DEĞİŞMİYOR — baştan sona yanlış işaret.
+ // IK ile yeniden çözüldü: kalça 2px indi, ayak (140,186) yerde, diz +26.4° önde.
+ a:{px:140,py:112,torso:128,ua:-88,fa:-88,th:-102.8,sh:-76.5},
  // Hareket açıklığı dar çizilmişti (yol 0.42); dambıl karın hizasına kadar çekiliyor.
- b:{px:140,py:110,torso:128,ua:-18,fa:-140,th:-84,sh:-99},
+ b:{px:140,py:112,torso:128,ua:-18,fa:-140,th:-102.8,sh:-76.5},
  eq:s=>grd()+db(s.haA,false),
  steps:["Ayaklar kalça genişliğinde, dizler hafif bükük; kalçandan menteşe gibi öne eğil, gövden yere ~45°.",
         "Sırtın baştan sona düz kalsın, bakışın bir metre önüne; dambıllar kollar gergin şekilde aşağıda.",
