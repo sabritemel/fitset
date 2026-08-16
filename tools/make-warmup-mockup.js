@@ -22,13 +22,31 @@ const FONTS = ['archivo-latin.woff2', 'archivo-latin-ext.woff2'].map((f, i) =>
 
 const byId = Object.fromEntries(EX.flat().map(e => [e.id, e]));
 
+const KARE = 20;   // döngü başına kare — 20 yeterince akıcı, 40 gereksiz yer kaplardı
+
+/** Bir hareketin tek karesi (SVG iç içeriği) */
+const kare = (k, t) => {
+  const s = E.skeleton(E.poseAt(k.a, k.b, t), k.view);
+  return (k.eq ? k.eq(s) : '') + E.figure(s, k);
+};
+
+/**
+ * Kareler BUILD ZAMANINDA hesaplanıyor, çalışma zamanında değil.
+ * Böylece mokap motoru taşımak zorunda kalmıyor; animasyon yalnızca hazır
+ * dizideki bir dizini değiştirmekten ibaret. Kare başına maliyet: tek
+ * innerHTML yazımı. Üstelik çizimler build çıktısıyla BİREBİR aynı.
+ * t eğrisi 0→1→0 (kosinüs) — hareket gidip geliyor, zıplamıyor.
+ */
+const kareler = k => Array.from({ length: KARE }, (_, i) =>
+  kare(k, (1 - Math.cos(2 * Math.PI * i / KARE)) / 2));
+
 /** Minik figür — Plank varyantlarındaki gibi, hareketin ortasından tek kare */
 function mini(w) {
   const k = w.ref ? byId[w.ref] : w;
-  const s = E.skeleton(E.poseAt(k.a, k.b, 0.55), k.view);
-  return `<svg class="mini" viewBox="10 25 240 170" preserveAspectRatio="xMidYMid meet" aria-hidden="true">`
+  return `<svg class="mini" data-anim="${w.id}" viewBox="10 25 240 170"
+      preserveAspectRatio="xMidYMid meet" aria-hidden="true">`
     + `<g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">`
-    + `${k.eq ? k.eq(s) : ''}${E.figure(s, k)}</g></svg>`;
+    + `${kare(k, 0.55)}</g></svg>`;
 }
 
 const SYS = `
@@ -225,12 +243,62 @@ code{font-size:13px;background:rgb(128 128 128/.14);padding:1px 5px;border-radiu
   </div>
 </div>`;
 
+/* ── Animasyon: SIRAYLA, tek seferde bir figür ─────────────────────────────
+   Beşini birden oynatmak hem görsel gürültü hem gereksiz maliyet olurdu
+   (5 SVG × 60fps innerHTML yazımı orta seviye telefonda hissedilir).
+   Sıralı oynatma maliyeti TEK figüre indiriyor ve gözü ısınma sırasında
+   yukarıdan aşağı gezdiriyor — dizilim zaten anlamlı, animasyon onu izliyor. */
+const ANIM = Object.fromEntries(
+  WARMUP.flat().map(w => [w.id, kareler(w.ref ? byId[w.ref] : w)]));
+
+const script = `<script>
+// innerHTML güvenli: içerik BUILD ZAMANINDA kendi çizim motorumuzla üretildi,
+// dışarıdan hiçbir girdi almıyor. Sabit bir dizideki hazır SVG parçaları.
+const KARELER = ${JSON.stringify(ANIM)};
+const sira = Object.keys(KARELER);
+const bul = id => document.querySelector('[data-anim="' + id + '"] g');
+
+// ⚠️ Bu üçü if bloğunun DIŞINDA: tıklama işleyicisi de bunlara dokunuyor.
+let hangi = 0, kare = -1, son = 0;
+
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const DONGU = 2400;                        // bir hareket ~2,4 sn oynar
+  const adim = now => {
+    if (!son) son = now;
+    const k = Math.floor((now - son) / (DONGU / ${KARE}));
+    if (k !== kare) {
+      if (k >= ${KARE}) {                    // bu hareket bitti, sıradakine geç
+        const g0 = bul(sira[hangi]);
+        if (g0) g0.innerHTML = KARELER[sira[hangi]][0];   // durağan kareye dön
+        hangi = (hangi + 1) % sira.length;
+        kare = -1; son = now;
+      } else {
+        kare = k;
+        const g = bul(sira[hangi]);
+        if (g) g.innerHTML = KARELER[sira[hangi]][kare];
+      }
+    }
+    requestAnimationFrame(adim);
+  };
+  requestAnimationFrame(adim);
+}
+
+// Dokununca o hareketi hemen öne al — sırasını beklemeye gerek yok
+document.addEventListener('click', e => {
+  const s = e.target.closest('[data-anim]');
+  if (!s) return;
+  const i = sira.indexOf(s.dataset.anim);
+  if (i >= 0) { hangi = i; kare = -1; son = 0; }
+});
+<\/script>`;
+
 /* ── ÇIKTI DENETİMİ ────────────────────────────────────────────────────────
    Bu betik bir kez ${SYS}'i sayfaya koymayı ATLADI: telefon ekranlarının TÜM
    stil sayfası eksik yayınlandı, satırlar çöktü, figürlerden yalnız kafa
    daireleri göründü. Sayfa "üretildi" dediği için hata sessiz kaldı.
    Artık üretim, beklenen KURALLARIN ve çizim öğelerinin varlığını doğruluyor. */
-const gövde = page.replace(/base64,[A-Za-z0-9+/=]+/g, 'base64,…');
+const sayfa = page + script;
+const gövde = sayfa.replace(/base64,[A-Za-z0-9+/=]+/g, 'base64,…');
 const eksik = [];
 for (const kural of ['.wlist{', '.mini{', '.li{', '.cardio{', '.ph{', '--fig-head'])
   if (!gövde.includes(kural)) eksik.push(kural);
@@ -238,6 +306,10 @@ for (const kural of ['.wlist{', '.mini{', '.li{', '.cardio{', '.ph{', '--fig-hea
 const polyline = (gövde.match(/<polyline/g) || []).length;
 const svg = (gövde.match(/<svg class="mini"/g) || []).length;
 if (svg === 0) eksik.push('minik figür üretilmemiş');
+if (!gövde.includes('const KARELER')) eksik.push('animasyon kareleri sayfaya konmamış');
+if (!gövde.includes('data-anim=')) eksik.push('figürlerde animasyon bağlantısı yok');
+if (!gövde.includes('const KARELER')) eksik.push('animasyon kareleri sayfaya konmamış');
+if (!gövde.includes('data-anim=')) eksik.push('figürlerde animasyon bağlantısı yok');
 if (polyline < svg * 3) eksik.push(`figürlerde gövde çizgisi yok (${polyline} polyline / ${svg} figür)`);
 
 if (eksik.length) {
@@ -245,6 +317,7 @@ if (eksik.length) {
   process.exit(1);
 }
 
-fs.writeFileSync(path.join(ROOT, 'mockup-isinma.html'), page, 'utf8');
-console.log(`✓ mockup-isinma.html — ${(Buffer.byteLength(page) / 1024).toFixed(0)} KB`);
-console.log(`  denetim: ${svg} figür · ${polyline} gövde çizgisi · stil kuralları yerinde`);
+fs.writeFileSync(path.join(ROOT, 'mockup-isinma.html'), sayfa, 'utf8');
+console.log(`✓ mockup-isinma.html — ${(Buffer.byteLength(sayfa) / 1024).toFixed(0)} KB`);
+const kareSay = Object.values(ANIM).reduce((a, v) => a + v.length, 0);
+console.log(`  denetim: ${svg} figür · ${polyline} gövde çizgisi · ${kareSay} animasyon karesi · stil kuralları yerinde`);
