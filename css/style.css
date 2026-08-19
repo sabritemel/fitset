@@ -412,3 +412,49 @@ input { font: inherit; }
    (bilerek tekrar yapmak isteyebilirsin) */
 .li.prev .t-h2 { color: var(--ink3); }
 .li.prev .t-m { color: var(--ink3); font-style: italic; }
+
+/* ══ GEÇMİŞ EKRANI ════════════════════════════════════════════════════════
+   Grafikte VURGU RENGİ YOK: #FF3B4E yalnız canlı olana ayrıldı, geçmiş canlı
+   değil. Çizgi mürekkep tonunda; son nokta biraz daha parlak. */
+#history-screen { padding-bottom: 28px; }
+.hd-links { display: flex; gap: 14px; }
+
+.hero { display: flex; align-items: baseline; gap: 7px; margin: 2px 0 14px; }
+.hero b { font-size: 34px; font-weight: 600; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums; }
+.hero i { font-style: normal; font-size: 13px; color: var(--ink3); }
+.hero .delta { margin-left: auto; font-size: 12.5px; color: var(--ink2);
+  font-variant-numeric: tabular-nums; }
+
+.spark { display: block; width: 100%; height: auto; overflow: visible; }
+.spark polyline { fill: none; stroke: var(--ink2); stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.spark circle { fill: var(--ink); }
+
+.kilogir { margin-top: 16px; }
+.kilogir .b3 { height: 44px; padding: 0 16px; }
+
+.hrows { display: flex; flex-direction: column; }
+.hrow { display: flex; align-items: baseline; gap: 10px; padding: 11px 0;
+  border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.hrow:last-child { border-bottom: 0; }
+.hdate { font-size: 12.5px; color: var(--ink2); min-width: 74px; }
+.hday { font-size: 13px; color: var(--ink); flex: 1; }
+.hcount { font-size: 12.5px; color: var(--ink2); }
+.hcount em { font-style: normal; color: var(--warn); font-size: 11px; margin-left: 4px; }
+.hvol { font-size: 12.5px; color: var(--ink3); min-width: 72px; text-align: right; }
+
+/* İlerleme SIKIŞIK satır: ad · minik çizgi · sayı. Her hareket için tam
+   boy grafik 17 hareketde 1500px'lik bir duvar yapıyordu (canlıda görüldü);
+   sparkline'ın işi zaten ŞEKLİ göstermek, değeri yanındaki sayı veriyor. */
+.progs { display: flex; flex-direction: column; }
+.prog { display: flex; align-items: center; gap: 12px; padding: 7px 0;
+  border-bottom: 1px solid var(--line); }
+.prog:last-child { border-bottom: 0; }
+.prog-ad { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 550;
+  letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prog-spark { flex: none; width: 96px; }
+.prog-spark .spark { width: 96px; }
+.prog-say { flex: none; min-width: 96px; text-align: right; font-size: 12px;
+  color: var(--ink3); font-variant-numeric: tabular-nums; }
+.prog-say b { color: var(--ink); font-weight: 600; }

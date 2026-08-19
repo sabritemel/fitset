@@ -149,5 +149,63 @@ console.log('\n6) BOZUK / UYUMSUZ YEDEK REDDEDİLİYOR');
   await red({ app: 'fitset', schemaVersion: 99, sessions: [] }, 'gelecekten gelen yedek');
 }
 
+console.log('');
+console.log('11) KİLO KAYDI — gün anahtarı, üstüne yazma, yedek turu');
+{
+  await S.driver.clear('body');
+  const G = (y, m, d) => new Date(y, m - 1, d, 9, 30);
+
+  ok(S.dayKey(G(2026, 8, 5)) === '2026-08-05', 'gün anahtarı yerel tarihten (2026-08-05)');
+
+  await S.saveWeight(83.1, G(2026, 7, 8));
+  await S.saveWeight(82.6, G(2026, 7, 22));
+  await S.saveWeight(82.4, G(2026, 8, 5));
+  let w = await S.weights();
+  ok(w.length === 3, '3 ölçüm kayıtlı');
+  ok(w[0].d === '2026-07-08' && w.at(-1).d === '2026-08-05', 'ESKİDEN YENİYE sıralı (grafik soldan sağa)');
+  ok((await S.lastWeight()).kg === 82.4, 'son kilo 82.4');
+
+  // Aynı gün ikinci tartı: YENİ nokta değil, üstüne yazar
+  await S.saveWeight(82.9, new Date(2026, 7, 5, 21, 0));
+  w = await S.weights();
+  ok(w.length === 3, 'aynı güne ikinci giriş YENİ nokta açmıyor');
+  ok(w.at(-1).kg === 82.9, 'aynı günün üstüne yazıldı');
+
+  await S.saveWeight(82.55, G(2026, 8, 12));
+  ok((await S.lastWeight()).kg === 82.6, 'ondalık tek haneye yuvarlanıyor (82.55 → 82.6)');
+
+  // Silme
+  await S.saveWeight(null, G(2026, 8, 12));
+  ok((await S.weights()).length === 3, 'boş değer o günün kaydını SİLİYOR');
+
+  // ── YEDEK TURU: dışa aktar → her şeyi sil → geri yükle ──
+  const yedek = JSON.stringify(await S.exportData());
+  ok(JSON.parse(yedek).body?.length === 3, 'kilo kayıtları YEDEĞE giriyor');
+
+  await S.driver.clear('body');
+  await S.driver.clear('sessions');
+  ok((await S.weights()).length === 0, 'silindi');
+
+  const stat = await S.importData(yedek);
+  const geri = await S.weights();
+  ok(geri.length === 3, `geri yüklemede kilo geçmişi TAM (${geri.length}/3)`);
+  ok(geri.at(-1).kg === 82.9, 'değerler bozulmadan döndü');
+  ok(stat.eklendi >= 3, 'sayaç eklenenleri bildiriyor');
+
+  // Aynı yedeği ikinci kez yüklemek nokta ÇOĞALTMAMALI
+  await S.importData(yedek);
+  ok((await S.weights()).length === 3, 'aynı yedek iki kez yüklenince kayıt çoğalmıyor');
+
+  // Bozuk kayıt sessizce atlanmalı, tur çökmemeli
+  const bozuk = JSON.parse(yedek);
+  bozuk.body = [{ d: '2026-09-01', kg: 80 }, { d: null, kg: 5 }, { d: '2026-09-02', kg: 0 }];
+  const s2 = await S.importData(JSON.stringify(bozuk));
+  ok((await S.weights()).some(x => x.d === '2026-09-01'), 'geçerli kayıt alınıyor');
+  ok(!(await S.weights()).some(x => x.kg === 0), 'geçersiz kayıt (kg=0) ALINMIYOR');
+  ok(s2.atlandı >= 2, 'atlananlar sayılıyor — sessiz kayıp yok');
+  await S.driver.clear('body');
+}
+
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

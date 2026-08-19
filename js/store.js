@@ -23,8 +23,8 @@
 
 export const SCHEMA_VERSION = 1;
 const DB_NAME = 'fitset';
-const DB_VERSION = 1;
-const STORES = { sessions: 'id', settings: 'key' };
+const DB_VERSION = 2;                                   // v2: 'body' tablosu (kilo takibi)
+const STORES = { sessions: 'id', settings: 'key', body: 'd' };
 
 export const DEFAULT_SETTINGS = {
   key: 'config',
@@ -79,7 +79,7 @@ class IDBDriver {
 
 /** IndexedDB yoksa (Node testleri, gizli sekme kısıtları) aynı arayüz, bellekte. */
 class MemoryDriver {
-  #m = { sessions: new Map(), settings: new Map() };
+  #m = { sessions: new Map(), settings: new Map(), body: new Map() };
   async open() { return this; }
   async get(store, key) { return structuredClone(this.#m[store].get(key)); }
   // .map(structuredClone) YAZMA: map ikinci argüman olarak index geçirir ve
@@ -210,6 +210,37 @@ export function sessionVolume(session, exercisesById) {
 
 /* ── Dışa / içe aktarım ────────────────────────────────────────────────── */
 
+/* ── Vücut ölçüsü ──────────────────────────────────────────────────────────
+ * Anahtar YEREL GÜN (YYYY-AA-GG): günde iki kez tartıya çıkmak iki nokta
+ * üretmemeli, aynı günün ikinci ölçümü birincinin ÜSTÜNE yazar. Zaman damgası
+ * ayrıca tutulur (ne zaman tartıldığı bilgisi kaybolmasın).
+ *
+ * Neden ayrı tablo: kilo seansa bağlı değil. Antrenman yapmadığın gün de
+ * tartılırsın, seans içine gömülse o günler kaydedilemezdi.
+ */
+export const dayKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Kilo yaz — aynı gün varsa üstüne. kg null/0 ise kayıt SİLİNİR. */
+export async function saveWeight(kg, d = new Date()) {
+  const key = dayKey(d);
+  if (kg == null || !(kg > 0)) { await driver.del('body', key); return null; }
+  const kayit = { d: key, kg: Math.round(kg * 10) / 10, ts: d.getTime() };
+  await driver.put('body', kayit);
+  return kayit;
+}
+
+/** Tüm kilo kayıtları, ESKİDEN YENİYE (grafik soldan sağa çizilir) */
+export async function weights() {
+  return (await driver.getAll('body')).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+}
+
+/** En son kilo kaydı */
+export async function lastWeight() {
+  const w = await weights();
+  return w.at(-1) ?? null;
+}
+
 export async function exportData() {
   return {
     app: 'fitset',
@@ -217,6 +248,9 @@ export async function exportData() {
     exportedAt: new Date().toISOString(),
     settings: await getSettings(),
     sessions: await allSessions(),
+    // ⚠️ Yeni tablo eklerken BURAYA da eklenmeli — yoksa yedek sessizce eksik
+    // kalır ve kullanıcı kaybettiğini ancak geri yüklerken fark eder.
+    body: await weights(),
   };
 }
 
@@ -239,13 +273,23 @@ export async function importData(raw, mode = 'merge') {
   if (data.schemaVersion > SCHEMA_VERSION)
     throw new Error(`Yedek daha yeni bir sürümden (v${data.schemaVersion}). Önce uygulamayı güncelle.`);
 
-  if (mode === 'replace') { await driver.clear('sessions'); await driver.clear('settings'); }
+  if (mode === 'replace') {
+    await driver.clear('sessions'); await driver.clear('settings'); await driver.clear('body');
+  }
 
   const stat = { eklendi: 0, güncellendi: 0, atlandı: 0 };
   for (const s of data.sessions ?? []) {
     const cur = await getSession(s.id);
     if (!cur) { await saveSession(migrate(s)); stat.eklendi++; }
     else if ((s.finishedAt ?? s.startedAt) > (cur.finishedAt ?? cur.startedAt)) { await saveSession(migrate(s)); stat.güncellendi++; }
+    else stat.atlandı++;
+  }
+  // Kilo kayıtları: gün anahtarı benzersiz, YENİ ölçüm eskinin üstüne yazar
+  for (const b of data.body ?? []) {
+    if (typeof b?.d !== 'string' || !(b.kg > 0)) { stat.atlandı++; continue; }
+    const cur = await driver.get('body', b.d);
+    if (!cur) { await driver.put('body', b); stat.eklendi++; }
+    else if ((b.ts ?? 0) > (cur.ts ?? 0)) { await driver.put('body', b); stat.güncellendi++; }
     else stat.atlandı++;
   }
   if (data.settings) await saveSettings(data.settings);

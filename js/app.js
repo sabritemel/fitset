@@ -23,6 +23,7 @@ const ctx = {
   tumRozetler: false,        // "+N" açıldı mı — harekete özel, geçicidir
   yarim: null,               // yarım kalan gün önerisi (cevap verilene kadar)
   oncekiYapilan: null,       // devredilen günde geçen sefer yapılmış hareketler
+  kilolar: [], gecmis: [], ilerleme: [],   // geçmiş ekranı — açılırken doldurulur
   view: 'list',
 };
 let bootDay = C.dayNumber(new Date());
@@ -205,6 +206,7 @@ const EKRAN = {
   focus:    { el: () => focusEl,              html: () => UI.focusHTML(ctx) },
   warmup:   { el: () => $('warmup-screen'),   html: () => UI.warmupHTML(ctx) },
   settings: { el: () => $('settings-screen'), html: () => UI.settingsHTML(ctx) },
+  history:  { el: () => $('history-screen'),  html: () => UI.historyHTML(ctx) },
 };
 
 function render() {
@@ -412,6 +414,22 @@ document.addEventListener('click', async e => {
       render();
       break;
 
+    case 'to-history': stopAnim(); await gecmisYukle(); ctx.view = 'history'; render(); scrollTo(0, 0); break;
+
+    case 'weight-save': {
+      const el = $('h-weight');
+      const v = el.value === '' ? null : +el.value;
+      if (v !== null && (!Number.isFinite(v) || v < 20 || v > 400)) {
+        toast('Kilo 20–400 kg arasında olmalı.', { warn: true });
+        break;
+      }
+      await S.saveWeight(v);
+      await gecmisYukle();
+      render();
+      toast(v === null ? 'Bugünün kilo kaydı silindi.' : `${v.toFixed(1)} kg kaydedildi.`);
+      break;
+    }
+
     case 'to-settings': stopAnim(); ctx.view = 'settings'; render(); scrollTo(0, 0); break;
     case 'prev': git(ctx.idx - 1); break;
     case 'next': git(ctx.idx + 1); break;
@@ -547,6 +565,22 @@ $('file').addEventListener('change', async e => {
 });
 
 /* ── Açılış ────────────────────────────────────────────────────────────── */
+/**
+ * Geçmiş ekranının verisi — AÇILIRKEN yüklenir, açılışta değil.
+ * Her uygulama açılışında tüm seansları taramak, ekranı hiç açmayan kullanıcıya
+ * ödetilen bir maliyet olurdu.
+ */
+async function gecmisYukle() {
+  ctx.kilolar = await S.weights();
+  ctx.gecmis = await N.historyRows(12);
+  const birimi = ex => ex.setType === 'time' ? 'sn' : ex.setType === 'cardio' ? 'dk' : ctx.settings.unit;
+  ctx.ilerleme = [];
+  for (const ex of await N.progressables()) {
+    const seri = await N.exerciseSeries(ex.id);
+    if (seri.length >= 2) ctx.ilerleme.push({ ex, seri, birim: birimi(ex) });
+  }
+}
+
 /** "Geçen sefer" kutularını o günün hareketleri için tazeler */
 async function lastPerfYukle() {
   ctx.lastPerf = {};

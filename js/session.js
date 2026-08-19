@@ -292,3 +292,65 @@ export async function summary(session) {
     ? Math.max(1, Math.round((session.finishedAt - session.startedAt) / 60000)) : null;
   return { ...v, minutesElapsed: dk, dayName: DAY_NAMES[session.dayIndex] };
 }
+
+/* ── Geçmiş ────────────────────────────────────────────────────────────────
+ * Bu veriler ZATEN kaydediliyordu; eksik olan onları GÖSTEREN ekrandı.
+ * doneSessions() yeniden eskiye sıralı; grafikler soldan sağa okunduğu için
+ * seriler burada ters çevrilir.
+ */
+
+/** Bir seansın özet satırı: kaç hareket yapıldı, hacim ne, yarım mı */
+export function sessionSummaryRow(session) {
+  const toplam = exercisesFor(session.dayIndex).length;
+  const yapilan = completedIds(session).size;
+  return {
+    id: session.id,
+    at: session.finishedAt ?? session.startedAt,
+    dayIndex: session.dayIndex,
+    yapilan, toplam,
+    yarim: yapilan / toplam < YARIM_ORAN,
+    hacim: store.sessionVolume(session, byId),
+  };
+}
+
+export async function historyRows(limit = 12) {
+  return (await store.doneSessions()).slice(0, limit).map(sessionSummaryRow);
+}
+
+/** Bir setin "ilerleme" değeri — ağırlık, süre ya da dakika */
+const setValue = s => s.type === 'time' ? s.seconds : s.type === 'cardio' ? s.minutes : s.weight;
+
+/**
+ * Egzersizin seans başına EN AĞIR seti, eskiden yeniye.
+ * En ağır set seçildi: ilerlemeyi o taşır. Ortalama, ısınmaya yakın hafif
+ * setler yüzünden gerçek artışı gizlerdi.
+ */
+export async function exerciseSeries(exerciseId, limit = 12) {
+  const out = [];
+  for (const s of await store.doneSessions()) {
+    const e = s.entries.find(x => x.exerciseId === exerciseId);
+    const setler = (e?.sets ?? []).filter(x => !x.warmup).map(setValue).filter(v => v > 0);
+    if (!setler.length) continue;
+    out.push({ at: s.finishedAt ?? s.startedAt, v: Math.max(...setler) });
+    if (out.length >= limit) break;
+  }
+  return out.reverse();
+}
+
+/** Kayıtta EN AZ iki seans bulunan egzersizler — ilerleme çizilebilenler */
+export async function progressables(minPoints = 2) {
+  const seanslar = await store.doneSessions();
+  const say = new Map();
+  for (const s of seanslar)
+    for (const e of s.entries)
+      if (e.sets.some(x => !x.warmup)) say.set(e.exerciseId, (say.get(e.exerciseId) ?? 0) + 1);
+  // PROGRAM SIRASINDA dön (1. Gün hareketleri, sonra 2. Gün'ün yenileri).
+  // Map'in ekleme sırası "en son hangi seansta görüldüğü"ne göreydi ve
+  // listeyi her seansta yeniden diziyordu — okuyan için rastgele görünüyordu.
+  const sira = [];
+  const görüldü = new Set();
+  for (const gün of [0, 1])
+    for (const ex of exercisesFor(gün))
+      if (!görüldü.has(ex.id)) { görüldü.add(ex.id); sira.push(ex); }
+  return sira.filter(ex => (say.get(ex.id) ?? 0) >= minPoints);
+}

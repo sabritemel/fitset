@@ -382,5 +382,58 @@ console.log('16) DEVİR SEÇİMİ DİSKE YAZILIYOR — canlıda yakalanan hata')
 }
 
 
+console.log('');
+console.log('17) GEÇMİŞ VERİSİ — özet satırı ve ilerleme serisi');
+{
+  await S.driver.clear('sessions');
+  const kur = async (dayIndex, kacHareket, gunOnce, agirlik) => {
+    const s = S.newSession(dayIndex);
+    s.id = `h${gunOnce}`;
+    for (const ex of N.exercisesFor(dayIndex).slice(0, kacHareket))
+      N.recordSet(s, ex.id, { type: 'weight_reps', weight: agirlik, reps: 12 });
+    s.status = 'done';
+    s.startedAt = s.finishedAt = Date.now() - gunOnce * 86400000;
+    await S.saveSession(s);
+    return s;
+  };
+
+  await kur(0, 9, 20, 30);
+  await kur(0, 9, 10, 35);
+  await kur(0, 4, 3, 40);          // yarım
+
+  const satir = await N.historyRows();
+  ok(satir.length === 3, '3 seans listeleniyor');
+  ok(satir[0].at > satir[1].at, 'YENİDEN ESKİYE sıralı');
+  ok(satir[0].yapilan === 4 && satir[0].toplam === 9, 'en son seans 4/9');
+  ok(satir[0].yarim === true, 'yarım seans işaretleniyor');
+  ok(satir[1].yarim === false, 'tam seans yarım DEĞİL');
+  ok(satir[0].hacim.kg > 0, 'hacim hesaplanıyor');
+
+  const seri = await N.exerciseSeries('bb_bench_press');
+  ok(seri.length === 3, 'bench için 3 nokta');
+  ok(seri[0].v === 30 && seri.at(-1).v === 40, 'seri ESKİDEN YENİYE: 30 → 40');
+
+  // Bench 3 seansta da var; 9. hareket yalnız 2 seansta (son seans 4 harekette kesildi)
+  const ilerleyen = await N.progressables();
+  ok(ilerleyen.some(e => e.id === 'bb_bench_press'), 'bench ilerleme listesinde');
+  ok(ilerleyen.every(e => e.id !== 'cardio'), 'hiç kaydı olmayan hareket listede yok');
+
+  // Tek kayıtlı hareket grafiğe girmemeli — "tek nokta trend" yalan olurdu
+  await S.driver.clear('sessions');
+  await kur(0, 9, 5, 25);
+  ok((await N.progressables()).length === 0, 'tek seans varsa ilerleme grafiği ÇİZİLMİYOR');
+  ok((await N.exerciseSeries('bb_bench_press')).length === 1, 'ama seri yine de okunabiliyor');
+
+  // Isınma seti ilerlemeyi kirletmemeli
+  await S.driver.clear('sessions');
+  const a = S.newSession(0); a.id = 'w1';
+  N.recordSet(a, 'bb_bench_press', { type: 'weight_reps', weight: 99, reps: 15, warmup: true });
+  N.recordSet(a, 'bb_bench_press', { type: 'weight_reps', weight: 40, reps: 12 });
+  a.status = 'done'; a.startedAt = a.finishedAt = Date.now();
+  await S.saveSession(a);
+  ok((await N.exerciseSeries('bb_bench_press'))[0].v === 40, 'seri ısınma setini SAYMIYOR (99 değil 40)');
+}
+
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

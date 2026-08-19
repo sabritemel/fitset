@@ -97,7 +97,9 @@ export function listHTML(ctx) {
     <div class="hd">
       <div class="hd-row">
         <p class="t-l">${status.label}</p>
-        <button class="hd-link" data-act="to-settings">Ayarlar</button>
+        <span class="hd-links">
+        <button class="hd-link" data-act="to-history">Geçmiş</button>
+        <button class="hd-link" data-act="to-settings">Ayarlar</button></span>
       </div>
       <h1 class="day">${gün}</h1>
       <p class="t-b">${kaslar}</p>
@@ -376,6 +378,102 @@ export function focusHTML(ctx) {
     </div>
     <div class="restline"><i id="restline"></i></div>
     ${sheetHTML(ex, settings)}`;
+}
+
+/* ══ GEÇMİŞ EKRANI ════════════════════════════════════════════════════════
+   Bu verilerin hepsi ZATEN kaydediliyordu; eksik olan onları gösteren ekrandı.
+
+   Grafik kararları (tasarım dili + veri görselleştirme kuralları):
+   · TEK SERİ → gösterge (legend) yok; başlık zaten neyi çizdiğini söylüyor.
+   · VURGU RENGİ YOK. #FF3B4E yalnız CANLI olana ayrıldı; geçmiş canlı değil.
+     Çizgi mürekkep tonunda, ızgara/eksen daha sönük.
+   · Her noktaya sayı YAZILMAZ — yalnız uçlar etiketlenir. Dokunmatikte hover
+     yok, o yüzden değerler doğrudan yazılıyor (tooltip'e gömülmüyor).
+   · İki noktadan azına grafik çizilmez; "tek nokta trend" yalandır. */
+
+/** Tek seri çizgi. viewBox oranı korunur — esnetilseydi nokta elips olurdu. */
+function sparkHTML(vals, { w = 280, h = 52 } = {}) {
+  if (vals.length < 2) return '';
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const pay = (mx - mn) * 0.18 || Math.max(1, mx * 0.02);   // düz seri de ortada dursun
+  const alt = mn - pay, ust = mx + pay;
+  // KENAR PAYI: son noktanın diski çerçevenin tam üstüne düşüyor ve yarısı
+  // dışarıda kalıyordu (canlıda görüldü). Çizim alanı içeriden daraltılıyor.
+  const m = 5;
+  const X = i => m + (i / (vals.length - 1)) * (w - 2 * m);
+  const Y = v => m + (h - 2 * m) - ((v - alt) / (ust - alt)) * (h - 2 * m);
+  const nokta = vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img"
+      aria-label="${vals.length} ölçüm: ${vals[0]} → ${vals.at(-1)}">
+    <polyline points="${nokta}"/>
+    <circle cx="${X(vals.length - 1).toFixed(1)}" cy="${Y(vals.at(-1)).toFixed(1)}" r="3.5"/>
+  </svg>`;
+}
+
+const kiloDelta = (kilolar) => {
+  if (kilolar.length < 2) return '';
+  const d = kilolar.at(-1).kg - kilolar[0].kg;
+  const gun = Math.round((kilolar.at(-1).ts - kilolar[0].ts) / 86400000);
+  const sure = gun >= 14 ? `${Math.round(gun / 7)} haftada` : `${gun} günde`;
+  if (Math.abs(d) < 0.05) return `<span class="delta">değişmedi · ${sure}</span>`;
+  return `<span class="delta">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)} kg · ${sure}</span>`;
+};
+
+export function historyHTML(ctx) {
+  const { kilolar = [], gecmis = [], ilerleme = [], settings } = ctx;
+  const son = kilolar.at(-1);
+
+  const kiloBolum = `
+    <div class="sect">
+      <p class="t-l">Kilo</p>
+      ${son ? `<div class="hero"><b>${son.kg.toFixed(1)}</b><i>kg</i> ${kiloDelta(kilolar)}</div>
+               ${sparkHTML(kilolar.map(k => k.kg))}
+               <p class="hint">${kilolar.length} ölçüm · son giriş ${C.relativeLabel(new Date(son.ts))}</p>`
+            : '<p class="hint">Henüz kilo kaydı yok. Aşağıya yazınca burada takip edilir.</p>'}
+      <div class="frow kilogir">
+        <label for="h-weight">Bugün</label>
+        <input type="number" id="h-weight" inputmode="decimal" step="0.1" min="20" max="400"
+               value="${son && son.d === (new Date()).toISOString().slice(0, 10) ? son.kg : ''}"
+               placeholder="—" aria-label="Bugünkü kilo">
+        <span class="unit">kg</span>
+        <button class="b3" data-act="weight-save">Kaydet</button>
+      </div>
+    </div>`;
+
+  const seansBolum = `
+    <div class="sect">
+      <p class="t-l">Son seanslar</p>
+      ${gecmis.length ? `<div class="hrows">${gecmis.map(r => `
+        <div class="hrow">
+          <span class="hdate">${C.fmtShort(new Date(r.at))}</span>
+          <span class="hday">${N.DAY_NAMES[r.dayIndex].split(' — ')[0]}</span>
+          <span class="hcount">${r.yapilan}/${r.toplam}${r.yarim ? ' <em>yarım</em>' : ''}</span>
+          <span class="hvol">${r.hacim.kg.toLocaleString('tr-TR')} ${settings.unit}</span>
+        </div>`).join('')}</div>`
+        : '<p class="hint">Henüz tamamlanmış seans yok.</p>'}
+    </div>`;
+
+  const ilerlemeBolum = `
+    <div class="sect">
+      <p class="t-l">Hareket ilerlemesi</p>
+      ${ilerleme.length ? `<div class="progs">${ilerleme.map(p => `
+        <div class="prog">
+          <span class="prog-ad" lang="en">${p.ex.en}</span>
+          <span class="prog-spark">${sparkHTML(p.seri.map(s => s.v), { w: 96, h: 26 })}</span>
+          <span class="prog-say">${p.seri[0].v} → <b>${p.seri.at(-1).v}</b> ${p.birim}</span>
+        </div>`).join('')}</div>
+        <p class="hint">${ilerleme.length} harekette <b>en ağır set</b> izleniyor; çizgi en fazla son ${Math.max(...ilerleme.map(p => p.seri.length))} seansı gösterir. Ortalama yerine en ağır set seçildi — hafif setler gerçek artışı gizlerdi.</p>`
+        : '<p class="hint">İlerleme grafiği için bir hareketin en az iki seansta kaydı gerekiyor.</p>'}
+    </div>`;
+
+  return `
+    <div class="top">
+      <button class="icb" data-act="to-list" aria-label="Listeye dön">←</button>
+      <span class="mid t-l">Geçmiş</span>
+      <span class="icb" style="visibility:hidden" aria-hidden="true"></span>
+    </div>
+    ${kiloBolum}${seansBolum}${ilerlemeBolum}
+    <div class="grow"></div>`;
 }
 
 /* ══ AYARLAR EKRANI ═══════════════════════════════════════════════════════
