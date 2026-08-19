@@ -95,13 +95,31 @@ let footClean = true;
 for (const ex of all) {
   if (ex.nofoot || ex.top) continue;
   const y0 = skeleton(ex.a, ex.view).ftA[1];
+
+  // (a) ZEMİN ÇİZGİSİ ÇİZEN hareketin ayağı gerçekten YERDE olmalı.
+  //     Aşağıdaki kayma denetimi, ayak zeminden uzaksa SESSİZCE ATLIYORDU —
+  //     yani "figür havada duruyor" hatası hiç yakalanamıyordu. Kasten 10px
+  //     kaldırılan bir poz denendi ve denetim ötmedi (19 Ağu). Zemin çizen
+  //     hareketlerde artık ayrıca konum denetleniyor.
+  const zeminCiziyor = /\bgrd\(/.test(String(ex.eq ?? ''));
+  if (zeminCiziyor) {
+    const ayaklar = [skeleton(ex.a, ex.view), skeleton(ex.b, ex.view)]
+      .flatMap(s => ex.view === 'front' ? [s.ftA[1], s.ftB[1]] : [s.ftA[1]]);
+    const enUzak = ayaklar.reduce((m, y) => Math.abs(y - GROUND_Y) > Math.abs(m - GROUND_Y) ? y : m, GROUND_Y);
+    if (Math.abs(enUzak - GROUND_Y) > 4) {
+      say('✗', ex, `zemin çizgisi var ama ayak ${(enUzak - GROUND_Y).toFixed(0)}px ${enUzak < GROUND_Y ? 'HAVADA' : 'zeminin ALTINDA'}`);
+      fails++; footClean = false;
+    }
+  }
+
+  // (b) Zemine basan ayak hareket boyunca KAYMAMALI
   if (Math.abs(y0 - GROUND_Y) > 6) continue;        // zaten zeminde başlamıyor
   let drift = 0;
   for (let i = 0; i <= STEPS; i++)
     drift = Math.max(drift, Math.abs(skeleton(poseAt(ex.a, ex.b, i / STEPS), ex.view).ftA[1] - y0));
   if (drift > 3) { say('✗', ex, `ayak zeminden ${drift.toFixed(0)}px kayıyor`); fails++; footClean = false; }
 }
-if (footClean) console.log('  ✓ zemine basan ayaklar sabit');
+if (footClean) console.log(`  ✓ zemine basan ayaklar yerinde ve sabit`);
 
 // ── 5. Veri tutarlılığı ────────────────────────────────────────────────────
 console.log('\n5) VERİ TUTARLILIĞI');

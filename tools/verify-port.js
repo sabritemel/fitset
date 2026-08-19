@@ -42,8 +42,12 @@ const EXPECTED = {
   'Leg Press': { endpointsSame: false, why: 'kollar koltuğun yanına indirildi — çakışma 1.00→0.00' },
   'Two Arm Dumbbell Row': { endpointsSame: false, why: 'hareket açıklığı genişletildi — yol 0.42→0.56' },
   'Seated Cable Row': { endpointsSame: false, why: 'başlangıçta dirsek −16° ile TERS bükülüydü; hareket boyunca işaret değiştiriyordu. fa −17→9 (hafif fleksiyon)' },
-  // — ekipman düzeltmesi (Sabri: "alet ile yapılıyor") —
-  'Reverse Pec Fly': { endpointsSame: true, why: 'MAKİNE eklendi; pozlara dokunulmadı, yalnız eq() değişti' },
+  // — GÖRÜŞ AÇISI DÜZELTMESİ (Sabri, 19 Ağu: "reverse pec fly doğru gösterilmiyor") —
+  // İkisi de ÜSTTEN çiziliyordu. Kuşbakışı bir insan daireye iner: omuz, gövde,
+  // bacak kalmaz, geriye yalnız ekipmanın dikdörtgenleri kalır. Hareketin
+  // kendisi okunmuyordu — prototipten devralınan en büyük görsel kusur.
+  'Reverse Pec Fly': { endpointsSame: false, why: 'ÜSTTEN → ARKADAN görünüm; gövde dikey, oturur poz, makine yeniden çizildi (önce yalnız eq() değişmişti)' },
+  'Dumbbell Bench Fly': { endpointsSame: false, why: 'ÜSTTEN görünüm korundu ama GÖVDE DİKEY çizilir oldu; sehpa baştan kalçaya uzun parça. Hareket yönü korundu (a=açık, b=birleşik)' },
 };
 
 /**

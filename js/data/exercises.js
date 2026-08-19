@@ -40,10 +40,16 @@ export const EX=[[
 {
  id:"db_bench_fly", setType:"weight_reps", equipment:"dumbbell", target:{"reps":12},
  en:"Dumbbell Bench Fly", tr:"Dambıl ile göğüs açma (kelebek)", sets:3, reps:"3 × 12",
- view:"front", top:true, nofoot:true, vl:"yukarıdan görünüm · sırtüstü", mus:"Göğüs (dış ve orta)",
- a:{px:95,py:110,torso:0,ua:-90,fa:-90,ua2:90,fa2:90,th:180,sh:180,al:1},
- b:{px:95,py:110,torso:0,ua:-90,fa:-90,ua2:90,fa2:90,th:180,sh:180,al:0.3},
- eq:s=>rct(26,92,134,36)+db(s.haA,false)+db(s.haB,false),
+ view:"front", nofoot:true, vl:"üstten görünüm · sırtüstü sehpada", mus:"Göğüs (dış ve orta)",
+ // Gövde YATAY çiziliyordu (torso:0) ve üstten bakışta insan bir daireye
+ // iniyordu — omuz, bacak, siluet kalmıyordu. Artık gövde DİKEY: yukarıdan
+ // bakıyoruz ama figür insan gibi duruyor. Sehpa arkada, baştan kalçaya uzun
+ // bir parça; kısa çizilince "sırt çantası" gibi okunuyordu.
+ // Yön korundu: a = kollar AÇIK, b = göğsün üzerinde BİRLEŞİK (çalışan faz sonda).
+ // Kollar yukarı, kameraya doğru uzanınca al ile kısalır.
+ a:{px:130,py:124,torso:90,ua:2,   fa:-10, ua2:178,fa2:190,th:-64,sh:-100,th2:-116,sh2:-80,al:1},
+ b:{px:130,py:124,torso:90,ua:-112,fa:-104,ua2:292,fa2:284,th:-64,sh:-100,th2:-116,sh2:-80,al:0.42},
+ eq:s=>rct(116,36,28,116)+db(s.haA,false)+db(s.haB,false),
  steps:["Sırtüstü uzan; dambıllar göğsünün üzerinde, avuç içleri birbirine bakar.",
         "Dirseklerini hafif bükülü sabitle — bu açı hareket boyunca hiç değişmez.",
         "Kolları yanlara doğru geniş bir yayla aç; göğsünde gerilme hissedince dur (dirsekler omuz hizasını fazla geçmesin).",
@@ -92,12 +98,20 @@ export const EX=[[
 {
  id:"machine_reverse_fly", setType:"weight_reps", equipment:"machine", target:{"reps":12},
  en:"Reverse Pec Fly", tr:"Ters kelebek — arka omuz", sets:3, reps:"3 × 12",
- view:"front", top:true, nofoot:true, vl:"yukarıdan görünüm · göğüs pedde", mus:"Arka omuz · Üst sırt (kürek kasları)",
- a:{px:95,py:110,torso:0,ua:-90,fa:-90,ua2:90,fa2:90,th:180,sh:180,al:0.3},
- b:{px:95,py:110,torso:0,ua:-100,fa:-100,ua2:100,fa2:100,th:180,sh:180,al:1},
- // MAKİNE: sütun + iki pivotlu kol. Üstten görünümde makinenin kolları
- // ellerle birlikte süpürür; hareketin aletle yapıldığı artık belli.
- eq:s=>rct(50,92,106,36)+rct(170,88,12,44)+bar([176,122],s.haA)+bar([176,98],s.haB)+grip(s.haA)+grip(s.haB),
+ view:"front", vl:"arkadan görünüm · göğüs pedde, oturur", mus:"Arka omuz · Üst sırt (kürek kasları)",
+ // ÜSTTEN çiziliyordu ve OKUNMUYORDU: kuşbakışı bir insan daireye iner —
+ // omuz, gövde, bacak kalmaz; geriye yalnız makinenin dikdörtgenleri kalıyordu
+ // (Sabri bildirdi, 19 Ağu). Artık ARKADAN: referans görsellerdeki açı.
+ // Kollar öne uzanmışken kameradan uzaklaşır → al ile kısalır, açılınca tam boy.
+ a:{px:130,py:116,torso:90,ua:-38,fa:-26,ua2:218,fa2:206,th:-58,sh:-92,th2:-122,sh2:-88,al:0.45},
+ b:{px:130,py:116,torso:90,ua:8,  fa:-6, ua2:172,fa2:186,th:-58,sh:-92,th2:-122,sh2:-88,al:1},
+ // MAKİNE: koltuk + omuz hizasından ellere inen iki makine kolu.
+ // Denenip ELENENLER: göğüs pedi yatay çizgi olarak çizilince gerçek uygulamada
+ // "elinde bar var" gibi okunuyordu (ped arkadan bakışta zaten gövdenin
+ // ardında kalır); yan kuleler kapı gibi görünüp figürü boğuyordu; üst kiriş
+ // şapka gibi duruyordu. Kalan üç öğe hem makineyi söylüyor hem sessiz.
+ eq:s=>grd()+rct(104,114,52,9)
+      +bar([136,58],s.haA)+bar([124,58],s.haB)+grip(s.haA)+grip(s.haB),
  steps:["Göğsün pede yaslanacak şekilde otur; ayaklar yere basar, göğüs pedden ayrılmaz.",
         "Tutamakları öne uzanmış, dirsekleri hafif bükülü kollarla omuz hizasında kavra.",
         "Önce kürek kemiklerini birbirine sık, sonra kolları geniş bir yayla arkaya-yanlara aç.",
