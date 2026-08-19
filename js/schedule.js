@@ -46,6 +46,22 @@ export const fmtShort = d => `${d.getDate()} ${AY[d.getMonth()].slice(0, 3)} ${G
 
 export const isTrainingDay = (d, trainingDays) => trainingDays.includes(d.getDay());
 
+/**
+ * Antrenman gününü aç/kapat — yeni diziyi döner, REDDEDERSE null.
+ *
+ * SON GÜN KAPATILAMAZ: trainingDays boşalırsa nextTrainingDay null döner,
+ * "sıradaki antrenman" bilgisi tümden kaybolur ve takvim satırı sessizce
+ * anlamsızlaşır. Bozulmaya izin vermektense dokunuşu reddetmek dürüst.
+ *
+ * Buraya (app.js'e değil) konuldu ki test edilebilsin.
+ */
+export function toggleTrainingDay(trainingDays, gun) {
+  const acik = trainingDays.includes(gun);
+  if (acik && trainingDays.length === 1) return null;
+  return (acik ? trainingDays.filter(g => g !== gun) : [...trainingDays, gun])
+    .sort((a, b) => a - b);
+}
+
 /** `from`'dan SONRAKİ ilk antrenman günü (from'un kendisi sayılmaz) */
 export function nextTrainingDay(from, trainingDays) {
   if (!trainingDays.length) return null;

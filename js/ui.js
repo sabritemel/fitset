@@ -75,7 +75,10 @@ export function listHTML(ctx) {
   return `
     ${railHTML(exs, session, settings)}
     <div class="hd">
-      <p class="t-l">${status.label}</p>
+      <div class="hd-row">
+        <p class="t-l">${status.label}</p>
+        <button class="hd-link" data-act="to-settings">Ayarlar</button>
+      </div>
       <h1 class="day">${gün}</h1>
       <p class="t-b">${kaslar}</p>
       ${status.isTrainingDay ? '' :
@@ -92,8 +95,6 @@ export function listHTML(ctx) {
     <div class="note">
       <p>Veri yalnız bu telefonda; sunucuya hiçbir şey gönderilmez — bu yüzden düzenli yedek al.
       Ağrı hissettiğin bir harekette dur. Bu uygulama tıbbi tavsiye vermez.</p>
-      <button data-act="backup">Yedek al</button> &nbsp;
-      <button data-act="import">Geri yükle</button> &nbsp;
       <button data-act="reset-day">Bugünü sıfırla</button>
     </div>
     <div class="grow"></div>
@@ -354,4 +355,79 @@ export function focusHTML(ctx) {
     </div>
     <div class="restline"><i id="restline"></i></div>
     ${sheetHTML(ex, settings)}`;
+}
+
+/* ══ AYARLAR EKRANI ═══════════════════════════════════════════════════════
+   Yalnız GERÇEKTEN çalışan ayarlar burada. `settings` nesnesinde duran ama
+   hiçbir kod yolunun okumadığı iki alan bilerek DIŞARIDA bırakıldı:
+
+     unit   → yalnızca ETİKET. setLabel birimi hiç kullanmıyor, dönüşüm yok;
+              "lbs" seçeneği kiloyu libre gibi gösterir ve YALAN söylerdi.
+     theme  → hiçbir yerde okunmuyor, CSS'te prefers-color-scheme bloğu da yok.
+              Uygulama tek temalı; seçenek koymak işlevsiz düğme olurdu.
+
+   Kural: arayüz, arkasındaki gerçeğin üstünde vaat veremez. İkisi de
+   uygulandığında buraya eklenecek. */
+
+const GUN_SEC = [1, 2, 3, 4, 5, 6, 0];        // Pzt…Paz — hafta Pazartesi başlar
+const DINLENME = [30, 45, 60, 90, 120];
+
+export function settingsHTML(ctx) {
+  const { settings } = ctx;
+  const seciliGunler = settings.trainingDays ?? [];
+
+  const gunler = GUN_SEC.map(g => `
+    <button class="b3 gun" data-gun="${g}" aria-pressed="${seciliGunler.includes(g)}"
+            aria-label="${C.GUN[g]}">${C.GUN_KISA[g]}</button>`).join('');
+
+  const sonraki = C.upcoming(new Date(), seciliGunler, 3);
+  const sonrakiMetin = sonraki.length
+    ? sonraki.map(d => C.fmtShort(d)).join(' · ')
+    : 'Hiç gün seçili değil — takvim çalışmaz.';
+
+  const dinlenme = DINLENME.map(sn => `
+    <button class="b3" data-rest="${sn}" aria-pressed="${settings.restSeconds === sn}">${sn} sn</button>`).join('');
+
+  return `
+    <div class="top">
+      <button class="icb" data-act="to-list" aria-label="Listeye dön">←</button>
+      <span class="mid t-l">Ayarlar</span>
+      <span class="icb" style="visibility:hidden" aria-hidden="true"></span>
+    </div>
+
+    <div class="sect">
+      <p class="t-l">Antrenman günleri</p>
+      <div class="chips">${gunler}</div>
+      <p class="hint${sonraki.length ? '' : ' warnhint'}">Sıradaki: ${sonrakiMetin}</p>
+    </div>
+
+    <div class="sect">
+      <p class="t-l">Setler arası dinlenme</p>
+      <div class="chips">${dinlenme}</div>
+      <p class="hint">Odak ekranındaki sayaç bu süreyle başlar.</p>
+    </div>
+
+    <div class="sect">
+      <p class="t-l">Vücut</p>
+      <div class="frow">
+        <label for="s-height">Boy</label>
+        <input type="number" id="s-height" inputmode="numeric" min="100" max="250" step="1"
+               value="${settings.heightCm ?? ''}" placeholder="—" aria-label="Boy (cm)">
+        <span class="unit">cm</span>
+      </div>
+      <p class="hint">Kilo takibi Geçmiş ekranında.</p>
+    </div>
+
+    <div class="sect">
+      <p class="t-l">Yedek</p>
+      <p class="hint">Veri yalnız bu telefonda; sunucuya hiçbir şey gönderilmez.
+        Telefonu değiştirirsen ya da tarayıcı verisini silersen <b>her şey gider</b> —
+        arada bir yedek al.</p>
+      <div class="split">
+        <button class="b2" data-act="import">Geri yükle</button>
+        <button class="b2" data-act="backup">Yedek al</button>
+      </div>
+    </div>
+
+    <div class="grow"></div>`;
 }

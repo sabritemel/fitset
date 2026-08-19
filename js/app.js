@@ -195,21 +195,25 @@ function isinmaDur() {
 }
 
 /* ── Çizim ─────────────────────────────────────────────────────────────── */
-function render() {
-  const warmEl = $('warmup-screen');
-  if (ctx.view !== 'warmup') isinmaDur();
-  warmEl.classList.toggle('on', ctx.view === 'warmup');
+/* Ekran tablosu: yeni ekran eklemek buraya bir satırdır. Eskiden if/else
+   zinciriydi; üçüncü ekranda hangi ekranın 'on' sınıfını kimin sildiği
+   takip edilemez olmuştu. Yalnız AKTİF ekran yeniden çizilir. */
+const EKRAN = {
+  list:     { el: () => listEl,               html: () => UI.listHTML(ctx) },
+  focus:    { el: () => focusEl,              html: () => UI.focusHTML(ctx) },
+  warmup:   { el: () => $('warmup-screen'),   html: () => UI.warmupHTML(ctx) },
+  settings: { el: () => $('settings-screen'), html: () => UI.settingsHTML(ctx) },
+};
 
-  if (ctx.view === 'warmup') {
-    warmEl.innerHTML = UI.warmupHTML(ctx);
-    listEl.classList.remove('on'); focusEl.classList.remove('on');
+function render() {
+  if (ctx.view !== 'warmup') isinmaDur();
+  const ad = EKRAN[ctx.view] ? ctx.view : 'list';
+  for (const [k, v] of Object.entries(EKRAN)) v.el().classList.toggle('on', k === ad);
+  EKRAN[ad].el().innerHTML = EKRAN[ad].html();
+
+  if (ad === 'warmup') {
     isinmaOynat();
-  } else if (ctx.view === 'list') {
-    listEl.innerHTML = UI.listHTML(ctx);
-    listEl.classList.add('on'); focusEl.classList.remove('on');
-  } else {
-    focusEl.innerHTML = UI.focusHTML(ctx);
-    focusEl.classList.add('on'); listEl.classList.remove('on');
+  } else if (ad === 'focus') {
     const ex = curEx();
     if (!ex.hold) { draw(ex, 0); if (!reduced) play(ex); }
     saatDurumu(ex);
@@ -293,6 +297,12 @@ document.addEventListener('click', async e => {
     return;
   }
 
+  // Ayar çipleri: gün seçimi ve dinlenme süresi anında yazılır
+  const gunBtn = t.closest('[data-gun]');
+  if (gunBtn) { await gunuCevir(+gunBtn.dataset.gun); return; }
+  const restBtn = t.closest('[data-rest]');
+  if (restBtn) { ctx.settings = await S.saveSettings({ restSeconds: +restBtn.dataset.rest }); render(); return; }
+
   const go = t.closest('[data-go]');
   if (go) { git(+go.dataset.go); return; }
 
@@ -375,6 +385,7 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'to-list': stopAnim(); ctx.view = 'list'; render(); scrollTo(0, 0); break;
+    case 'to-settings': stopAnim(); ctx.view = 'settings'; render(); scrollTo(0, 0); break;
     case 'prev': git(ctx.idx - 1); break;
     case 'next': git(ctx.idx + 1); break;
     case 'save': await kaydetTıklandı(); break;
@@ -422,6 +433,31 @@ document.addEventListener('input', e => {
   
   if (t.id?.startsWith('f-')) ctx.draft[t.id.slice(2)] = t.value === '' ? null : +t.value;
 });
+
+/* Boy: her tuşta değil ALAN BIRAKILINCA yazılır. Yazarken kaydetmek "17" gibi
+   yarım değerleri diske indirir ve sonraki açılışta saçma bir boy gösterirdi. */
+document.addEventListener('change', async e => {
+  if (e.target.id !== 's-height') return;
+  const v = e.target.value === '' ? null : Math.round(+e.target.value);
+  if (v !== null && (!Number.isFinite(v) || v < 100 || v > 250)) {
+    toast('Boy 100–250 cm arasında olmalı.', { warn: true });
+    e.target.value = ctx.settings.heightCm ?? '';
+    return;
+  }
+  ctx.settings = await S.saveSettings({ heightCm: v });
+});
+
+/** Gün çipi — kural schedule.toggleTrainingDay'de (orada test ediliyor) */
+async function gunuCevir(gun) {
+  const yeni = C.toggleTrainingDay(ctx.settings.trainingDays ?? [], gun);
+  if (!yeni) {
+    toast('En az bir antrenman günü seçili kalmalı.', { warn: true });
+    return;
+  }
+  ctx.settings = await S.saveSettings({ trainingDays: yeni });
+  ctx.status = C.todayStatus(ctx.settings.trainingDays);   // takvim satırı hemen tazelensin
+  render();
+}
 
 function git(i) {
   const exs = N.exercisesFor(ctx.dayIndex);

@@ -169,6 +169,10 @@ input { font: inherit; }
 .finisher h3 { font-size: 14px; font-weight: 600; margin: 0 0 3px; }
 .finisher p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink2); }
 
+.hd-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.hd-link { color: var(--ink3); font-size: 12.5px; padding: 6px 0 6px 12px; min-height: 32px; }
+.hd-link:active { color: var(--ink); }
+
 .note { padding: 18px 20px 0; font-size: 12px; line-height: 1.55; color: var(--ink3); }
 .note button { color: var(--ink2); font-size: 12.5px; padding: 8px 0; min-height: 36px;
   border-bottom: 1px solid var(--line2); }
@@ -365,3 +369,29 @@ input { font: inherit; }
 .toast span { flex: 1; }
 .toast button { pointer-events: auto; flex: none; border: 1px solid var(--line2); padding: 8px 12px;
   border-radius: var(--r1); font-size: 13px; min-height: 38px; }
+
+/* ══ AYARLAR EKRANI ═══════════════════════════════════════════════════════
+   Kart yok: bölümler kıl payı çizgiyle ayrılır (tasarım dili 2. sürüm).
+   Ekran KAYABİLİR — odak ekranından farkı bu; burada içerik uzayabilir ve
+   salonda tek elle hızlı olması gerekmiyor. */
+#settings-screen { padding-bottom: 28px; }
+.sect { padding: 22px 20px 0; border-top: 1px solid var(--line); margin-top: 22px; }
+.sect:first-of-type { border-top: 0; margin-top: 6px; }
+.sect > .t-l { margin: 0 0 12px; }
+.sect .split { margin-top: 14px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chips .b3 { min-width: 46px; justify-content: center; }
+.gun { font-variant-numeric: tabular-nums; }
+
+.hint { color: var(--ink3); font-size: 12.5px; line-height: 1.5; margin: 12px 0 0; }
+.hint b { color: var(--ink2); font-weight: 550; }
+.warnhint { color: var(--warn); }
+
+.frow { display: flex; align-items: center; gap: 12px; }
+.frow label { color: var(--ink2); font-size: 14px; min-width: 42px; }
+.frow input { width: 92px; height: 44px; padding: 0 12px; border-radius: var(--r1);
+  border: 1px solid var(--line2); background: transparent; color: var(--ink);
+  font-size: 17px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.frow input:focus { outline: none; border-color: var(--ink3); }
+.frow .unit { color: var(--ink3); font-size: 13px; }

@@ -241,5 +241,40 @@ console.log('\n11) ISINMA — tek bayrak, sete ve hacme karışmaz');
   ok(await N.nextDayIndex() === 0, 'A/B sırası ilerlemiyor');
 }
 
+console.log('');
+console.log('12) ANTRENMAN GÜNÜ AYARI — son gün kapatılamaz');
+{
+  ok(JSON.stringify(C.toggleTrainingDay([2, 4, 6], 4)) === '[2,6]', 'seçili gün kapatılıyor');
+  ok(JSON.stringify(C.toggleTrainingDay([2, 4, 6], 1)) === '[1,2,4,6]', 'yeni gün açılıyor ve SIRALI kalıyor');
+  ok(JSON.stringify(C.toggleTrainingDay([6, 2], 4)) === '[2,4,6]', 'karışık sıralı girdi de sıralanıyor');
+  ok(C.toggleTrainingDay([3], 3) === null, 'SON gün kapatılamıyor (null = reddedildi)');
+  ok(JSON.stringify(C.toggleTrainingDay([3], 5)) === '[3,5]', 'tek gün varken BAŞKA gün eklenebiliyor');
+
+  // Reddin sebebi ölçüldü: boş liste takvimi sessizce anlamsızlaştırıyor
+  ok(C.nextTrainingDay(D(2026, 7, 14), []) === null, 'boş listede sıradaki gün YOK — red bu yüzden');
+  ok(C.upcoming(D(2026, 7, 14), []).length === 0, 'boş listede yaklaşan gün de yok');
+
+  // Ayar değişince takvim GERÇEKTEN yeni günlere göre çalışmalı
+  const kalan = C.toggleTrainingDay(C.toggleTrainingDay([2, 4, 6], 2), 4);
+  ok(JSON.stringify(kalan) === '[6]', 'iki gün kapatılınca yalnız Cumartesi kalıyor');
+  ok(+C.nextTrainingDay(D(2026, 7, 14), [6]) === +D(2026, 7, 18), 'yeni ayara göre sıradaki gün Cumartesi');
+  ok(C.upcoming(D(2026, 7, 14), [1, 3, 5], 3).map(d => d.getDate()).join(',') === '15,17,20',
+     'Pzt/Çar/Cum seçilince yaklaşanlar 15, 17, 20 Temmuz');
+}
+
+console.log('');
+console.log('13) BOY AYARI — varsayılan ve kalıcılık');
+{
+  ok(S.DEFAULT_SETTINGS.heightCm === null, 'boy varsayılanı null (uydurma değer yok)');
+  const a = await S.saveSettings({ heightCm: 178 });
+  ok(a.heightCm === 178, 'boy yazılıyor');
+  ok((await S.getSettings()).heightCm === 178, 'boy diskten geri okunuyor');
+  const b = await S.saveSettings({ restSeconds: 45 });
+  ok(b.heightCm === 178, 'başka ayar yazılınca boy KORUNUYOR');
+  ok((await S.getSettings()).trainingDays.join(',') === '2,4,6', 'dokunulmayan ayar varsayılanda kalıyor');
+  await S.saveSettings({ heightCm: null, restSeconds: 60 });
+}
+
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

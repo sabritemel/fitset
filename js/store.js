@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS = {
   unit: 'kg',
   theme: 'auto',
   trainingDays: [2, 4, 6],       // 0=Pazar … 2=Salı, 4=Perşembe, 6=Cumartesi
+  heightCm: null,                // bir kez girilir; kilo takibi ayrı tabloda
   backupNagEvery: 8,             // kaç seansta bir yedek hatırlatması
   // Egzersiz bazında kullanıcı hedefleri: { [exerciseId]: {sets, reps, seconds, weight} }
   // Program dosyasına dokunmadan üzerine yazmayı sağlar; yedeğe de dahildir.
