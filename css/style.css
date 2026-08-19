@@ -395,3 +395,20 @@ input { font: inherit; }
   font-size: 17px; font-weight: 550; font-variant-numeric: tabular-nums; }
 .frow input:focus { outline: none; border-color: var(--ink3); }
 .frow .unit { color: var(--ink3); font-size: 13px; }
+
+/* ── Yarım kalan gün bandı ────────────────────────────────────────────────
+   Modal değil bant: ekranı kilitlemez, altındaki program görünmeye devam
+   eder. Vurgu rengi YOK — bu bir alarm değil, bir soru. */
+.carry { margin: 20px 20px 0; padding: 16px; border: 1px solid var(--line2);
+  border-radius: var(--r3); background: var(--s1); }
+.carry > .t-l { margin: 0; color: var(--ink2); }
+.carry-sub { margin: 5px 0 0; font-size: 12.5px; color: var(--ink3);
+  font-variant-numeric: tabular-nums; }
+.carry-list { margin: 11px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink); }
+.carry .split { margin-top: 15px; }
+.carry .b2, .carry .b1 { height: 46px; font-size: 13.5px; }
+
+/* Devredilen günde geçen sefer yapılmış hareket — sönük ama TIKLANABİLİR
+   (bilerek tekrar yapmak isteyebilirsin) */
+.li.prev .t-h2 { color: var(--ink3); }
+.li.prev .t-m { color: var(--ink3); font-style: italic; }

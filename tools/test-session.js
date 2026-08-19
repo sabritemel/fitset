@@ -276,5 +276,111 @@ console.log('13) BOY AYARI — varsayılan ve kalıcılık');
 }
 
 
+console.log('');
+console.log('14) YARIM KALAN GÜN — tespit');
+{
+  await S.driver.clear('sessions');
+  const kur = async (dayIndex, kacHareket) => {
+    const s = S.newSession(dayIndex);
+    for (const ex of N.exercisesFor(dayIndex).slice(0, kacHareket))
+      N.recordSet(s, ex.id, { type: 'weight_reps', weight: 20, reps: 12 });
+    s.status = 'done'; s.finishedAt = Date.now();
+    await S.saveSession(s);
+    return s;
+  };
+
+  const tam = await kur(0, 9);
+  ok(N.incompleteOf(tam).length === 0, 'tam yapılan günde eksik hareket yok');
+  ok(await N.carryOffer() === null, 'tam gün için öneri ÇIKMIYOR');
+
+  await S.driver.clear('sessions');
+  const yarim = await kur(0, 4);
+  const o = await N.carryOffer();
+  ok(o !== null, '4/9 yapılan gün YARIM sayılıyor');
+  ok(o.yapilan === 4 && o.toplam === 9, `sayım doğru: ${o?.yapilan}/${o?.toplam}`);
+  ok(o.kalan.length === 5, '5 hareket kaldı');
+  ok(o.kalan[0].id === 'cable_front_raise', 'kalanlar SIRAYLA geliyor (ilki 05. hareket)');
+  ok(N.completedIds(yarim).size === 4, 'yapılanların kimlikleri çıkarılıyor');
+
+  // Eşik: yarıdan azı → yarım. 5/9 yarıdan çok → gün BİTMİŞ sayılır.
+  await S.driver.clear('sessions');
+  await kur(0, 5);
+  ok(await N.carryOffer() === null, '5/9 yapılan gün yarım SAYILMIYOR (eşik)');
+
+  // Isınma seti hareketi "yapıldı" yapmaz
+  await S.driver.clear('sessions');
+  const w = S.newSession(0);
+  for (const ex of N.exercisesFor(0).slice(0, 6))
+    N.recordSet(w, ex.id, { type: 'weight_reps', weight: 5, reps: 15, warmup: true });
+  w.status = 'done'; w.finishedAt = Date.now();
+  await S.saveSession(w);
+  ok(N.incompleteOf(w).length === 9, 'yalnız ısınma seti girilen hareket YAPILMIŞ sayılmıyor');
+}
+
+console.log('');
+console.log('15) YARIM KALAN GÜN — cevap ve sıraya etkisi');
+{
+  await S.driver.clear('sessions');
+  const y = S.newSession(0);
+  for (const ex of N.exercisesFor(0).slice(0, 3))
+    N.recordSet(y, ex.id, { type: 'weight_reps', weight: 20, reps: 12 });
+  y.status = 'done'; y.finishedAt = Date.now();
+  await S.saveSession(y);
+
+  ok(await N.nextDayIndex() === 1, 'yarım da olsa sıra normalde 2. Güne geçiyor');
+  const o = await N.carryOffer();
+  ok(o !== null, 'öneri var');
+
+  // "Devam et" → aynı gün, ama sıranın kendisi değişmiyor: yeni seans o güne açılır
+  await N.resolveCarry(o.session);
+  ok(await N.carryOffer() === null, 'cevap verilince bir daha SORULMUYOR');
+  const tekrar = await S.getSession(y.id);
+  ok(tekrar.carryResolved === true, 'cevap ESKİ seansa yazıldı (yeniden açılışta da sürer)');
+
+  // Devredilen seans tamamlanınca sıra normal işler
+  const d = S.newSession(0);
+  d.carriedFrom = y.id;
+  for (const ex of N.exercisesFor(0)) N.recordSet(d, ex.id, { type: 'weight_reps', weight: 20, reps: 12 });
+  ok(await N.finish(d) !== null, 'devredilen seans tamamlanabiliyor');
+  ok(await N.nextDayIndex() === 1, 'ondan sonra sıra 2. Güne geçiyor');
+  ok(await N.carryOffer() === null, 'tam yapılan devir seansı yeni öneri doğurmuyor');
+}
+
+
+console.log('');
+console.log('16) DEVİR SEÇİMİ DİSKE YAZILIYOR — canlıda yakalanan hata');
+{
+  await S.driver.clear('sessions');
+  const y = S.newSession(0); y.id = 'y16';
+  for (const ex of N.exercisesFor(0).slice(0, 3))
+    N.recordSet(y, ex.id, { type: 'weight_reps', weight: 20, reps: 12 });
+  y.status = 'done'; y.finishedAt = Date.now();
+  await S.saveSession(y);
+
+  // "Bu güne devam et": yeni seans açılır, HİÇ SET GİRİLMEZ, uygulama kapanır
+  await N.resolveCarry(y);
+  const d = S.newSession(0);
+  d.carriedFrom = y.id;
+  ok(N.hasAnySet(d) === false, 'devir seansında henüz set yok');
+  ok(N.hasAnyRecord(d) === true, 'ama KAYDA DEĞER: devir kararı da bir kayıt');
+  await N.persist(d);
+
+  const geri = await S.getSession(d.id);
+  ok(!!geri, 'set girilmeden de diske YAZILIYOR (seçim kaybolmuyor)');
+  ok(geri?.carriedFrom === 'y16', 'hangi seanstan devredildiği korunuyor');
+  ok(geri?.dayIndex === 0, 'devredilen GÜN korunuyor — yenilemede 2. Güne düşmüyor');
+
+  // Açılışta o seans yeniden bulunmalı ve "geçen sefer yapıldı" kurulabilmeli
+  const aktif = await S.activeSession();
+  ok(aktif?.id === d.id, 'açılışta devir seansına DEVAM ediliyor');
+  ok(N.completedIds(await S.getSession(aktif.carriedFrom)).size === 3,
+     'işaretlenecek hareketler eski seanstan yeniden çıkarılabiliyor');
+
+  // Ama yalnız "devam et"e basmak antrenman yapmak değildir
+  ok(await N.finish(d) === null, 'yalnız devir kararı olan seans TAMAMLANMIŞ sayılmıyor');
+  ok(await N.nextDayIndex() === 1, 'A/B sırası bu yüzden ilerlemiyor');
+}
+
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

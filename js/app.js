@@ -21,6 +21,8 @@ const ctx = {
   lastPerf: {}, settings: S.DEFAULT_SETTINGS, status: null,
   draft: {},                 // o an ekranda duran, henüz kaydedilmemiş değerler
   tumRozetler: false,        // "+N" açıldı mı — harekete özel, geçicidir
+  yarim: null,               // yarım kalan gün önerisi (cevap verilene kadar)
+  oncekiYapilan: null,       // devredilen günde geçen sefer yapılmış hareketler
   view: 'list',
 };
 let bootDay = C.dayNumber(new Date());
@@ -385,6 +387,31 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'to-list': stopAnim(); ctx.view = 'list'; render(); scrollTo(0, 0); break;
+    case 'carry-go': {
+      const y = ctx.yarim;
+      await N.resolveCarry(y.session);
+      // Yeni seans, YARIM KALAN günün kendisi. Setler kopyalanmaz — kayıtlar
+      // yapıldıkları güne ait kalır; carriedFrom yalnız "geçen sefer yapıldı"
+      // işaretini yeniden kurabilmek için (yeniden açılışta da sürsün diye).
+      ctx.session = S.newSession(y.session.dayIndex);
+      ctx.session.carriedFrom = y.session.id;
+      ctx.dayIndex = y.session.dayIndex;
+      ctx.oncekiYapilan = N.completedIds(y.session);
+      ctx.yarim = null;
+      // HEMEN diske: yoksa yenilemede seçim kaybolur ve soru bir daha
+      // sorulmadığı için kullanıcı sessizce yanlış güne düşer (canlıda yakalandı).
+      await N.persist(ctx.session);
+      await lastPerfYukle();
+      render();
+      toast(`${N.DAY_NAMES[ctx.dayIndex].split(' — ')[0]}'e devam ediliyor.`);
+      break;
+    }
+    case 'carry-skip':
+      await N.resolveCarry(ctx.yarim.session);
+      ctx.yarim = null;
+      render();
+      break;
+
     case 'to-settings': stopAnim(); ctx.view = 'settings'; render(); scrollTo(0, 0); break;
     case 'prev': git(ctx.idx - 1); break;
     case 'next': git(ctx.idx + 1); break;
@@ -520,13 +547,31 @@ $('file').addEventListener('change', async e => {
 });
 
 /* ── Açılış ────────────────────────────────────────────────────────────── */
+/** "Geçen sefer" kutularını o günün hareketleri için tazeler */
+async function lastPerfYukle() {
+  ctx.lastPerf = {};
+  for (const ex of N.exercisesFor(ctx.dayIndex))
+    ctx.lastPerf[ex.id] = await S.lastPerformance(ex.id, ctx.session.id);
+}
+
 async function yükle() {
   const r = await N.startOrResume();
   ctx.session = r.session; ctx.dayIndex = r.session.dayIndex;
   ctx.status = C.todayStatus(ctx.settings.trainingDays);
-  ctx.lastPerf = {};
-  for (const ex of N.exercisesFor(ctx.dayIndex))
-    ctx.lastPerf[ex.id] = await S.lastPerformance(ex.id, ctx.session.id);
+  await lastPerfYukle();
+
+  // Yarım kalan gün YALNIZ yeni seansta sorulur. Yarıda kalmış bir seansa
+  // devam ediliyorsa günü değiştirmek girilmiş setleri yanlış güne bağlardı.
+  ctx.yarim = r.resumed ? null : await N.carryOffer();
+
+  // Devredilen bir seansa geri dönüldüyse "geçen sefer yapıldı" işareti
+  // yeniden kurulur — yoksa uygulamayı kapatıp açınca kaybolurdu.
+  ctx.oncekiYapilan = null;
+  if (ctx.session.carriedFrom) {
+    const önce = await S.getSession(ctx.session.carriedFrom);
+    if (önce) ctx.oncekiYapilan = N.completedIds(önce);
+  }
+
   ctx.view = 'list'; ctx.idx = 0;
   render();
   return r;

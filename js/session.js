@@ -84,6 +84,55 @@ export async function startOrResume() {
   return { session: store.newSession(await nextDayIndex()), resumed: false, stale };
 }
 
+/* ── Yarım kalan gün ────────────────────────────────────────────────────────
+ * Sıra takvimden değil geçmişten türetildiği için KAÇIRILAN gün zaten
+ * sorunsuz: hiç seans yoksa sıra ilerlemez, sonraki gidişte aynı gün gelir.
+ *
+ * Kapanmayan boşluk şuydu: gün YARIM bırakılınca (erken çıkış) seans "yapıldı"
+ * sayılıp sıra ilerliyor ve girilmemiş hareketler hiçbir yerde anılmıyordu.
+ * Ölçüldü: 1. Gün 4/9 → sıra 2. Güne geçiyor, kalan 5 hareket sessizce kayıp.
+ *
+ * Karar KULLANICININ: uygulama sessizce "devam ettiriyorum" demiyor. Bilerek
+ * atlanan hareket de vardır (sakatlık, dolu makine) — onu yarım saymak yanlış
+ * olurdu. Sorulur, cevap seansa yazılır, bir daha sorulmaz.
+ */
+
+/** Yapılan oranı bunun ALTINDAysa gün "yarım" sayılır. 9 harekette 4 → yarım, 5 → değil. */
+export const YARIM_ORAN = 0.5;
+
+/** O seansta hiç ÇALIŞMA seti girilmemiş hareketler (ısınma seti sayılmaz) */
+export function incompleteOf(session) {
+  return exercisesFor(session.dayIndex).filter(ex => {
+    const e = session.entries.find(x => x.exerciseId === ex.id);
+    return !e || !e.sets.some(s => !s.warmup);
+  });
+}
+
+/** O seansta EN AZ bir çalışma seti girilmiş hareketlerin kimlikleri */
+export const completedIds = session =>
+  new Set(session.entries.filter(e => e.sets.some(s => !s.warmup)).map(e => e.exerciseId));
+
+/**
+ * Son tamamlanan seans yarım kaldıysa öneri nesnesi, yoksa null.
+ * Cevaplanmış (carryResolved) seans bir daha sorulmaz.
+ */
+export async function carryOffer() {
+  const son = await store.lastDoneSession();
+  if (!son || son.carryResolved) return null;
+  const toplam = exercisesFor(son.dayIndex).length;
+  const kalan = incompleteOf(son);
+  if (!kalan.length) return null;
+  const yapilan = toplam - kalan.length;
+  if (yapilan / toplam >= YARIM_ORAN) return null;
+  return { session: son, kalan, yapilan, toplam };
+}
+
+/** Soruya cevap verildi — bir daha sorulmasın diye ESKİ seansa yazılır */
+export async function resolveCarry(prev) {
+  prev.carryResolved = true;
+  await store.saveSession(prev);
+}
+
 /* ── Kayıt işlemleri ───────────────────────────────────────────────────── */
 
 /** Egzersizin kaydını bulur, yoksa oluşturur */
@@ -219,8 +268,14 @@ export async function abandon(session) {
  * (Yine de "bitmiş antrenman" sayılmaz — finish() ve bayat-seans temizliği
  *  hâlâ hasAnySet'e bakar, yoksa yalnız ısınma yapılan gün A/B sırasını
  *  yanlış ilerletirdi.)
+ *
+ * ⚠️ Aynı tuzak `carriedFrom` için de geçerli ve CANLI KULLANIMDA yakalandı:
+ * "Bu güne devam et" seçilip sayfa yenilenince seçim kayboluyor, üstelik soru
+ * cevaplanmış sayıldığı için bir daha SORULMUYOR ve kullanıcı sessizce yanlış
+ * güne düşüyordu. Devir kararı da bir kayıttır.
  */
-export const hasAnyRecord = session => hasAnySet(session) || !!session.warmupDone;
+export const hasAnyRecord = session =>
+  hasAnySet(session) || !!session.warmupDone || !!session.carriedFrom;
 
 export async function persist(session) {
   if (!hasAnyRecord(session)) return;       // gerçekten boş seansı yazma

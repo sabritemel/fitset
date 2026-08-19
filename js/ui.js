@@ -38,10 +38,26 @@ const railHTML = (exs, session, settings, şimdi = -1) =>
     return `<i class="${p.tamam ? 'f' : i === şimdi ? 'c' : ''}"></i>`;
   }).join('')}</div>`;
 
+/* YARIM KALAN GÜN BANDI — modal DEĞİL.
+   Salonda tek elle kullanılan bir uygulamada modal düşmanca: ekranı kilitler,
+   kapatma hedefi arattırır. Bant listenin üstünde durur, iki düğmesi var ve
+   cevap verilene kadar bekler; altındaki program görünmeye devam eder. */
+const carryHTML = y => !y ? '' : `
+  <div class="carry">
+    <p class="t-l">${N.DAY_NAMES[y.session.dayIndex].split(' — ')[0]} yarım kaldı</p>
+    <p class="carry-sub">${C.relativeLabel(new Date(y.session.finishedAt ?? y.session.startedAt))}
+      · ${y.yapilan}/${y.toplam} hareket</p>
+    <p class="carry-list">${y.kalan.map(e => e.tr).join(' · ')}</p>
+    <div class="split">
+      <button class="b2" data-act="carry-skip">Sıradakine geç</button>
+      <button class="b1" data-act="carry-go">Bu güne devam et</button>
+    </div>
+  </div>`;
+
 /* ══ LİSTE EKRANI ═════════════════════════════════════════════════════════ */
 
 export function listHTML(ctx) {
-  const { session, dayIndex, settings, status } = ctx;
+  const { session, dayIndex, settings, status, yarim, oncekiYapilan } = ctx;
   const exs = N.exercisesFor(dayIndex);
   const p = N.progress(session, dayIndex, settings);
   const v = N.summaryVolume(session);
@@ -52,9 +68,13 @@ export function listHTML(ctx) {
     const q = N.exerciseProgress(session, ex, settings);
     const pips = Array.from({ length: q.hedef }, (_, k) =>
       `<i class="${k < q.calisma ? 'f' : ''}"></i>`).join('');
-    return `<button class="li${q.tamam ? ' done' : ''}" data-go="${i}">
+    // Devredilen günde geçen sefer YAPILMIŞ olanı söyle — ama setlerini KOPYALAMA.
+    // Kayıtlar yapıldıkları güne ait kalmalı; bu yalnız bir yön göstericidir.
+    const gecen = oncekiYapilan?.has(ex.id);
+    return `<button class="li${q.tamam ? ' done' : ''}${gecen ? ' prev' : ''}" data-go="${i}">
       <span class="ix">${String(i + 1).padStart(2, '0')}</span>
-      <span class="nm"><span class="t-h2" lang="en">${ex.en}</span><span class="t-m">${ex.tr}</span></span>
+      <span class="nm"><span class="t-h2" lang="en">${ex.en}</span>
+        <span class="t-m">${gecen ? 'geçen sefer yapıldı' : ex.tr}</span></span>
       <span class="pips">${pips}</span>
     </button>`;
   }).join('');
@@ -90,6 +110,7 @@ export function listHTML(ctx) {
       <div><span class="t-l">Hacim</span><b>${v.kg.toLocaleString('tr-TR')}<i>${settings.unit}</i></b></div>
       <div><span class="t-l">Süre</span><b>${dk}<i>dk</i></b></div>
     </div>
+    ${carryHTML(yarim)}
     <div class="lst">${isinma}${items}</div>
     <div class="finisher"><h3>${f.h}</h3><p>${f.p}</p></div>
     <div class="note">
