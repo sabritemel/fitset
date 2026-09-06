@@ -24,6 +24,8 @@ const ctx = {
   yarim: null,               // yarım kalan gün önerisi (cevap verilene kadar)
   oncekiYapilan: null,       // devredilen günde geçen sefer yapılmış hareketler
   kilolar: [], gecmis: [], ilerleme: [],   // geçmiş ekranı — açılırken doldurulur
+  gunSecici: false,          // gün seçici paneli açık mı
+  onerilen: 0,               // programın önerdiği gün (kullanıcı ezebilir)
   view: 'list',
 };
 let bootDay = C.dayNumber(new Date());
@@ -301,6 +303,22 @@ document.addEventListener('click', async e => {
     return;
   }
 
+  // Gün seçici: hangi günü yapacağını kullanıcı söyler
+  const gsec = t.closest('[data-gun-sec]');
+  if (gsec) {
+    const hedef = +gsec.dataset.gunSec;
+    if (hedef !== ctx.dayIndex) {
+      const r = await N.chooseDay(ctx.session, hedef);
+      if (!r.ok) { toast('Bugün set girdin — önce seansı bitir ya da bugünü sıfırla.', { warn: true }); return; }
+      ctx.dayIndex = hedef; ctx.idx = 0; ctx.oncekiYapilan = null;
+      await lastPerfYukle();
+      toast(`${N.DAY_NAMES[hedef].split(' — ')[0]} seçildi.`);
+    }
+    ctx.gunSecici = false;
+    render();
+    return;
+  }
+
   // Ayar çipleri: gün seçimi ve dinlenme süresi anında yazılır
   const gunBtn = t.closest('[data-gun]');
   if (gunBtn) { await gunuCevir(+gunBtn.dataset.gun); return; }
@@ -427,6 +445,22 @@ document.addEventListener('click', async e => {
       await gecmisYukle();
       render();
       toast(v === null ? 'Bugünün kilo kaydı silindi.' : `${v.toFixed(1)} kg kaydedildi.`);
+      break;
+    }
+
+    case 'gun-ac': ctx.gunSecici = !ctx.gunSecici; render(); break;
+
+    case 'gun-yapildi': {
+      const gun = ctx.dayIndex;
+      const ad = N.DAY_NAMES[gun].split(' — ')[0];
+      // Tarih BUGÜN değil ÖNCEKİ antrenman günü: telefonsuz yapılan antrenman
+      // tipik olarak bugün değil, kaçırılan program günündeydi.
+      const onceki = C.prevTrainingDay(new Date(), ctx.settings.trainingDays);
+      const ne = onceki ?? C.addDays(new Date(), -1);
+      await N.markDayDone(gun, ne.getTime());
+      ctx.gunSecici = false;
+      await yükle();
+      toast(`${ad} yapıldı olarak işaretlendi (${C.fmtShort(ne)}). Sıra ${N.DAY_NAMES[ctx.dayIndex].split(' — ')[0]}.`);
       break;
     }
 
@@ -589,8 +623,10 @@ async function lastPerfYukle() {
 }
 
 async function yükle() {
+  ctx.onerilen = await N.nextDayIndex();      // program ne diyor (öneri)
   const r = await N.startOrResume();
   ctx.session = r.session; ctx.dayIndex = r.session.dayIndex;
+  ctx.gunSecici = false;
   ctx.status = C.todayStatus(ctx.settings.trainingDays);
   await lastPerfYukle();
 

@@ -435,5 +435,82 @@ console.log('17) GEÇMİŞ VERİSİ — özet satırı ve ilerleme serisi');
 }
 
 
+console.log('');
+console.log('18) GÜN SEÇİMİ — öneri dayatma değil');
+{
+  await S.driver.clear('sessions');
+  ok(N.allDays().length === 2, 'seçenekler programdan üretiliyor (2 gün)');
+  ok(N.allDays()[0].name === N.DAY_NAMES[0], 'gün adları programdan geliyor');
+
+  const s = S.newSession(0);
+  ok(N.canSwitchDay(s).ok === true, 'boş seansta gün değiştirilebilir');
+  const r = await N.chooseDay(s, 1);
+  ok(r.ok === true && s.dayIndex === 1, 'gün değişti');
+  ok(s.dayChosen === true, 'kullanıcı seçimi işaretlendi');
+  ok(!!(await S.getSession(s.id)), 'SEÇİM DİSKE YAZILDI — yenilemede kaybolmaz');
+
+  N.recordSet(s, 'close_grip_pulldown', { type: 'weight_reps', weight: 30, reps: 12 });
+  ok(N.canSwitchDay(s).ok === false, 'set girilince gün KİLİTLENİYOR');
+  const r2 = await N.chooseDay(s, 0);
+  ok(r2.ok === false && r2.neden === 'set', 'reddin sebebi söyleniyor');
+  ok(s.dayIndex === 1, 'reddedilince gün DEĞİŞMİYOR (setler yanlış güne bağlanmaz)');
+}
+
+console.log('');
+console.log('19) KAYITSIZ GÜN — "telefonsuz yaptım"');
+{
+  await S.driver.clear('sessions');
+  const t = Date.now() - 2 * 86400000;
+  const s = await N.markDayDone(0, t);
+
+  ok(s.kayitsiz === true, 'kayıtsız işaretli');
+  ok(s.status === 'done', 'tamamlanmış sayılıyor');
+  ok(await N.nextDayIndex() === 1, 'SIRA İLERLİYOR — asıl istek buydu');
+  ok(!!(await S.getSession(s.id)), 'diske yazıldı');
+  ok(N.hasAnyRecord(s) === true, 'kayda değer sayılıyor (set yok ama karar var)');
+
+  // Tuzak 1: 0/9 görünür ama YARIM değildir
+  ok(await N.carryOffer() === null, 'yarım-gün önerisi ÇIKMIYOR (0/9 ama tamamlandı)');
+
+  // Tuzak 2: uydurma istatistik üretmemeli
+  ok(S.sessionVolume(s, N.byId).kg === 0, 'hacme karışmıyor');
+  ok(await S.lastPerformance('bb_bench_press') === null, '"geçen sefer" kirlenmiyor');
+
+  // Geçmişte dürüst görünmeli
+  const satir = N.sessionSummaryRow(s);
+  ok(satir.kayitsiz === true, 'geçmiş satırı kayıtsız diyor');
+  ok(satir.yarim === false, 'geçmiş satırı YARIM demiyor');
+  ok(satir.at === t, 'tarih verilen gün (bugün değil)');
+
+  // Sıradaki gerçek seans normal işlemeli
+  const d = S.newSession(await N.nextDayIndex());
+  for (const ex of N.exercisesFor(1)) N.recordSet(d, ex.id, { type: 'weight_reps', weight: 20, reps: 12 });
+  ok(await N.finish(d) !== null, 'sonraki gerçek seans tamamlanabiliyor');
+  ok(await N.nextDayIndex() === 0, 'ondan sonra sıra başa dönüyor');
+}
+
+console.log('');
+console.log('20) KARAR BAYRAKLARI — üçüncü kez eksik kalmasın');
+{
+  for (const bayrak of N.KARAR_BAYRAKLARI) {
+    const s = S.newSession(0);
+    s[bayrak] = bayrak === 'carriedFrom' ? 'x' : true;
+    ok(N.hasAnyRecord(s) === true, `"${bayrak}" tek başına kayda değer`);
+  }
+  ok(N.hasAnyRecord(S.newSession(0)) === false, 'hiçbir işaret yoksa boş seans YAZILMIYOR');
+  ok(N.KARAR_BAYRAKLARI.includes('dayChosen') && N.KARAR_BAYRAKLARI.includes('kayitsiz'),
+     'yeni bayraklar listede');
+}
+
+console.log('');
+console.log('21) ÖNCEKİ ANTRENMAN GÜNÜ — kayıtsız günün tarihi');
+{
+  ok(+C.prevTrainingDay(D(2026, 9, 6), SALPERCMT) === +D(2026, 9, 5), 'Pazar → önceki Cumartesi');
+  ok(+C.prevTrainingDay(D(2026, 9, 8), SALPERCMT) === +D(2026, 9, 5), 'Salı → önceki Cumartesi');
+  ok(+C.prevTrainingDay(D(2027, 1, 2), SALPERCMT) === +D(2026, 12, 31), 'yıl sınırını geriye doğru geçiyor');
+  ok(C.prevTrainingDay(D(2026, 9, 6), []) === null, 'gün seçili değilse null');
+}
+
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

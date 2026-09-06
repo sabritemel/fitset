@@ -54,10 +54,47 @@ const carryHTML = y => !y ? '' : `
     </div>
   </div>`;
 
+/* GÜN SEÇİCİ — "öner, dayatma".
+   Sıra geçmişten türetilir (doğru), ama son sözü kullanıcı söyler. Emsallerin
+   kalıbı da bu: sıradaki gün, tamamlanana YA DA bilerek atlanana kadar bekler.
+   Modal değil satır içi panel — salonda tek elle, ekranı kilitlemeden. */
+const gunSeciciHTML = ctx => {
+  const { session, dayIndex, onerilen, gunSecici } = ctx;
+  if (!gunSecici) return '';
+  const izin = N.canSwitchDay(session);
+  const bugunAdi = N.DAY_NAMES[dayIndex].split(' — ')[0];
+
+  const secenekler = N.allDays().map(g => {
+    const [ad, kas] = g.name.split(' — ');
+    const secili = g.dayIndex === dayIndex;
+    return `<button class="pick" data-gun-sec="${g.dayIndex}" aria-pressed="${secili}"
+              ${izin.ok ? '' : 'disabled'}>
+      <span class="pick-ad">${ad}</span>
+      <span class="pick-kas">${kas}</span>
+      ${g.dayIndex === onerilen ? '<span class="pick-not">program önerisi</span>' : ''}
+    </button>`;
+  }).join('');
+
+  return `<div class="picker">
+    <p class="t-l">Bugün ne yapıyorsun?</p>
+    ${izin.ok ? '' :
+      `<p class="hint warnhint">Bugün zaten set girdin — gün değiştirmek bu setleri
+        yanlış güne bağlardı. Önce <b>Seansı bitir</b> ya da <b>Bugünü sıfırla</b>.</p>`}
+    <div class="picks">${secenekler}</div>
+    ${izin.ok ? `
+      <div class="picker-alt">
+        <p class="hint">${bugunAdi}'ü telefonsuz yaptıysan işaretle — kayda geçer,
+          sıra sonraki güne atlar. Ağırlıklar bilinmediği için hacme ve
+          "geçen sefer"e karışmaz.</p>
+        <button class="b2" data-act="gun-yapildi">${bugunAdi}'ü yapıldı işaretle</button>
+      </div>` : ''}
+  </div>`;
+};
+
 /* ══ LİSTE EKRANI ═════════════════════════════════════════════════════════ */
 
 export function listHTML(ctx) {
-  const { session, dayIndex, settings, status, yarim, oncekiYapilan } = ctx;
+  const { session, dayIndex, settings, status, yarim, oncekiYapilan, gunSecici } = ctx;
   const exs = N.exercisesFor(dayIndex);
   const p = N.progress(session, dayIndex, settings);
   const v = N.summaryVolume(session);
@@ -101,12 +138,15 @@ export function listHTML(ctx) {
         <button class="hd-link" data-act="to-history">Geçmiş</button>
         <button class="hd-link" data-act="to-settings">Ayarlar</button></span>
       </div>
-      <h1 class="day">${gün}</h1>
+      <button class="day-btn" data-act="gun-ac" aria-expanded="${!!gunSecici}">
+        <h1 class="day">${gün}</h1><span class="caret">${gunSecici ? '▴' : '▾'}</span>
+      </button>
       <p class="t-b">${kaslar}</p>
       ${status.isTrainingDay ? '' :
         `<p class="resting">Bugün program günü değil — istersen yine de kaydet.
           Sıradaki antrenman ${status.next ? C.fmtShort(status.next) : '—'}.</p>`}
     </div>
+    ${gunSeciciHTML(ctx)}
     <div class="stat">
       <div><span class="t-l">Set</span><b>${p.done}<i>/${p.total}</i></b></div>
       <div><span class="t-l">Hacim</span><b>${v.kg.toLocaleString('tr-TR')}<i>${settings.unit}</i></b></div>
@@ -447,8 +487,9 @@ export function historyHTML(ctx) {
         <div class="hrow">
           <span class="hdate">${C.fmtShort(new Date(r.at))}</span>
           <span class="hday">${N.DAY_NAMES[r.dayIndex].split(' — ')[0]}</span>
-          <span class="hcount">${r.yapilan}/${r.toplam}${r.yarim ? ' <em>yarım</em>' : ''}</span>
-          <span class="hvol">${r.hacim.kg.toLocaleString('tr-TR')} ${settings.unit}</span>
+          <span class="hcount">${r.kayitsiz ? '<em class="kyt">kayıtsız</em>'
+            : `${r.yapilan}/${r.toplam}${r.yarim ? ' <em>yarım</em>' : ''}`}</span>
+          <span class="hvol">${r.kayitsiz ? '—' : r.hacim.kg.toLocaleString('tr-TR') + ' ' + settings.unit}</span>
         </div>`).join('')}</div>`
         : '<p class="hint">Henüz tamamlanmış seans yok.</p>'}
     </div>`;

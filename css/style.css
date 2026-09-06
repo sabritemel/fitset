@@ -458,3 +458,36 @@ input { font: inherit; }
 .prog-say { flex: none; min-width: 96px; text-align: right; font-size: 12px;
   color: var(--ink3); font-variant-numeric: tabular-nums; }
 .prog-say b { color: var(--ink); font-weight: 600; }
+
+/* ── Gün seçici ───────────────────────────────────────────────────────────
+   Gün adı artık bir DÜĞME: sıra öneridir, son sözü kullanıcı söyler. */
+.day-btn { display: flex; align-items: baseline; gap: 8px; padding: 0; text-align: left; }
+/* Caret, bu özelliğin TEK giriş noktası — bulunamazsa özellik yok demektir.
+   Bu yüzden sönük değil orta tonda; ama başlığı gölgelemesin diye küçük. */
+.day-btn .caret { color: var(--ink2); font-size: 14px; line-height: 1;
+  border: 1px solid var(--line2); border-radius: 999px;
+  width: 22px; height: 22px; display: inline-flex;
+  align-items: center; justify-content: center; align-self: center; }
+.day-btn:active .caret { background: var(--s2); }
+.day-btn:active .day { color: var(--ink2); }
+
+.picker { margin: 14px 20px 0; padding: 15px; border: 1px solid var(--line2);
+  border-radius: var(--r3); background: var(--s1); }
+.picker > .t-l { margin: 0 0 11px; color: var(--ink2); }
+.picks { display: flex; flex-direction: column; gap: 7px; }
+.pick { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--r2);
+  text-align: left; width: 100%; }
+.pick[aria-pressed="true"] { border-color: var(--ink); background: var(--s2); }
+.pick:disabled { opacity: .4; }
+.pick:not(:disabled):active { background: var(--s2); }
+.pick-ad { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+.pick-kas { flex: 1; font-size: 12.5px; color: var(--ink2); }
+.pick-not { flex: none; font-size: 10.5px; font-weight: 550; letter-spacing: .045em;
+  text-transform: uppercase; color: var(--ink3); border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px 8px; }
+.picker-alt { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
+.picker-alt .hint { margin: 0 0 11px; }
+/* Kayıtsız gün: "yarım" değil, kendi etiketi. Uyarı rengi DEĞİL — bu bir
+   kusur değil kullanıcının beyanı; nötr tonda durur. */
+.hcount em.kyt { color: var(--ink3); font-style: normal; font-size: 11px; }

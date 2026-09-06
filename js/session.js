@@ -119,6 +119,9 @@ export const completedIds = session =>
 export async function carryOffer() {
   const son = await store.lastDoneSession();
   if (!son || son.carryResolved) return null;
+  // Kayıtsız gün 0/9 görünür ama YARIM DEĞİLDİR — kullanıcı "tamamladım" dedi.
+  // Bu koruma olmadan "1. Gün yarım kaldı, 0/9" diyerek tam tersini söylüyordu.
+  if (son.kayitsiz) return null;
   const toplam = exercisesFor(son.dayIndex).length;
   const kalan = incompleteOf(son);
   if (!kalan.length) return null;
@@ -131,6 +134,58 @@ export async function carryOffer() {
 export async function resolveCarry(prev) {
   prev.carryResolved = true;
   await store.saveSession(prev);
+}
+
+/* ── Gün seçimi ve kayıtsız gün ────────────────────────────────────────────
+ * Sıra geçmişten türetiliyor (doğru) ama kullanıcının bunu DEĞİŞTİREBİLECEĞİ
+ * hiçbir yer yoktu. Telefonsuz yapılan gün uygulama için hiç olmamış sayılıyor
+ * ve sıra sonsuza kadar orada bekliyordu.
+ *
+ * Emsallerin kalıbı "ÖNER, DAYATMA": sıradaki gün, tamamlanana YA DA bilerek
+ * atlanana kadar sıradaki kalır. FitSet önerinin ilk yarısını yapıyordu.
+ */
+
+/** Programdaki tüm günler — seçici bundan üretilir, gün sayısı artarsa büyür */
+export const allDays = () => EX.map((_, i) => ({ dayIndex: i, name: DAY_NAMES[i] }));
+
+/**
+ * Gün değiştirilebilir mi? Set girilmişse HAYIR — girilen setler yanlış güne
+ * bağlanırdı. Sebebini de döndürür ki arayüz "neden" diyebilsin.
+ */
+export function canSwitchDay(session) {
+  if (hasAnySet(session)) return { ok: false, neden: 'set' };
+  return { ok: true };
+}
+
+/**
+ * Bugünün gününü elle değiştir. Seans DİSKE yazılır — yoksa yenilemede seçim
+ * kaybolur (aynı tuzağın dördüncü hâli olurdu).
+ */
+export async function chooseDay(session, dayIndex) {
+  const izin = canSwitchDay(session);
+  if (!izin.ok) return izin;
+  session.dayIndex = dayIndex;
+  session.dayChosen = true;              // "kullanıcı seçti" — sıra bunu ezmesin
+  await persist(session);
+  return { ok: true };
+}
+
+/**
+ * "Bu günü kaydetmeden yaptım."
+ * Kaydı olmayan ama YAPILMIŞ bir gün: sırayı ilerletir, geçmişte görünür,
+ * ama hacme/"geçen sefer"e karışmaz (uydurma istatistik üretmesin).
+ *
+ * Tarih: bugün değil SON ANTRENMAN GÜNÜ — telefonsuz yapılan antrenman
+ * tipik olarak bugün değil, önceki program günündeydi.
+ */
+export async function markDayDone(dayIndex, at = Date.now()) {
+  const s = store.newSession(dayIndex);
+  s.status = 'done';
+  s.kayitsiz = true;                     // ⚠️ hacim/geçen-sefer bunu ATLAR
+  s.carryResolved = true;                // yarım sanılmasın (aşağıdaki korumaya ek kemer)
+  s.startedAt = s.finishedAt = at;
+  await store.saveSession(s);
+  return s;
 }
 
 /* ── Kayıt işlemleri ───────────────────────────────────────────────────── */
@@ -274,8 +329,18 @@ export async function abandon(session) {
  * cevaplanmış sayıldığı için bir daha SORULMUYOR ve kullanıcı sessizce yanlış
  * güne düşüyordu. Devir kararı da bir kayıttır.
  */
+/**
+ * ⚠️ Bu liste ÜÇ KEZ eksik kaldı (warmupDone → carriedFrom → dayChosen), her
+ * seferinde aynı biçimde: kullanıcı bir KARAR veriyor, henüz set girmediği için
+ * seans diske yazılmıyor, karar yenilemede buharlaşıyor. Dördüncüsünü beklemek
+ * yerine kural yazıldı: **sette olmayan ama kullanıcıdan gelen her işaret**
+ * kayda değerdir. Yeni bir bayrak eklerken buraya EKLE — ya da daha iyisi,
+ * `KARAR_BAYRAKLARI` listesine.
+ */
+export const KARAR_BAYRAKLARI = ['warmupDone', 'carriedFrom', 'dayChosen', 'kayitsiz'];
+
 export const hasAnyRecord = session =>
-  hasAnySet(session) || !!session.warmupDone || !!session.carriedFrom;
+  hasAnySet(session) || KARAR_BAYRAKLARI.some(k => !!session[k]);
 
 export async function persist(session) {
   if (!hasAnyRecord(session)) return;       // gerçekten boş seansı yazma
@@ -308,7 +373,9 @@ export function sessionSummaryRow(session) {
     at: session.finishedAt ?? session.startedAt,
     dayIndex: session.dayIndex,
     yapilan, toplam,
-    yarim: yapilan / toplam < YARIM_ORAN,
+    // Kayıtsız gün ne "yarım"dır ne de sayılabilir — kendi etiketini taşır
+    kayitsiz: !!session.kayitsiz,
+    yarim: !session.kayitsiz && yapilan / toplam < YARIM_ORAN,
     hacim: store.sessionVolume(session, byId),
   };
 }

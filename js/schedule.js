@@ -72,6 +72,16 @@ export function nextTrainingDay(from, trainingDays) {
   return null;
 }
 
+/** `from`'dan ÖNCEKİ ilk antrenman günü (from'un kendisi sayılmaz) */
+export function prevTrainingDay(from, trainingDays) {
+  if (!trainingDays.length) return null;
+  for (let i = 1; i <= 7; i++) {
+    const d = addDays(from, -i);
+    if (isTrainingDay(d, trainingDays)) return d;
+  }
+  return null;
+}
+
 /** Sıradaki n antrenman günü (bugün antrenman günüyse bugünle başlar) */
 export function upcoming(from, trainingDays, n = 3) {
   const out = [];
