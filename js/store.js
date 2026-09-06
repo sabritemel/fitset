@@ -186,7 +186,10 @@ export async function lastPerformance(exerciseId, excludeSessionId = null) {
   //    basmayı unutmuş olabilir; girdiği ağırlık yine de geçerli bir referanstır.
   //    (Bu olmadan, bir kez bile "bitir"e basılmamışsa kutular hep boş gelirdi.)
   for (const s of await allSessions()) {
-    if (s.status === 'done') continue;
+    // ⚠️ Eskiden "done olmayan" deniyordu; yumuşak silinen seans (status
+    // 'deleted') bu delikten geçip silinmiş ağırlığı "geçen sefer" diye geri
+    // getiriyordu. Yalnız GERÇEKTEN yarım kalmış (active) seansa bakılır.
+    if (s.status !== 'active') continue;
     const r = bul(s); if (r) return r;
   }
   return null;
@@ -247,7 +250,8 @@ export async function exportData() {
     schemaVersion: SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     settings: await getSettings(),
-    sessions: await allSessions(),
+    // Silinen seans yedeğe girmez — yoksa geri yüklemede sessizce geri gelirdi
+    sessions: (await allSessions()).filter(s => s.status !== 'deleted'),
     // ⚠️ Yeni tablo eklerken BURAYA da eklenmeli — yoksa yedek sessizce eksik
     // kalır ve kullanıcı kaybettiğini ancak geri yüklerken fark eder.
     body: await weights(),

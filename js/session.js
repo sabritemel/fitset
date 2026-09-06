@@ -225,13 +225,6 @@ export function recordSet(session, exerciseId, data) {
   return set;
 }
 
-export function updateSet(session, exerciseId, index, patch) {
-  const sets = entryFor(session, exerciseId).sets;
-  if (!sets[index]) return null;
-  sets[index] = { ...sets[index], ...patch };
-  return sets[index];
-}
-
 /**
  * Son seti geri al. Terli/eldivenli parmakla yanlış dokunuş KESİN olacağı için
  * bu bir konfor değil zorunluluk — ve onay diyaloğundan iyidir (diyalog akışı keser).
@@ -356,6 +349,82 @@ export async function summary(session) {
   const dk = session.finishedAt && session.startedAt
     ? Math.max(1, Math.round((session.finishedAt - session.startedAt) / 60000)) : null;
   return { ...v, minutesElapsed: dk, dayName: DAY_NAMES[session.dayIndex] };
+}
+
+/* ── Geçmiş seansı düzenleme ───────────────────────────────────────────────
+ * Yanlış girilen ağırlık kalıcıydı: yalnız CANLI seansta son set geri
+ * alınabiliyordu. Geçmişteki bir sayı yanlışsa hacim, "geçen sefer" ve
+ * ilerleme grafiği ömür boyu o yanlışı taşıyordu.
+ *
+ * SİLME YUMUŞAKTIR (`status:'deleted'`), sert değil. Sebebi: geri-al'ın
+ * uygulamayı kapatınca da yaşaması gerekiyor. "Bugünü sıfırla"nın geri-al'ı
+ * yalnız BELLEKTE ve bu yüzden kapanışta kayboluyor — aynı hatayı burada
+ * tekrarlamamak için silinen seans diskte duruyor, yalnız görünmüyor.
+ *
+ * `doneSessions()` ve `activeSession()` duruma göre süzdüğü için silinen
+ * seans geçmişten, sıradan, hacimden KENDİLİĞİNDEN düşer.
+ */
+
+/**
+ * Bir setin değerlerini düzelt.
+ *
+ * Burada ÖLÜ bir `updateSet` zaten vardı (kimse çağırmıyordu) ve iki kusuru
+ * taşıyordu: (1) doğrulama yok — "abc" yazılabilirdi; (2) `entryFor` kullanıyordu,
+ * yani OLMAYAN bir egzersizi düzenlemeye çalışmak boş kayıt YARATIRDI.
+ * Silinip yerine bu kondu. (Ölü API sayısı bu projede üçe çıktı: setNote,
+ * updateSet, unit/theme ayarları.)
+ */
+export function updateSet(session, exerciseId, index, patch) {
+  const e = session.entries.find(x => x.exerciseId === exerciseId);
+  const set = e?.sets[index];
+  if (!set) return { ok: false, neden: 'yok' };
+  const izinli = set.type === 'time' ? ['seconds']
+    : set.type === 'cardio' ? ['minutes'] : ['weight', 'reps'];
+  for (const [k, v] of Object.entries(patch)) {
+    if (!izinli.includes(k)) continue;
+    if (v === null || v === '') { set[k] = k === 'weight' ? null : set[k]; continue; }
+    const n = +v;
+    if (!Number.isFinite(n) || n < 0) return { ok: false, neden: 'sayı' };
+    set[k] = n;
+  }
+  return { ok: true, set };
+}
+
+/** Tek seti sil. Egzersizin son seti gidince o kayıt da temizlenir. */
+export function deleteSet(session, exerciseId, index) {
+  const e = session.entries.find(x => x.exerciseId === exerciseId);
+  if (!e?.sets[index]) return { ok: false };
+  const silinen = e.sets.splice(index, 1)[0];
+  if (!e.sets.length) session.entries = session.entries.filter(x => x !== e);
+  return { ok: true, silinen, bosaldi: !hasAnySet(session) };
+}
+
+/**
+ * Seansı sil — YUMUŞAK. Geri getirilebilir ve geri-al uygulamayı kapatsan da
+ * yaşar. Sert silme (`abandon`) yalnız hiç seti olmayan seanslar için.
+ */
+export async function softDeleteSession(session) {
+  session.status = 'deleted';
+  session.deletedAt = Date.now();
+  await store.saveSession(session);
+  return session.id;
+}
+
+/** Silinen seansı geri getir */
+export async function restoreSession(id) {
+  const s = await store.getSession(id);
+  if (!s || s.status !== 'deleted') return null;
+  s.status = 'done';
+  delete s.deletedAt;
+  await store.saveSession(s);
+  return s;
+}
+
+/** Düzenlenen seansı diske yaz — boşaldıysa SİLER (kullanıcı kararı, 6 Eyl) */
+export async function saveEdited(session) {
+  if (!hasAnySet(session)) { await softDeleteSession(session); return { silindi: true }; }
+  await store.saveSession(session);
+  return { silindi: false };
 }
 
 /* ── Geçmiş ────────────────────────────────────────────────────────────────

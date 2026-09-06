@@ -25,6 +25,7 @@ const ctx = {
   oncekiYapilan: null,       // devredilen günde geçen sefer yapılmış hareketler
   kilolar: [], gecmis: [], ilerleme: [],   // geçmiş ekranı — açılırken doldurulur
   gunSecici: false,          // gün seçici paneli açık mı
+  duzenlenen: null,          // geçmiş ekranından açılan seans
   onerilen: 0,               // programın önerdiği gün (kullanıcı ezebilir)
   view: 'list',
 };
@@ -209,6 +210,7 @@ const EKRAN = {
   warmup:   { el: () => $('warmup-screen'),   html: () => UI.warmupHTML(ctx) },
   settings: { el: () => $('settings-screen'), html: () => UI.settingsHTML(ctx) },
   history:  { el: () => $('history-screen'),  html: () => UI.historyHTML(ctx) },
+  seans:    { el: () => $('session-screen'),  html: () => UI.sessionEditHTML(ctx) },
 };
 
 function render() {
@@ -300,6 +302,35 @@ document.addEventListener('click', async e => {
   if (wa && ctx.view === 'warmup') {
     const i = N.warmupFor(ctx.dayIndex).findIndex(w => w.id === wa.dataset.warm);
     if (i >= 0) { isinmaAnim.hangi = i; isinmaAnim.t0 = 0; }
+    return;
+  }
+
+  // Geçmişte bir seansa dokunmak → düzenleme ekranı
+  const hs = t.closest('[data-seans]');
+  if (hs) {
+    ctx.duzenlenen = await S.getSession(hs.dataset.seans);
+    ctx.view = 'seans'; render(); scrollTo(0, 0);
+    return;
+  }
+
+  // Set silme (düzenleme ekranı)
+  const es = t.closest('[data-eset-sil]');
+  if (es) {
+    const [exId, i] = es.dataset.esetSil.split(':');
+    const r = N.deleteSet(ctx.duzenlenen, exId, +i);
+    if (!r.ok) return;
+    const sonuc = await N.saveEdited(ctx.duzenlenen);
+    await gecmisYukle(); await yükle();
+    if (sonuc.silindi) {
+      // Son set de gitti → seans boşaldı. Kullanıcı kararı (6 Eyl): seansı sil.
+      const id = ctx.duzenlenen.id;
+      ctx.duzenlenen = null; ctx.view = 'history'; render();
+      toast('Son set silindi — seans da silindi.', {
+        label: 'Geri getir', sticky: true,
+        action: async () => { await N.restoreSession(id); await gecmisYukle(); await yükle();
+                              ctx.view = 'history'; render(); },
+      });
+    } else { render(); toast('Set silindi.'); }
     return;
   }
 
@@ -464,6 +495,26 @@ document.addEventListener('click', async e => {
       break;
     }
 
+    case 'seans-sil': {
+      const d = ctx.duzenlenen;
+      const id = await N.softDeleteSession(d);
+      ctx.duzenlenen = null;
+      await gecmisYukle();
+      await yükle();                       // sıra silinen seansa göre yeniden hesaplanır
+      ctx.view = 'history'; render();
+      // Geri-al DİSKTEN çalışır: uygulamayı kapatsan da seans duruyor, yalnız gizli.
+      toast('Seans silindi.', {
+        label: 'Geri getir', sticky: true,
+        action: async () => {
+          await N.restoreSession(id);
+          await gecmisYukle(); await yükle();
+          ctx.view = 'history'; render();
+          toast('Seans geri getirildi.');
+        },
+      });
+      break;
+    }
+
     case 'to-settings': stopAnim(); ctx.view = 'settings'; render(); scrollTo(0, 0); break;
     case 'prev': git(ctx.idx - 1); break;
     case 'next': git(ctx.idx + 1); break;
@@ -516,6 +567,17 @@ document.addEventListener('input', e => {
 /* Boy: her tuşta değil ALAN BIRAKILINCA yazılır. Yazarken kaydetmek "17" gibi
    yarım değerleri diske indirir ve sonraki açılışta saçma bir boy gösterirdi. */
 document.addEventListener('change', async e => {
+  // Geçmiş seansta bir set değeri düzeltildi
+  const ed = e.target.closest?.('[data-eset]');
+  if (ed && ctx.duzenlenen) {
+    const [exId, i, alan] = ed.dataset.eset.split(':');
+    const r = N.updateSet(ctx.duzenlenen, exId, +i, { [alan]: ed.value });
+    if (!r.ok) { toast('Geçerli bir sayı gir.', { warn: true }); render(); return; }
+    await N.saveEdited(ctx.duzenlenen);
+    await gecmisYukle(); await yükle();
+    ctx.view = 'seans'; render();
+    return;
+  }
   if (e.target.id !== 's-height') return;
   const v = e.target.value === '' ? null : Math.round(+e.target.value);
   if (v !== null && (!Number.isFinite(v) || v < 100 || v > 250)) {

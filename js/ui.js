@@ -484,13 +484,13 @@ export function historyHTML(ctx) {
     <div class="sect">
       <p class="t-l">Son seanslar</p>
       ${gecmis.length ? `<div class="hrows">${gecmis.map(r => `
-        <div class="hrow">
+        <button class="hrow" data-seans="${r.id}">
           <span class="hdate">${C.fmtShort(new Date(r.at))}</span>
           <span class="hday">${N.DAY_NAMES[r.dayIndex].split(' — ')[0]}</span>
           <span class="hcount">${r.kayitsiz ? '<em class="kyt">kayıtsız</em>'
             : `${r.yapilan}/${r.toplam}${r.yarim ? ' <em>yarım</em>' : ''}`}</span>
           <span class="hvol">${r.kayitsiz ? '—' : r.hacim.kg.toLocaleString('tr-TR') + ' ' + settings.unit}</span>
-        </div>`).join('')}</div>`
+        </button>`).join('')}</div>`
         : '<p class="hint">Henüz tamamlanmış seans yok.</p>'}
     </div>`;
 
@@ -514,6 +514,65 @@ export function historyHTML(ctx) {
       <span class="icb" style="visibility:hidden" aria-hidden="true"></span>
     </div>
     ${kiloBolum}${seansBolum}${ilerlemeBolum}
+    <div class="grow"></div>`;
+}
+
+/* ══ SEANS DÜZENLEME EKRANI ═══════════════════════════════════════════════
+   Yanlış girilen ağırlık ömür boyu kalıyordu: hacim, "geçen sefer" ve
+   ilerleme grafiği o yanlışı taşıyordu. Düzeltme burada.
+
+   Alan bırakılınca kaydeder (her tuşta değil) — "4" yazarken 4 kg diske
+   inmesin diye; boy alanında da aynı karar verildi. */
+export function sessionEditHTML(ctx) {
+  const { duzenlenen: d, settings } = ctx;
+  if (!d) return '<div class="top"><span class="mid t-l">Seans bulunamadı</span></div>';
+
+  const gunAdi = N.DAY_NAMES[d.dayIndex].split(' — ')[0];
+  const bloklar = N.exercisesFor(d.dayIndex).map(ex => {
+    const e = d.entries.find(x => x.exerciseId === ex.id);
+    if (!e?.sets.length) return '';
+    const satirlar = e.sets.map((s, i) => {
+      const alanlar = s.type === 'time'
+        ? [['seconds', s.seconds, 'sn', 5]]
+        : s.type === 'cardio'
+          ? [['minutes', s.minutes, 'dk', 5]]
+          : [['weight', s.weight, settings.unit, 2.5], ['reps', s.reps, 'tekrar', 1]];
+      return `<div class="eset">
+        <span class="eno">${s.warmup ? 'ıs' : i + 1}</span>
+        ${alanlar.map(([alan, deger, birim, adim]) => `
+          <label class="efield">
+            <input type="number" inputmode="decimal" step="${adim}" min="0"
+                   value="${deger ?? ''}" placeholder="—"
+                   data-eset="${ex.id}:${i}:${alan}" aria-label="${ex.tr} ${i + 1}. set ${birim}">
+            <span class="eunit">${birim}</span>
+          </label>`).join('')}
+        <button class="esil" data-eset-sil="${ex.id}:${i}" aria-label="${i + 1}. seti sil">sil</button>
+      </div>`;
+    }).join('');
+    return `<div class="eex">
+      <p class="t-h2" lang="en">${ex.en}</p>
+      ${satirlar}
+    </div>`;
+  }).join('');
+
+  const v = N.summaryVolume(d);
+  return `
+    <div class="top">
+      <button class="icb" data-act="to-history" aria-label="Geçmişe dön">←</button>
+      <span class="mid t-l">${C.fmtShort(new Date(d.finishedAt ?? d.startedAt))} · ${gunAdi}</span>
+      <span class="icb" style="visibility:hidden" aria-hidden="true"></span>
+    </div>
+    <div class="sect">
+      <p class="hint">Bir değeri düzeltmek için üstüne yaz — alandan çıkınca kaydedilir.
+        Hacim, "geçen sefer" ve ilerleme grafiği kendiliğinden yeniden hesaplanır.</p>
+      <p class="hint"><b>${v.sets} set · ${v.kg.toLocaleString('tr-TR')} ${settings.unit}</b></p>
+    </div>
+    <div class="eex-list">${bloklar}</div>
+    <div class="sect">
+      <button class="b2 danger" data-act="seans-sil">Bu seansı sil</button>
+      <p class="hint">Silinen seans geçmişten kalkar ve sıra yeniden hesaplanır.
+        Geri getirebilirsin — silme kalıcı değil.</p>
+    </div>
     <div class="grow"></div>`;
 }
 

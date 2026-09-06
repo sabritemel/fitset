@@ -512,5 +512,104 @@ console.log('21) ÖNCEKİ ANTRENMAN GÜNÜ — kayıtsız günün tarihi');
 }
 
 
+console.log('');
+console.log('22) GEÇMİŞ SEANSI DÜZENLEME — set düzelt / sil');
+{
+  await S.driver.clear('sessions');
+  const s = S.newSession(0); s.id = 'e1'; s.status = 'done';
+  s.startedAt = s.finishedAt = Date.now() - 86400000;
+  N.recordSet(s, 'bb_bench_press', { type: 'weight_reps', weight: 40, reps: 12 });
+  N.recordSet(s, 'bb_bench_press', { type: 'weight_reps', weight: 40, reps: 12 });
+  N.recordSet(s, 'plank', { type: 'time', seconds: 30 });
+  await S.saveSession(s);
+  const hacim0 = S.sessionVolume(s, N.byId).kg;
+
+  // Yanlış girilen ağırlığı düzelt
+  const r = N.updateSet(s, 'bb_bench_press', 0, { weight: 45 });
+  ok(r.ok === true && r.set.weight === 45, 'ağırlık düzeltiliyor');
+  ok(S.sessionVolume(s, N.byId).kg > hacim0, 'hacim kendiliğinden yeniden hesaplanıyor');
+  await N.saveEdited(s);
+  ok((await S.getSession('e1')).entries[0].sets[0].weight === 45, 'düzeltme DİSKE yazıldı');
+
+  // Doğrulama: saçma değer reddedilmeli
+  ok(N.updateSet(s, 'bb_bench_press', 0, { weight: 'abc' }).ok === false, 'sayı olmayan REDDEDİLİYOR');
+  ok(N.updateSet(s, 'bb_bench_press', 0, { weight: -5 }).ok === false, 'negatif REDDEDİLİYOR');
+  ok((await S.getSession('e1')).entries[0].sets[0].weight === 45, 'red sonrası değer BOZULMADI');
+
+  // Tipe uymayan alan sessizce yazılmamalı
+  N.updateSet(s, 'plank', 0, { weight: 99 });
+  ok(s.entries.find(e => e.exerciseId === 'plank').sets[0].weight === undefined,
+     'süre setine ağırlık yazılmıyor (tip korunuyor)');
+  ok(N.updateSet(s, 'plank', 0, { seconds: 45 }).ok === true, 'süre setinde saniye düzeltilebiliyor');
+
+  // Olmayan egzersizi düzenlemek BOŞ KAYIT YARATMAMALI (eski ölü API bunu yapıyordu)
+  const kacEntry = s.entries.length;
+  ok(N.updateSet(s, 'lunge', 0, { weight: 10 }).ok === false, 'olmayan set için hata');
+  ok(s.entries.length === kacEntry, 'olmayan egzersiz için BOŞ KAYIT yaratılmıyor');
+
+  // Set silme
+  const d = N.deleteSet(s, 'bb_bench_press', 0);
+  ok(d.ok === true && d.bosaldi === false, 'set silindi, seans boşalmadı');
+  ok(s.entries.find(e => e.exerciseId === 'bb_bench_press').sets.length === 1, 'bench 1 sete indi');
+  N.deleteSet(s, 'bb_bench_press', 0);
+  ok(!s.entries.some(e => e.exerciseId === 'bb_bench_press'), 'son set gidince EGZERSİZ kaydı da temizlendi');
+}
+
+console.log('');
+console.log('23) SEANS SİLME — yumuşak, geri getirilebilir, sızdırmaz');
+{
+  await S.driver.clear('sessions');
+  const s = S.newSession(0); s.id = 'sil1'; s.status = 'done';
+  s.startedAt = s.finishedAt = Date.now() - 86400000;
+  N.recordSet(s, 'bb_bench_press', { type: 'weight_reps', weight: 60, reps: 8 });
+  await S.saveSession(s);
+  const b = S.newSession(1); b.id = 'sil2'; b.status = 'done';
+  b.startedAt = b.finishedAt = Date.now() - 3 * 86400000;
+  N.recordSet(b, 'close_grip_pulldown', { type: 'weight_reps', weight: 30, reps: 12 });
+  await S.saveSession(b);
+
+  ok(await N.nextDayIndex() === 1, 'silmeden önce sıra 2. Gün');
+  ok((await S.lastPerformance('bb_bench_press'))?.sets[0].weight === 60, 'geçen sefer 60 kg');
+
+  await N.softDeleteSession(s);
+  ok((await S.doneSessions()).length === 1, 'silinen seans GEÇMİŞTEN düştü');
+  ok(await N.nextDayIndex() === 0, 'SIRA yeniden hesaplandı (artık 1. Gün)');
+  ok(await S.lastPerformance('bb_bench_press') === null,
+     '⚠️ silinen ağırlık "geçen sefer"e SIZMIYOR (yedek döngü deliği kapalı)');
+  ok(!!(await S.getSession('sil1')), 'kayıt diskte DURUYOR (geri-al kapatınca da yaşar)');
+  ok((await S.getSession('sil1')).status === 'deleted', 'yalnız durumu değişti');
+
+  // Yedeğe girmemeli
+  const yedek = await S.exportData();
+  ok(!yedek.sessions.some(x => x.id === 'sil1'), 'silinen seans YEDEĞE girmiyor');
+  ok(yedek.sessions.some(x => x.id === 'sil2'), 'duran seans yedekte');
+
+  // Geri getir
+  const geri = await N.restoreSession('sil1');
+  ok(geri?.status === 'done', 'geri getirildi');
+  ok((await S.doneSessions()).length === 2, 'geçmişte yine görünüyor');
+  ok(await N.nextDayIndex() === 1, 'sıra da geri döndü');
+  ok((await S.lastPerformance('bb_bench_press'))?.sets[0].weight === 60, '"geçen sefer" geri geldi');
+}
+
+console.log('');
+console.log('24) SON SET SİLİNİRSE SEANS SİLİNİR — Sabri kararı (6 Eyl)');
+{
+  await S.driver.clear('sessions');
+  const s = S.newSession(0); s.id = 'bosal'; s.status = 'done';
+  s.startedAt = s.finishedAt = Date.now();
+  N.recordSet(s, 'bb_bench_press', { type: 'weight_reps', weight: 40, reps: 12 });
+  await S.saveSession(s);
+
+  const d = N.deleteSet(s, 'bb_bench_press', 0);
+  ok(d.bosaldi === true, 'seansın boşaldığı bildiriliyor');
+  const sonuc = await N.saveEdited(s);
+  ok(sonuc.silindi === true, 'boşalan seans SİLİNİYOR (çöp satır birikmiyor)');
+  ok((await S.doneSessions()).length === 0, 'geçmişte görünmüyor');
+  ok((await S.getSession('bosal')).status === 'deleted', 'ama diskte duruyor — geri getirilebilir');
+  ok((await N.restoreSession('bosal')).status === 'done', 'geri getirildi');
+}
+
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

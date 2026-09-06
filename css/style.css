@@ -491,3 +491,29 @@ input { font: inherit; }
 /* Kayıtsız gün: "yarım" değil, kendi etiketi. Uyarı rengi DEĞİL — bu bir
    kusur değil kullanıcının beyanı; nötr tonda durur. */
 .hcount em.kyt { color: var(--ink3); font-style: normal; font-size: 11px; }
+
+/* ══ SEANS DÜZENLEME ══════════════════════════════════════════════════════ */
+#session-screen { padding-bottom: 28px; }
+.hrow[data-seans] { width: 100%; text-align: left; }
+.hrow[data-seans]:active { background: var(--s1); }
+
+.eex-list { margin-top: 6px; }
+.eex { padding: 15px 20px 13px; border-top: 1px solid var(--line); }
+.eex > .t-h2 { display: block; margin-bottom: 9px; }
+.eset { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
+.eno { flex: none; width: 20px; font-size: 11.5px; color: var(--ink3);
+  font-variant-numeric: tabular-nums; }
+.efield { display: inline-flex; align-items: center; gap: 5px; }
+.efield input { width: 74px; height: 42px; padding: 0 10px; border-radius: var(--r1);
+  border: 1px solid var(--line2); background: transparent; color: var(--ink);
+  font-size: 16px; font-weight: 550; font-variant-numeric: tabular-nums; text-align: center; }
+.efield input:focus { outline: none; border-color: var(--ink3); }
+.eunit { font-size: 11.5px; color: var(--ink3); }
+.esil { margin-left: auto; flex: none; font-size: 12px; color: var(--ink3);
+  padding: 10px 4px; min-height: 40px; }
+.esil:active { color: var(--live); }
+
+/* Yıkıcı eylem: kırmızı DOLGU değil kenar — bu bir alarm değil, geri
+   alınabilir bir işlem. Vurgu rengi canlı olana ayrılı. */
+.b2.danger { border-color: rgb(238 85 104 / .45); color: var(--live); }
+.b2.danger:active { background: rgb(238 85 104 / .1); }
