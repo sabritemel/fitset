@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitSet — 3B hareket kütüphanesi</title>
+<!-- MOKAP: uygulama koduna dokunmaz. Motor: js/anim3d/manken3d.js,
+     hareketler: js/anim3d/hareketler3d.js, fizik denetimi:
+     tools/fizik-denetimi.js. 2B çizim UYGULAMANIN KENDİ motorundan
+     ve verisinden canlı çizilir — karşılaştırma bayatlamaz. -->
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body { padding: 18px 16px 40px; display: block; }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  .alt { color: var(--ink3); font-size: 12.5px; margin: 0 0 14px; line-height: 1.55; }
+  .gun { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); margin: 24px 0 4px; }
+  .kart { border-top: 1px solid var(--line); padding: 14px 0 8px; }
+  .kart h2 { font-size: 15px; margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; }
+  .kart h2 span { font-size: 11.5px; font-weight: 450; color: var(--ink3); text-align: right; }
+  .ikili { display: grid; grid-template-columns: 1fr 1.5fr; gap: 8px; align-items: end; }
+  .kutu { border: 1px solid var(--line); border-radius: 10px; padding: 5px; }
+  .kutu .t-l { display: block; margin: 2px 4px 3px; }
+  .kutu svg { width: 100%; height: auto; display: block; touch-action: none; }
+  .uc { cursor: grab; }
+  .serit { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+  .serit .t-l { text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>3B hareket kütüphanesi — mokap</h1>
+  <p class="alt">Her hareket adından ve kaynaklardan (ExRx, ACE, NSCA) türetilen teknikle, <b>ekipmanın
+    yolundan</b> çözülüyor ve her karede fizik denetiminden geçiyor
+    (<code>node tools/fizik-denetimi.js</code>). Solda uygulamanın bugünkü 2B çizimi, sağda 3B —
+    <b>parmakla sürükleyerek döndür</b>, çift dokununca varsayılan açıya döner. Alttaki şerit aynı
+    kameradan hareketin başı, ortası ve sonu.</p>
+  <div id="kartlar"></div>
+</div>
+<script type="module">
+import * as M from './js/anim3d/manken3d.js';
+import { KUTUPHANE } from './js/anim3d/hareketler3d.js';
+import * as E from './js/anim/engine.js';
+import { EX } from './js/data/exercises.js';
+import { WARMUP } from './js/data/warmup.js';
+
+const gunu = Object.fromEntries(EX.flatMap((g, i) => g.map(e => [e.id, i])));
+const iki2 = Object.fromEntries([...EX.flat(), ...WARMUP.flat()].map(e => [e.id, e]));
+const azalt = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const kartlar = document.getElementById('kartlar');
+const VB = '-130 -175 260 230';
+
+/** Uygulamanın bugünkü 2B çizimi (ısınma pozları ödünç alıyorsa kaynağını çizer) */
+const iki = (ex, t) => {
+  if (!ex) return '';
+  const k = ex.ref ? iki2[ex.ref] : ex;
+  if (k.hold) { const v = k.variants[0], s = E.skeleton(v.pose, k.view); return k.eq(s) + E.figure(s, k); }
+  const s = E.skeleton(E.poseAt(k.a, k.b, t), k.view);
+  return (k.eq ? k.eq(s) : '') + E.trailOf(k) + E.figure(s, k);
+};
+
+const canli = [];
+let sonGrup = '';
+for (const [id, h] of Object.entries(KUTUPHANE)) {
+  const ex = iki2[id], grup = h.isinma ? 'Isınma' : `${(gunu[id] ?? 0) + 1}. Gün`;
+  if (grup !== sonGrup) { sonGrup = grup; kartlar.insertAdjacentHTML('beforeend', `<p class="gun">${grup}</p>`); }
+  const anlar = h.seritAnlar ? h.seritAnlar.map(x => x[0]) : h.statik ? [0.5] : h.dongu ? [0, 0.25, 0.5] : [0, 0.5, 1];
+  const el = document.createElement('section');
+  el.className = 'kart';
+  el.innerHTML = `<h2><b lang="en">${h.ad}</b><span>${ex?.tr ?? ex?.ad ?? ''}</span></h2>
+    <div class="ikili">
+      <div class="kutu"><span class="t-l">bugün · 2B</span>
+        <svg viewBox="0 20 260 180"><g class="art iki" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></g></svg></div>
+      <div class="kutu"><span class="t-l">3B · sürükle</span><svg class="uc" viewBox="${VB}"><g class="uc-g"></g></svg></div>
+    </div>
+    <div class="serit">${anlar.map((z, i) => `<div class="kutu"><span class="t-l">${h.seritAnlar ? h.seritAnlar[i][1] : h.statik ? 'duruş' : h.dongu ? ['0°', '90°', '180°'][i] : ['başı', 'ortası', 'sonu'][i]}</span>
+      <svg viewBox="${VB}"><g data-an="${z}"></g></svg></div>`).join('')}</div>`;
+  kartlar.append(el);
+  for (const g of el.querySelectorAll('[data-an]')) g.innerHTML = M.sahne(h, +g.dataset.an, ...h.kamera).svg;
+
+  const g3 = el.querySelector('.uc-g'), g2 = el.querySelector('.iki'), svg3 = el.querySelector('.uc');
+  const d = { h, ex, g3, g2, teta: h.kamera[0], fi: h.kamera[1], gorunur: false };
+  let surukle = null;
+  svg3.addEventListener('pointerdown', e => { surukle = [e.clientX, e.clientY, d.teta, d.fi]; svg3.setPointerCapture(e.pointerId); });
+  svg3.addEventListener('pointermove', e => { if (!surukle) return;
+    d.teta = surukle[2] - (e.clientX - surukle[0]) * 0.6; d.fi = Math.max(-5, Math.min(75, surukle[3] + (e.clientY - surukle[1]) * 0.4)); });
+  svg3.addEventListener('pointerup', () => { surukle = null; });
+  svg3.addEventListener('dblclick', () => { [d.teta, d.fi] = h.kamera; });
+  canli.push(d);
+  new IntersectionObserver(([g]) => { d.gorunur = g.isIntersecting; }).observe(el);
+}
+
+// Yalnız ekranda görünen kartlar oynar: 22 kartı birden çizmek telefonda gereksiz yük.
+// Gidip gelen hareket 0→1→0 (kosinüs); dönen hareket (kol çevirme) 0→1 sürekli.
+const t0 = performance.now();
+const kare = now => {
+  const e = (now - t0) / 1600, git = azalt ? 0.5 : (1 - Math.cos((e % 2) * Math.PI)) / 2, don = azalt ? 0 : (e / 2) % 1;
+  for (const d of canli) {
+    if (!d.gorunur) continue;
+    const t = d.h.statik ? 0.5 : d.h.dongu ? don : git;
+    d.g3.innerHTML = M.sahne(d.h, t, d.teta, d.fi).svg;
+    d.g2.innerHTML = iki(d.ex, git);
+  }
+  requestAnimationFrame(kare);
+};
+requestAnimationFrame(kare);
+</script>
+</body>
+</html>

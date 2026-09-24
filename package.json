@@ -5,8 +5,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "node tools/bump-sw.js && node tools/check-contrast.js && node tools/verify-poses.js && node tools/verify-port.js && node tools/test-store.js && node tools/test-session.js",
-    "verify": "node tools/verify-poses.js",
+    "test": "node tools/bump-sw.js && node tools/check-contrast.js && node tools/fizik-denetimi.js && node tools/test-store.js && node tools/test-session.js && node tools/test-timer.js && node tools/check-docs.js",
+    "verify": "node tools/fizik-denetimi.js",
     "icons": "node tools/make-icons.js",
     "fonts": "node tools/fetch-fonts.js",
     "bump": "node tools/bump-sw.js"

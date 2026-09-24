@@ -32,7 +32,7 @@ export const EX=[[
  b:{px:100,py:122,torso:0,ua:90,fa:90,th:-130,sh:-67},
  eq:s=>grd()+bar([50,128],[178,128])+bar([60,128],[60,186])+bar([170,128],[170,186])+plate(s.haA),
  steps:["Sırtüstü uzan; gözlerin barın tam altında, ayakların yere basıyor, dizler bükülü.",
-        "Kürek kemiklerini birbirine sıkıştırıp göğsünü hafif yukarı ver — sırtında küçük bir boşluk kalır.",
+        "Kürek kemiklerini birbirine sıkıştırıp göğsünü hafif yukarı ver; belini aşırı kavislendirme, kalçan sehpada kalsın.",
         "Barı göğsünün alt kısmına 2 saniyede indir, hafifçe değdir ve nefes vererek yukarı it.",
         "Bar aşağıda meme hizasında, yukarıda omuzların üzerindedir; yol hafif bir yay çizer."],
  tip:"Dirseklerin gövdenle 45° açı yapsın, tam yana açma. Kalçanı sedyeden kaldırma, ağır setlerde yanında biri dursun."
@@ -65,7 +65,7 @@ export const EX=[[
  eq:s=>grd()+rct(90,155,54,10)+bar([104,158],[79,102])+grip(s.haA),
  steps:["Oturağı, tutamaklar göğsünün üst kısmı hizasına gelecek şekilde ayarla; sırtın ve başın mindere yaslı.",
         "Tutamakları kavra; başlangıçta dirsekler gövdenin biraz gerisinde ve aşağıda kalır.",
-        "Nefes vererek yukarı-ileri doğru it — sırtın 45°'ye yakın yatık olduğu için yol yukarı doğrudur.",
+        "Nefes vererek it — makinenin kolu kendi ekseninde döndüğü için eller yukarı-ileri bir yay çizer.",
         "3 saniyede geri bırak; eller göğüs hizasına gelince dur, ağırlığı çarptırma."],
  tip:"Sırtın minderden kalkıyorsa ağırlık fazla. Omuzları kulaklara doğru kaldırma, aşağıda ve geride tut."
 },
@@ -79,7 +79,7 @@ export const EX=[[
  steps:["Sırtın destekli otur; dambıllar omuz hizasında, ön kolların yere dik, avuç içleri öne bakar.",
         "Karnını hafif sık ve nefes vererek yukarı it; dambıllar tepede birbirine yaklaşır.",
         "Kollar tam kilitlenmeden dur, sonra kontrollü indir.",
-        "Dirsekler kulak hizasının biraz altına inince yeni tekrara başla."],
+        "Dambıllar omuz hizasına inince yeni tekrara başla."],
  tip:"Beli boşluğa alıp geriye yaslanma — o zaman hareket göğüs presine döner. Omuzda sıkışma olursa avuçları birbirine baktır."
 },
 {
@@ -89,9 +89,9 @@ export const EX=[[
  a:{px:130,py:110,torso:90,ua:-100,fa:-100,th:-90,sh:-90},
  b:{px:130,py:110,torso:90,ua:-176,fa:-176,th:-90,sh:-90},
  eq:s=>grd()+rct(206,148,14,38)+cbl([210,168],s.haA)+grip(s.haA),
- steps:["Alçak makaraya sırtın dönük dur; kablo bacaklarının arasından geçer, tutamak uyluğunun önündedir.",
+ steps:["Alçak makaraya sırtın dönük dur; kablo bacaklarının arasından geçer, düz barı iki elle, avuç içleri aşağı bakacak şekilde uyluklarının önünde tut.",
         "Karnını sık, dizleri hafif bükük tut.",
-        "Kolunu düz tutarak öne-yukarı kaldır; omuz hizasında, kol yere paralel olunca dur.",
+        "Kollarını neredeyse düz tutarak barı öne-yukarı birlikte kaldır; omuz hizasında, kollar yere paralel olunca dur.",
         "Aynı yavaşlıkta indir; kablo seni geri çekmesin."],
  tip:"Gövdeni geriye yaslayarak sallama; omuz hizasını geçip yukarı fırlatma. Zorlanıyorsan ağırlığı düşür."
 },
@@ -114,9 +114,9 @@ export const EX=[[
       +bar([136,58],s.haA)+bar([124,58],s.haB)+grip(s.haA)+grip(s.haB),
  steps:["Göğsün pede yaslanacak şekilde otur; ayaklar yere basar, göğüs pedden ayrılmaz.",
         "Tutamakları öne uzanmış, dirsekleri hafif bükülü kollarla omuz hizasında kavra.",
-        "Önce kürek kemiklerini birbirine sık, sonra kolları geniş bir yayla arkaya-yanlara aç.",
+        "Dirseklerini omuz hizasında tutarak kolları geniş bir yayla arkaya-yanlara aç; sonda kürekler birbirine yaklaşır.",
         "En arkada 1 saniye bekle ve kontrollü şekilde öne bırak."],
- tip:"Kolları omuz hizasının üstüne kaldırma ve boynunu öne uzatma. Hareketi omuz değil sırt başlatır."
+ tip:"Kolları omuz hizasının üstüne kaldırma ve boynunu öne uzatma. Hedef arka omuz: dirsekler omuz hizasının altına düşmesin."
 },
 {
  id:"cable_vbar_pushdown", setType:"weight_reps", equipment:"cable", target:{"reps":12}, setsMin:2,
@@ -125,7 +125,7 @@ export const EX=[[
  a:{px:130,py:110,torso:88,ua:-78,fa:30,th:-90,sh:-90},
  b:{px:130,py:110,torso:88,ua:-78,fa:-84,th:-90,sh:-90},
  eq:s=>grd()+rct(190,22,16,12)+cbl([198,34],s.haA)+bar([s.haA[0]-10,s.haA[1]-4],[s.haA[0]+10,s.haA[1]+4]),
- steps:["V barı omuz genişliğinde, avuç içleri aşağı bakacak şekilde tut; hafif öne eğil, dizler yumuşak.",
+ steps:["V barı iki kolundan dar tut — avuç içleri birbirine doğru eğik bakar; hafif öne eğil, dizler yumuşak.",
         "Dirsekleri gövdenin yanına kilitle — başlangıçta ön kolların yere yakın paralel, bar göğüs hizasında.",
         "Sadece ön kolları hareket ettirerek barı uyluklarına doğru it; aşağıda kolları tam uzat ve tricepsi 1 saniye sık.",
         "Ön kolları yavaşça yukarı bırak; dirsekler yerinden oynamasın."],
@@ -186,11 +186,11 @@ export const EX=[[
  // 270 ile kısa yoldan (Δ=+151°) gidiyor: kol ÖNDEN iniyor, dirsek tepe 131°.
  b:{px:130,py:149,torso:95,ua:270,fa:139,th:180,sh:-90},
  eq:s=>rct(104,155,54,10)+bar([96,140],[124,140])+cbl([107,6],s.haA)+bar([s.haA[0],s.haA[1]-8],[s.haA[0],s.haA[1]+8]),
- steps:["Otur ve diz pedini uyluklarını sabitleyecek şekilde ayarla; barı omuz genişliğinden dar kavra.",
-        "Göğsünü yukarı ver, gövdeni çok az geriye yasla ve bu açıyı koru.",
-        "Barı göğsünün üst kısmına çek — dirsekler yanlardan aşağı ve geriye iner, bilekler düz kalır.",
+ steps:["Otur ve diz pedini uyluklarını sabitleyecek şekilde ayarla; V tutamağı avuç içleri birbirine bakacak şekilde (nötr tutuş) kavra.",
+        "Göğsünü yukarı ver, gövdeni yaklaşık 20° geriye yasla ve bu açıyı koru.",
+        "Tutamağı göğsünün üst kısmına çek — dirsekler önden aşağı, gövdenin yanına iner; bilekler düz kalır.",
         "Aşağıda kürekleri sıkıp 1 saniye bekle, sonra kolları kontrollü şekilde tam yukarı uzat."],
- tip:"Barı ense arkasına çekme ve gövdeni yatırarak sallanma. Hareketi kolla değil, dirseklerini arka cebine sokar gibi sırtla başlat."
+ tip:"Tutamağı ense arkasına çekme ve gövdeni yatırarak sallanma. Hareketi kolla değil, dirseklerini arka cebine sokar gibi sırtla başlat."
 },
 {
  id:"db_two_arm_row", setType:"weight_reps", equipment:"dumbbell", target:{"reps":12},
@@ -204,7 +204,7 @@ export const EX=[[
  // Hareket açıklığı dar çizilmişti (yol 0.42); dambıl karın hizasına kadar çekiliyor.
  b:{px:140,py:112,torso:128,ua:-18,fa:-140,th:-102.8,sh:-76.5},
  eq:s=>grd()+db(s.haA,false),
- steps:["Ayaklar kalça genişliğinde, dizler hafif bükük; kalçandan menteşe gibi öne eğil, gövden yere ~45°.",
+ steps:["Ayaklar kalça genişliğinde, dizler hafif bükük; kalçandan menteşe gibi öne eğil, gövden yere neredeyse paralel (yatayın 10–20° üstü).",
         "Sırtın baştan sona düz kalsın, bakışın bir metre önüne; dambıllar kollar gergin şekilde aşağıda.",
         "Dambılları karnının yanına çek — dirsekler gövdeni sıyırarak yukarı ve geriye gider.",
         "Yukarıda kürekleri sık, sonra kolları kontrollü şekilde tam aşağı uzat."],
@@ -254,7 +254,7 @@ export const EX=[[
         "Dirsekleri gövdenin yanına sabitle.",
         "Dambılları omuz hizasına kaldır, tepede 1 saniye sık.",
         "Kontrollü indir; istersen kolları sırayla çalıştır."],
- tip:"Bu tutuş bicepsin yan başını ve ön kolu çalıştırır. Omuzları öne yuvarlamadan dik dur, dirsek öne kaymasın."
+ tip:"Bu tutuş bicepsin yanında ön koldaki brachioradialis kasını da çalıştırır. Omuzları öne yuvarlamadan dik dur, dirsek öne kaymasın."
 },
 {
  id:"machine_leg_press", setType:"weight_reps", equipment:"machine", target:{"reps":12},
@@ -290,7 +290,7 @@ export const EX=[[
  steps:["Dik dur, karnını sık; bir ayağınla öne uzun bir adım at, arka topuk havada kalır.",
         "Gövden dik kalacak şekilde kalçanı düz aşağı indir — öne doğru eğilme.",
         "Arka dizin yere yaklaşınca dur; ön dizin ayak bileğinin üzerinde, parmak uçlarını fazla geçmesin.",
-        "Ön topuğundan itip yukarı çık. Setin yarısını bir bacakla, yarısını diğeriyle yap."],
+        "Ön topuğundan itip başlangıç duruşuna geri dön; sonraki tekrarda diğer bacakla adım at (bacaklar sırayla)."],
  tip:"Dengeni zor buluyorsan sabit bir bara tutunarak yap. Diz ağrısı olursa adımı biraz uzat ve daha az derine in."
 },
 {

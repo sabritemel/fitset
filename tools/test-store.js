@@ -190,7 +190,8 @@ console.log('11) KİLO KAYDI — gün anahtarı, üstüne yazma, yedek turu');
   const geri = await S.weights();
   ok(geri.length === 3, `geri yüklemede kilo geçmişi TAM (${geri.length}/3)`);
   ok(geri.at(-1).kg === 82.9, 'değerler bozulmadan döndü');
-  ok(stat.eklendi >= 3, 'sayaç eklenenleri bildiriyor');
+  // Kilo kayıtları seanslardan AYRI sayılır (24 Eyl: "28 yeni" = 14 seans + 14 kilo idi)
+  ok(stat.kilo.eklendi === 3, `kilo sayacı AYRI: ${stat.kilo.eklendi} kilo kaydı`);
 
   // Aynı yedeği ikinci kez yüklemek nokta ÇOĞALTMAMALI
   await S.importData(yedek);
@@ -202,8 +203,54 @@ console.log('11) KİLO KAYDI — gün anahtarı, üstüne yazma, yedek turu');
   const s2 = await S.importData(JSON.stringify(bozuk));
   ok((await S.weights()).some(x => x.d === '2026-09-01'), 'geçerli kayıt alınıyor');
   ok(!(await S.weights()).some(x => x.kg === 0), 'geçersiz kayıt (kg=0) ALINMIYOR');
-  ok(s2.atlandı >= 2, 'atlananlar sayılıyor — sessiz kayıp yok');
+  ok(s2.geçersiz === 2, `geçersizler sayılıyor — sessiz kayıp yok (${s2.geçersiz})`);
   await S.driver.clear('body');
+}
+
+console.log('');
+console.log('12) ⭐ İÇE AKTARIM ŞEMA DOĞRULAMASI (24 Eyl: bozuk yedek ekranı çökertiyor, kimlik kaçışsız basılıyordu)');
+{
+  await S.driver.clear('sessions');
+  const iyi = () => ({ id: 's_iyi', schemaVersion: 1, dayIndex: 1, startedAt: 1000, finishedAt: 2000, status: 'done',
+    carriedFrom: 's_eski', entries: [{ exerciseId: 'bb_bench_press', note: '', sets: [set({ type: 'weight_reps', weight: 40, reps: 12 })] }] });
+  ok(S.gecersizSeans(iyi(), { gunSayisi: 2 }) === null, 'geçerli seans geçiyor');
+
+  const boz = (f) => { const s = iyi(); f(s); return s; };
+  const vakalar = [
+    ['gün', boz(s => { s.dayIndex = 7; })],
+    ['gün', boz(s => { s.dayIndex = 1.5; })],
+    ['kimlik', boz(s => { s.id = '"><img src=x onerror=alert(1)>'; })],
+    ['durum', boz(s => { s.status = 'hacked'; })],
+    ['başlangıç', boz(s => { s.startedAt = 'dün'; })],
+    ['kayıtlar', boz(s => { s.entries = 'yok'; })],
+    ['hareket kimliği', boz(s => { s.entries[0].exerciseId = '<script>'; })],
+    ['set', boz(s => { s.entries[0].sets[0].weight = 'kırk'; })],
+    ['set', boz(s => { s.entries[0].sets[0].reps = -3; })],
+    ['set', boz(s => { s.entries[0].sets[0].type = 'bilinmeyen'; })],
+    ['set', boz(s => { s.entries[0].sets[0].weight = Infinity; })],
+  ];
+  for (const [neden, s] of vakalar)
+    ok(S.gecersizSeans(s, { gunSayisi: 2 }) === neden, `reddedildi — ${neden}: ${S.gecersizSeans(s, { gunSayisi: 2 })}`);
+
+  const stat = await S.importData({ app: 'fitset', schemaVersion: 1, sessions: [iyi(), ...vakalar.map(v => v[1])] }, 'merge', { gunSayisi: 2 });
+  ok(stat.eklendi === 1 && stat.geçersiz === vakalar.length, `iyi olan alındı, bozuklar SAYILARAK atlandı (${stat.eklendi} + ${stat.geçersiz})`);
+  ok((await S.allSessions()).length === 1, 'diske yalnız geçerli seans indi');
+  ok((await S.getSession('s_iyi')).carriedFrom === 's_eski', 'bilinmeyen EK alanlar korunuyor (doğrulayıcı veri yemiyor)');
+
+  // Gün sayısı verilmezse sınır yok (eski çağıranlar kırılmasın), ama tür yine denetlenir
+  ok(S.gecersizSeans(boz(s => { s.dayIndex = 7; })) === null, 'gün sayısı verilmeyince üst sınır uygulanmıyor');
+
+  // Ayarlar: yalnız tanınan ve doğru tipte alanlar
+  await S.driver.clear('settings');
+  await S.importData({ app: 'fitset', schemaVersion: 1, sessions: [],
+    settings: { restSeconds: 'hızlı', trainingDays: [], heightCm: 180, zararli: '<x>', overrides: { bb_bench_press: { sets: 4, weight: 'ağır' } } } });
+  const a = await S.getSettings();
+  ok(a.restSeconds === S.DEFAULT_SETTINGS.restSeconds, 'yanlış tipte dinlenme alınmadı');
+  ok(a.trainingDays.length === 3, 'BOŞ gün listesi alınmadı (takvim anlamsızlaşırdı)');
+  ok(a.heightCm === 180, 'geçerli boy alındı');
+  ok(!('zararli' in a), 'tanınmayan ayar alınmadı');
+  ok(a.overrides.bb_bench_press.sets === 4 && !('weight' in a.overrides.bb_bench_press), 'hedeflerde yalnız sayısal alanlar');
+  await S.driver.clear('settings');
 }
 
 

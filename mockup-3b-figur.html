@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitSet — figür karşılaştırması</title>
+<!-- MOKAP: uygulama koduna dokunmaz. Aynı hareket motoru (js/anim3d/manken3d.js +
+     js/anim3d/hareketler3d.js, fizik denetimli) iki çiziciyle çizilir:
+       SOL  — SVG, bağımlılıksız (yeni tek-siluet yumurta kafa)
+       SAĞ  — WebGL, three.js r186 alt kümesi (MIT) · js/anim3d/webgl.js
+     Yalnız GÖRÜNÜŞ farklıdır; eklem konumları birebir aynıdır. -->
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body { padding: 18px 16px 40px; display: block; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  .alt { color: var(--ink3); font-size: 12.5px; margin: 0 0 14px; line-height: 1.55; }
+  .gun { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); margin: 24px 0 4px; }
+  .kart { border-top: 1px solid var(--line); padding: 14px 0 8px; }
+  .kart h2 { font-size: 15px; margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; }
+  .kart h2 span { font-size: 11.5px; font-weight: 450; color: var(--ink3); text-align: right; }
+  .ikili { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kutu { border: 1px solid var(--line); border-radius: 10px; padding: 5px; }
+  .kutu .t-l { display: block; margin: 2px 4px 3px; }
+  .kutu svg, .kutu canvas { width: 100%; aspect-ratio: 260 / 230; height: auto; display: block; touch-action: none; }
+  .uc { cursor: grab; }
+  .serit { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+  .serit .t-l { text-align: center; }
+  .yok { color: var(--warn); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Figür karşılaştırması — mokap</h1>
+  <p class="alt">Aynı hareket motoru, iki çizici. <b>Sol:</b> bağımlılıksız SVG — kafa artık tek siluetli,
+    yüzsüz yumurta (çentik ve burun çubuğu yok). <b>Sağ:</b> three.js ile ışıklı 3B manken (çizim mankeni
+    tarzı, yüzsüz) — MIT lisanslı, paketlenmiş ~135 KB gzip, internet gerektirmez. <b>Sürükleyerek döndür</b>
+    (iki görünüm birlikte döner), çift dokunuş varsayılan açı. Alttaki şerit: 3B'de başı / ortası / sonu.</p>
+  <p id="durum" class="alt"></p>
+  <div id="kartlar"></div>
+</div>
+<script type="module">
+import * as M from './js/anim3d/manken3d.js';
+import { KUTUPHANE } from './js/anim3d/hareketler3d.js';
+import * as T from './js/vendor/three.min.js';
+import * as W from './js/anim3d/webgl.js';
+import { EX } from './js/data/exercises.js';
+import { WARMUP } from './js/data/warmup.js';
+
+const gunu = Object.fromEntries(EX.flatMap((g, i) => g.map(e => [e.id, i])));
+const adlar = Object.fromEntries([...EX.flat(), ...WARMUP.flat()].map(e => [e.id, e]));
+const azalt = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const dpr = Math.min(2, devicePixelRatio || 1);
+const VB = '-130 -175 260 230';
+
+// İki paylaşılan WebGL bağlamı (tarayıcı ~16 bağlama izin verir; 22 kart tek tek bağlam açamaz):
+// biri büyük görünümler, biri şerit. Kart tuvaline drawImage ile kopyalanır.
+const olustur = (w, h) => {
+  const r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: false });
+  r.setPixelRatio(1); r.setSize(w, h, false);
+  r.setClearColor(0x000000, 0);
+  return { r, m: W.motorKur(r) };             // uygulamayla AYNI paylaşılan sahne
+};
+let BUYUK, SERIT;
+const BW = Math.round(300 * dpr), BH = Math.round(BW * 230 / 260), SW = Math.round(200 * dpr), SH = Math.round(SW * 230 / 260);
+try { BUYUK = olustur(BW, BH); SERIT = olustur(SW, SH); }
+catch (e) { document.getElementById('durum').innerHTML = `<span class="yok">WebGL açılamadı (${e.message}) — yalnız SVG gösteriliyor.</span>`; }
+const kopyala = (r, cv) => { const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); c.drawImage(r.r.domElement, 0, 0, cv.width, cv.height); };
+// Çerçeve uygulamayla AYNI hesap (manken3d.cerceve): dönen görünüm açıdan bağımsız, şerit sıkı
+const cer = (h, te, fi, oran, bicim = 'donen') => M.sigdir(M.cerceve(h, te, fi, bicim), oran);
+
+const canli = [];
+let sonGrup = '';
+for (const [id, h] of Object.entries(KUTUPHANE)) {
+  const ex = adlar[id], grup = h.isinma ? 'Isınma' : `${(gunu[id] ?? 0) + 1}. Gün`;
+  if (grup !== sonGrup) { sonGrup = grup; kartlar.insertAdjacentHTML('beforeend', `<p class="gun">${grup}</p>`); }
+  const anlar = h.seritAnlar ? h.seritAnlar.map(x => x[0]) : h.statik ? [0.5] : h.dongu ? [0, 0.25, 0.5] : [0, 0.5, 1];
+  const el = document.createElement('section');
+  el.className = 'kart';
+  el.innerHTML = `<h2><b lang="en">${h.ad}</b><span>${ex?.tr ?? ex?.ad ?? ''}</span></h2>
+    <div class="ikili">
+      <div class="kutu"><span class="t-l">SVG · bağımlılıksız</span><svg class="uc" viewBox="${VB}"><g class="uc-g"></g></svg></div>
+      <div class="kutu"><span class="t-l">WebGL · three.js</span><canvas class="uc gl" width="${BW}" height="${BH}"></canvas></div>
+    </div>
+    <div class="serit">${anlar.map((z, i) => `<div class="kutu"><span class="t-l">${h.seritAnlar ? h.seritAnlar[i][1] : h.statik ? 'duruş' : h.dongu ? ['0°', '90°', '180°'][i] : ['başı', 'ortası', 'sonu'][i]}</span>
+      <canvas width="${SW}" height="${SH}" data-an="${z}"></canvas></div>`).join('')}</div>`;
+  kartlar.append(el);
+
+  const d = { h, g3: el.querySelector('.uc-g'), gl: el.querySelector('.gl'), serit: [...el.querySelectorAll('[data-an]')],
+              teta: h.kamera[0], fi: h.kamera[1], gorunur: false, sahne: null, seritCizildi: false };
+  let surukle = null;
+  for (const hedef of el.querySelectorAll('.uc')) {
+    hedef.addEventListener('pointerdown', e => { surukle = [e.clientX, e.clientY, d.teta, d.fi]; hedef.setPointerCapture(e.pointerId); });
+    hedef.addEventListener('pointermove', e => { if (!surukle) return;
+      d.teta = surukle[2] - (e.clientX - surukle[0]) * 0.6; d.fi = Math.max(-5, Math.min(75, surukle[3] + (e.clientY - surukle[1]) * 0.4)); });
+    hedef.addEventListener('pointerup', () => { surukle = null; });
+    hedef.addEventListener('dblclick', () => { [d.teta, d.fi] = h.kamera; });
+  }
+  canli.push(d);
+  new IntersectionObserver(([g]) => { d.gorunur = g.isIntersecting; }).observe(el);
+}
+
+const t0 = performance.now();
+const kare = now => {
+  const e = (now - t0) / 1600, git = azalt ? 0.5 : (1 - Math.cos((e % 2) * Math.PI)) / 2, don = azalt ? 0 : (e / 2) % 1;
+  for (const d of canli) {
+    if (!d.gorunur) continue;
+    const t = d.h.statik ? 0.5 : d.h.dongu ? don : git;
+    d.g3.closest('svg').setAttribute('viewBox', M.viewBox(cer(d.h, d.teta, d.fi, 260 / 230)));
+    d.g3.innerHTML = M.sahne(d.h, t, d.teta, d.fi).svg;
+    if (!BUYUK) continue;
+    BUYUK.m.ciz(d.h, t, d.teta, d.fi, cer(d.h, d.teta, d.fi, BW / BH)); kopyala(BUYUK, d.gl);
+    if (!d.seritCizildi) {
+      for (const cv of d.serit) { SERIT.m.ciz(d.h, +cv.dataset.an, ...d.h.kamera, cer(d.h, ...d.h.kamera, SW / SH, 'sabit')); kopyala(SERIT, cv); }
+      d.seritCizildi = true;
+    }
+  }
+  requestAnimationFrame(kare);
+};
+requestAnimationFrame(kare);
+window.__figur = { canli, W, M };
+</script>
+</body>
+</html>

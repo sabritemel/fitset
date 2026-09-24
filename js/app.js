@@ -5,11 +5,12 @@
  * Ağır mantığın tamamı modüllerde (store / schedule / session / anim / timer);
  * burası yalnız durum tutar, çizer ve olayları bağlar.
  */
-import * as E from './anim/engine.js';
+import * as A3 from './anim3d/sahne.js';
 import * as C from './schedule.js';
 import * as N from './session.js';
 import * as S from './store.js';
 import * as UI from './ui.js';
+import * as I from './ilerleme.js';
 import { Countdown, mmss, primeAudio } from './timer.js';
 
 const $ = id => document.getElementById(id);
@@ -19,6 +20,7 @@ const listEl = $('list-screen'), focusEl = $('focus-screen');
 const ctx = {
   session: null, dayIndex: 0, idx: 0,
   lastPerf: {}, settings: S.DEFAULT_SETTINGS, status: null,
+  oneri: {},                 // ağırlık artırma önerisi (iki seans kuralı) — hareket başına
   draft: {},                 // o an ekranda duran, henüz kaydedilmemiş değerler
   tumRozetler: false,        // "+N" açıldı mı — harekete özel, geçicidir
   yarim: null,               // yarım kalan gün önerisi (cevap verilene kadar)
@@ -30,6 +32,9 @@ const ctx = {
   view: 'list',
 };
 let bootDay = C.dayNumber(new Date());
+/* Bekleyen yeni sürüm (bkz. GÜNCELLEME). render() onu okuduğu için burada,
+   ilk çizimden ÖNCE tanımlı olmalı. */
+let bekleyenSW = null, sorulanSW = null;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const curEx = () => N.exercisesFor(ctx.dayIndex)[ctx.idx];
 
@@ -105,8 +110,8 @@ const hold = new Countdown({
   onDone: async () => {
     const ex0 = curEx(); saatDurumu(ex0);
     const ex = ex0;
-    await kaydet(ex, { type: 'time', seconds: ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds, warmup: !!ctx.draft.warmup });
-    toast('Süre doldu — set kaydedildi.');
+    const oldu = await kaydet(ex, { type: 'time', seconds: ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds, warmup: !!ctx.draft.warmup });
+    if (oldu) toast('Süre doldu — set kaydedildi.');   // başarısızsa hata şeridi yerinde kalsın
   },
 });
 
@@ -169,16 +174,8 @@ function isinmaOynat() {
   const adımlar = N.warmupFor(ctx.dayIndex);
   if (!adımlar.length) return;
 
-  const çiz = (w, t) => {
-    const g = document.querySelector(`[data-anim="${w.id}"] g`);
-    if (!g) return;
-    const k = w.ref ? N.byId[w.ref] : w;
-    const s = E.skeleton(E.poseAt(k.a, k.b, t), k.view);
-    g.innerHTML = (k.eq ? k.eq(s) : '') + E.figure(s, k);
-  };
-
   // Hepsini durağan kareyle bir kez çiz — animasyon sırası gelmeden de görünsünler
-  adımlar.forEach(w => çiz(w, 0.55));
+  isinmaDurağan();
   if (reduced) return;
 
   const adım = now => {
@@ -186,15 +183,21 @@ function isinmaOynat() {
     const e = (now - isinmaAnim.t0) / DONGU;
     const w = adımlar[isinmaAnim.hangi % adımlar.length];
     if (e >= 1) {
-      çiz(w, 0.55);                                  // durağan kareye dön
+      isinmaÇiz(w, 0.55);                            // durağan kareye dön
       isinmaAnim.hangi++; isinmaAnim.t0 = now;
     } else {
-      çiz(w, (1 - Math.cos(2 * Math.PI * e)) / 2);   // 0→1→0, zıplamadan
+      // Gidip gelen hareket 0→1→0 zıplamadan; dönen hareket (kol çevirme) 0→1 bir tur
+      isinmaÇiz(w, A3.hareketBul(w)?.dongu ? e : (1 - Math.cos(2 * Math.PI * e)) / 2);
     }
     isinmaAnim.raf = requestAnimationFrame(adım);
   };
   isinmaAnim.raf = requestAnimationFrame(adım);
 }
+/** Isınma satırındaki minik 3B figür — küçük alanda figür boşlukta kaybolmasın diye SIKI kadraj */
+function isinmaÇiz(w, t) {
+  A3.ciz(document.querySelector(`[data-anim="${w.id}"]`), A3.hareketBul(w), t, { bicim: 'sabit' });
+}
+function isinmaDurağan() { N.warmupFor(ctx.dayIndex).forEach(w => isinmaÇiz(w, 0.55)); }
 function isinmaDur() {
   if (isinmaAnim.raf) cancelAnimationFrame(isinmaAnim.raf);
   isinmaAnim.raf = 0; isinmaAnim.t0 = 0;
@@ -219,42 +222,97 @@ function render() {
   for (const [k, v] of Object.entries(EKRAN)) v.el().classList.toggle('on', k === ad);
   EKRAN[ad].el().innerHTML = EKRAN[ad].html();
 
+  if (ad === 'warmup' || ad === 'focus') A3.webglHazirla(yenidenÇiz);   // three.js arka planda; hazır olunca geçer
   if (ad === 'warmup') {
     isinmaOynat();
   } else if (ad === 'focus') {
     const ex = curEx();
-    if (!ex.hold) { draw(ex, 0); if (!reduced) play(ex); }
+    if (ex.hold) varyantlarıÇiz(ex);
+    else { draw(ex, 0); if (!reduced) play(ex); }
     saatDurumu(ex);
     // Yuva her çizimde tazelenmeli: yeniden çizim sonrası işaretleme boştaki
     // düğmeyi basıyor, ama sayaç hâlâ çalışıyor olabilir. Ayrıca kalan-süre
     // çizgisi eski değerinde takılı kalıyordu (ekranda kırmızı kalıntı).
     restSlot();
   }
+  guncellemeyiDene();          // bekleyen sürüm varsa ve artık güvenliyse uygula
 }
 
-/* ── Animasyon ─────────────────────────────────────────────────────────── */
+/* ── Animasyon — 3B (anim3d/sahne.js: WebGL, yoksa SVG) ──────────────────── */
 let raf = 0;
+let sonT = 0;                                          // son çizilen an — döndürürken aynı kare yeniden çizilir
+/** Kullanıcının döndürdüğü açı, hareket başına (oturum içi; kalıcı değil — her açılış ilk açıyla) */
+const kamera3d = {};
+const kameraOf = (ex, h) => kamera3d[ex.id] ?? h.kamera;
 function draw(ex, t) {
-  const g = $('fig')?.querySelector('.art');
-  if (!g) return;
-  const s = E.skeleton(E.poseAt(ex.a, ex.b, t), ex.view);
-  // ghostOf/trailOf ÖNBELLEKLİ: ikisi de t'den bağımsız, kare başına yeniden
-  // hesaplanmaları saf israftı (bkz. engine.js önbellek katmanı).
-  g.innerHTML = (ex.eq ? ex.eq(s) : '') + (t > 0.03 ? E.ghostOf(ex) : '') + E.trailOf(ex) + E.figure(s, ex);
-  const ph = $('phase'); if (ph) ph.textContent = t < 0.03 ? 'başlangıç' : t > 0.97 ? 'bitiş' : 'geçiş';
-  const sc = $('scrub'); if (sc && +sc.value !== Math.round(t * 100)) sc.value = Math.round(t * 100);
+  sonT = t;
+  const h = A3.hareketBul(ex);
+  if (h) A3.ciz($('fig3d'), h, t, { kamera: kameraOf(ex, h) });
 }
 function play(ex) {
   stopAnim();
+  const dongu = A3.hareketBul(ex)?.dongu;
   const t0 = performance.now();
   const adım = now => {
-    const e = (now - t0) / 1500, t = (1 - Math.cos(e * Math.PI)) / 2;
-    draw(ex, t);
-    if (e < 6) raf = requestAnimationFrame(adım); else { raf = 0; draw(ex, 0); }
+    const ms = now - t0;
+    // Gidip gelen hareket 0→1→0 (1,5 sn'de bir yön); dönen hareket (lunge: sağ adım, dön, sol adım,
+    // dön) 0→1 sürekli, 3 sn'de bir tur. İkisi de 9 sn sonra durur — pil.
+    draw(ex, dongu ? (ms / 3000) % 1 : (1 - Math.cos(ms / 1500 * Math.PI)) / 2);
+    if (ms < 9000) raf = requestAnimationFrame(adım); else { raf = 0; draw(ex, 0); }
   };
   raf = requestAnimationFrame(adım);
 }
 const stopAnim = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+
+/** İzometrik hareket (plank): doğru ve yanlış duruşlar yan yana, AYNI ölçekte */
+function varyantlarıÇiz(ex) {
+  const h = A3.hareketBul(ex);
+  if (!h?.varyantlar) return;
+  const hs = h.varyantlar.map((_, i) => A3.varyant(h, i));
+  // Tam YANDAN: "baştan topuğa tek çizgi" yandan okunan bir şey; 3/4 açıda kalçanın sapması kaybolur
+  const kam = [0, 6], c = A3.ortakCerceve(hs, kam);
+  document.querySelectorAll('[data-varyant]').forEach(el => A3.ciz(el, hs[+el.dataset.varyant], 0, { kamera: kam, cerceve: c }));
+}
+
+/** Ekrandaki 3B görselleri yeniden çiz: WebGL hazır olduğunda, GPU bağlamı geri geldiğinde, boyut değişince */
+function yenidenÇiz() {
+  if (ctx.view === 'focus') { const ex = curEx(); if (ex.hold) varyantlarıÇiz(ex); else if (!raf) draw(ex, sonT); }
+  else if (ctx.view === 'warmup') isinmaDurağan();
+}
+addEventListener('resize', yenidenÇiz);
+
+/* Sürükleyerek döndür — hareketi her açıdan görmek (özellikle yatay düzlemdeki fly, rotasyon).
+   Çift dokunuş hareketin kendi açısına döndürür. Çizim ekranın yeniden kurulmasından bağımsız:
+   hedef her olayda kimlikle (#fig3d) yeniden bulunur. */
+let döndür = null, sonDokunuş = 0;
+document.addEventListener('pointerdown', e => {
+  const el = e.target.closest?.('#fig3d');
+  if (!el || ctx.view !== 'focus') return;
+  const ex = curEx(), h = A3.hareketBul(ex);
+  if (!h) return;
+  const [te, fi] = kameraOf(ex, h);
+  döndür = { x: e.clientX, y: e.clientY, te, fi, id: ex.id, oynadı: false };
+  try { el.setPointerCapture(e.pointerId); } catch { /* yakalama olmadan da belge düzeyinde dinleniyor */ }
+});
+document.addEventListener('pointermove', e => {
+  if (!döndür) return;
+  const dx = e.clientX - döndür.x, dy = e.clientY - döndür.y;
+  if (!döndür.oynadı && Math.hypot(dx, dy) < 4) return;
+  döndür.oynadı = true;
+  kamera3d[döndür.id] = [döndür.te - dx * 0.6, Math.max(-5, Math.min(75, döndür.fi + dy * 0.4))];
+  if (!raf) draw(curEx(), sonT);                       // oynuyorsa sonraki kare zaten yeni açıyla çizer
+});
+const bırak = () => {
+  if (!döndür) return;
+  if (!döndür.oynadı) {                                // dokunuş (sürükleme değil): çift dokunuş → ilk açı
+    const şimdi = performance.now();
+    if (şimdi - sonDokunuş < 320) { delete kamera3d[döndür.id]; if (!raf) draw(curEx(), sonT); sonDokunuş = 0; }
+    else sonDokunuş = şimdi;
+  }
+  döndür = null;
+};
+document.addEventListener('pointerup', bırak);
+document.addEventListener('pointercancel', bırak);
 
 /* ── Kayıt ─────────────────────────────────────────────────────────────── */
 function draftFor(ex) {
@@ -263,14 +321,26 @@ function draftFor(ex) {
   return { ...ö, warmup: false };
 }
 
+/**
+ * Kaydetme başarısız olduğunda söylenecek tek cümle. Sessiz kalmak en kötüsü:
+ * kullanıcı "basmadım galiba" deyip tekrar basar (bkz. session.transact).
+ */
+const KAYIT_HATASI = 'Kaydedilemedi — telefonun depolaması yazmayı reddetti. Tekrar dene; sürerse yedek al.';
+
 async function kaydet(ex, veri) {
-  N.recordSet(ctx.session, ex.id, veri);
-  await N.persist(ctx.session);
+  try {
+    await N.transact(ctx.session, s => N.recordSet(s, ex.id, veri));
+  } catch (err) {
+    console.error('[kayıt]', err);
+    toast(KAYIT_HATASI, { warn: true, sticky: true, label: 'Kapat', action: () => {} });
+    return false;
+  }
   ctx.draft = draftFor(ex);
   render();
   if (navigator.vibrate) navigator.vibrate(15);
   // Dinlenme kendiliğinden başlar — seansta ~27 kez elle başlatmak angarya
   if (ctx.settings.restSeconds > 0) { await rest.start(ctx.settings.restSeconds); restSlot(); }
+  return true;
 }
 
 async function kaydetTıklandı() {
@@ -330,7 +400,27 @@ document.addEventListener('click', async e => {
         action: async () => { await N.restoreSession(id); await gecmisYukle(); await yükle();
                               ctx.view = 'history'; render(); },
       });
-    } else { render(); toast('Set silindi.'); }
+    } else {
+      // ⚠️ yükle() görünümü LİSTEYE çeker. Eskiden burada yalnız render()
+      // vardı ve set silen kullanıcı düzenleme ekranından listeye atılıyordu
+      // (24 Eyl, canlıda görüldü). Değer düzeltme dalı görünümü geri kuruyordu,
+      // bu dal kurmuyordu.
+      ctx.view = 'seans';
+      render();
+      // Tek dokunuşluk silme GERİ ALINABİLİR olmalı (uygulamanın kendi ilkesi:
+      // yanlış dokunuş kesin, geri al zorunluluk). Eskiden yalnız "Set silindi." diyordu.
+      const d = ctx.duzenlenen;
+      toast('Set silindi.', {
+        label: 'Geri getir',
+        action: async () => {
+          if (ctx.duzenlenen?.id !== d.id) return;   // başka seansa geçildiyse dokunma
+          N.restoreSet(d, exId, +i, r.silinen);
+          await N.saveEdited(d);
+          await gecmisYukle(); await yükle();
+          ctx.duzenlenen = d; ctx.view = 'seans'; render();
+        },
+      });
+    }
     return;
   }
 
@@ -401,8 +491,7 @@ document.addEventListener('click', async e => {
     case 'warmup-done': {
       // Tıpkı normal hareketlerdeki gibi doğrudan 1. harekete geç — listeye
       // dönüp oradan seçtirmek akışı kesiyordu.
-      N.setWarmupDone(ctx.session);
-      await N.persist(ctx.session);
+      await N.transact(ctx.session, s => N.setWarmupDone(s));   // hata → genel yakalayıcı söyler
       isinmaDur();
       git(0);
       break;
@@ -425,6 +514,7 @@ document.addEventListener('click', async e => {
       // geçen seferki gerçekleşmeyi ezmeli (yoksa "kaydettim ama değişmedi" olur).
       ctx.draft = draftFor(ex);
       if (o.weight !== undefined) ctx.draft.weight = o.weight;
+      await oneriYukle();
       sheet(false); render();
       toast(`Hedef güncellendi: ${N.repsLabel(ex, ctx.settings)}`);
       break;
@@ -433,6 +523,7 @@ document.addEventListener('click', async e => {
       const ov = { ...ctx.settings.overrides }; delete ov[ex.id];
       ctx.settings = await S.saveSettings({ overrides: ov });
       ctx.draft = draftFor(ex);
+      await oneriYukle();
       sheet(false); render();
       toast('Programın kendi hedefine dönüldü.');
       break;
@@ -440,18 +531,21 @@ document.addEventListener('click', async e => {
     case 'to-list': stopAnim(); ctx.view = 'list'; render(); scrollTo(0, 0); break;
     case 'carry-go': {
       const y = ctx.yarim;
-      await N.resolveCarry(y.session);
       // Yeni seans, YARIM KALAN günün kendisi. Setler kopyalanmaz — kayıtlar
       // yapıldıkları güne ait kalır; carriedFrom yalnız "geçen sefer yapıldı"
       // işaretini yeniden kurabilmek için (yeniden açılışta da sürsün diye).
-      ctx.session = S.newSession(y.session.dayIndex);
-      ctx.session.carriedFrom = y.session.id;
+      const yeni = S.newSession(y.session.dayIndex);
+      yeni.carriedFrom = y.session.id;
+      // HEMEN diske: yoksa yenilemede seçim kaybolur ve soru bir daha
+      // sorulmadığı için kullanıcı sessizce yanlış güne düşer (canlıda yakalandı).
+      // ⚠️ SIRA ÖNEMLİ: önce yeni seans, SONRA "cevaplandı" işareti. Tersi
+      // olunca yazma başarısızlığında soru cevaplanmış sayılıp kayboluyordu.
+      await N.persist(yeni);
+      await N.resolveCarry(y.session);
+      ctx.session = yeni;
       ctx.dayIndex = y.session.dayIndex;
       ctx.oncekiYapilan = N.completedIds(y.session);
       ctx.yarim = null;
-      // HEMEN diske: yoksa yenilemede seçim kaybolur ve soru bir daha
-      // sorulmadığı için kullanıcı sessizce yanlış güne düşer (canlıda yakalandı).
-      await N.persist(ctx.session);
       await lastPerfYukle();
       render();
       toast(`${N.DAY_NAMES[ctx.dayIndex].split(' — ')[0]}'e devam ediliyor.`);
@@ -475,7 +569,7 @@ document.addEventListener('click', async e => {
       await S.saveWeight(v);
       await gecmisYukle();
       render();
-      toast(v === null ? 'Bugünün kilo kaydı silindi.' : `${v.toFixed(1)} kg kaydedildi.`);
+      toast(v === null ? 'Bugünün kilo kaydı silindi.' : `${UI.fmt(v, 1, 1)} kg kaydedildi.`);
       break;
     }
 
@@ -520,17 +614,30 @@ document.addEventListener('click', async e => {
     case 'next': git(ctx.idx + 1); break;
     case 'save': await kaydetTıklandı(); break;
 
+    case 'oneri-uygula': {
+      // ÖNER, DAYATMA: yalnız kutuya yazar; seti kaydetmek kullanıcının kararı
+      const o = ctx.oneri[ex.id];
+      if (o?.tur === 'agirlik') { ctx.draft.weight = o.agirlik; render(); }
+      break;
+    }
     case 'rozet-hepsi': ctx.tumRozetler = true;  render(); break;
     case 'rozet-az':    ctx.tumRozetler = false; render(); break;
 
     case 'undo': {
-      const geri = N.undoLastSet(ctx.session, ex.id);
+      // Geri al da işlemsel: yazma başarısızsa set bellekte de KALIR (ekran
+      // ile disk aynı şeyi söylesin).
+      let geri;
+      try { geri = await N.transact(ctx.session, s => N.undoLastSet(s, ex.id)); }
+      catch (err) { console.error('[geri al]', err); toast(KAYIT_HATASI, { warn: true, sticky: true, label: 'Kapat', action: () => {} }); break; }
       if (!geri) break;
-      await N.persist(ctx.session);
       ctx.draft = draftFor(ex); render();
       toast('Set geri alındı.', {
         label: 'Geri getir',
-        action: async () => { N.recordSet(ctx.session, ex.id, geri); await N.persist(ctx.session); ctx.draft = draftFor(ex); render(); },
+        action: async () => {
+          try { await N.transact(ctx.session, s => { N.entryFor(s, ex.id).sets.push(geri); }); }
+          catch (err) { console.error('[geri getir]', err); toast(KAYIT_HATASI, { warn: true, sticky: true, label: 'Kapat', action: () => {} }); return; }
+          ctx.draft = draftFor(ex); render();
+        },
       });
       break;
     }
@@ -654,8 +761,14 @@ $('file').addEventListener('change', async e => {
   const f = e.target.files?.[0]; if (!f) return;
   e.target.value = '';
   try {
-    const s = await S.importData(await f.text());
-    toast(`Geri yüklendi: ${s.eklendi} yeni, ${s.güncellendi} güncel, ${s.atlandı} atlandı.`);
+    // Gün sayısı verilir ki programda olmayan güne ait seans içeri girip
+    // ekranları çökertmesin (bkz. store.gecersizSeans).
+    const s = await S.importData(await f.text(), 'merge', { gunSayisi: N.allDays().length });
+    // Seans ve kilo AYRI sayılır: "28 yeni" 14 seans + 14 kilo demekti.
+    const parca = [`${s.eklendi} yeni seans`, s.güncellendi && `${s.güncellendi} güncellendi`,
+      s.kilo.eklendi && `${s.kilo.eklendi} kilo kaydı`,
+      s.geçersiz && `${s.geçersiz} bozuk kayıt atlandı`].filter(Boolean).join(' · ');
+    toast(`Geri yüklendi: ${parca}.`, s.geçersiz ? { warn: true, sticky: true, label: 'Tamam', action: () => {} } : {});
     await yükle();
   } catch (err) { toast(err.message, { warn: true, sticky: true, label: 'Kapat', action: () => {} }); }
 });
@@ -682,6 +795,17 @@ async function lastPerfYukle() {
   ctx.lastPerf = {};
   for (const ex of N.exercisesFor(ctx.dayIndex))
     ctx.lastPerf[ex.id] = await S.lastPerformance(ex.id, ctx.session.id);
+  await oneriYukle();
+}
+
+/**
+ * Ağırlık artırma önerisi — o hareketin yapıldığı son İKİ bitmiş seanstan (bugünkü hariç).
+ * Kural ilerleme.js'te (test ediliyor); burada yalnız veri toplanır. Hedef değişince yeniden hesaplanır.
+ */
+async function oneriYukle() {
+  const bitmis = (await S.doneSessions()).filter(s => s.id !== ctx.session.id);
+  ctx.oneri = {};
+  for (const ex of N.exercisesFor(ctx.dayIndex)) ctx.oneri[ex.id] = I.oneri(ex, bitmis, N.effective(ex, ctx.settings));
 }
 
 async function yükle() {
@@ -739,9 +863,32 @@ document.addEventListener('visibilitychange', () => {
  * Bu yüzden reg.waiting ayrıca kontrol ediliyor — hem açılışta hem her dönüşte.
  *
  * ⚠️ İKİNCİ KARAR: güncellemeyi kullanıcının bulmasına bırakmak kırılgan.
- * Antrenman ortasında DEĞİLSEN (kaydedilmiş set yoksa) güncelleme sorulmadan
- * uygulanır. Yalnız seans sürerken sorulur — o zaman kesintinin bedeli var.
+ * Kaybedilecek bir şey yoksa sorulmadan uygulanır; seans sürerken sorulur.
+ *
+ * ⚠️ ÜÇÜNCÜ KARAR (24 Eyl): "kaybedilecek şey" yalnız set DEĞİL. Isınma
+ * ekranındayken, ağırlık yazmışken ya da ilk Plank sayacı çalışırken dönünce
+ * sayfa yeniden yükleniyor ve kullanıcı listeye atılıyordu. Karar artık
+ * session.guncellemeKarari'nda (test ediliyor); 'bekle' durumunda sürüm
+ * liste ekranına dönülünce uygulanır — render() her çizimde yeniden dener.
  */
+function guncellemeyiDene() {
+  const sw = bekleyenSW;
+  if (!sw) return;
+  const karar = N.guncellemeKarari({
+    ekran: ctx.view,
+    seansSetli: !!ctx.session && N.hasAnySet(ctx.session),
+    sayacCalisiyor: rest.running || hold.running,
+  });
+  if (karar === 'uygula') { bekleyenSW = null; sw.postMessage('SKIP_WAITING'); return; }
+  if (karar === 'sor' && sorulanSW !== sw) {
+    sorulanSW = sw;                                   // her çizimde yeniden sorma
+    toast('Yeni sürüm hazır — seansı bitirince kendiliğinden uygulanacak.', {
+      sticky: true, label: 'Şimdi yenile', action: () => sw.postMessage('SKIP_WAITING'),
+    });
+  }
+  // 'bekle' → sessizce bekle
+}
+
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   let yenilendi = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -749,14 +896,9 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   });
 
   const kontrolEt = reg => {
-    const sw = reg.waiting;
-    if (!sw) return;
-    // Kaybedilecek bir şey yoksa sessizce uygula; varsa kararı kullanıcıya bırak
-    const güvenli = !ctx.session || !N.hasAnySet(ctx.session);
-    if (güvenli) { sw.postMessage('SKIP_WAITING'); return; }
-    toast('Yeni sürüm hazır — seansı bitirince kendiliğinden uygulanacak.', {
-      sticky: true, label: 'Şimdi yenile', action: () => sw.postMessage('SKIP_WAITING'),
-    });
+    if (!reg.waiting) return;
+    bekleyenSW = reg.waiting;
+    guncellemeyiDene();
   };
 
   addEventListener('load', async () => {
@@ -778,3 +920,11 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 }
 
 addEventListener('error', e => toast('Bir aksaklık oldu: ' + (e.message || 'bilinmeyen'), { warn: true }));
+/* ⚠️ Olay işleyicilerinin neredeyse hepsi async: içlerinden fırlayan hata
+   'error' DEĞİL 'unhandledrejection' olur ve eskiden HİÇ dinlenmiyordu —
+   yani yukarıdaki satır bu uygulamanın hatalarının çoğunu hiç görmüyordu
+   (24 Eyl, tarayıcıda ölçüldü: yazma hatasında toast null). */
+addEventListener('unhandledrejection', e => {
+  console.error('[yakalanmamış]', e.reason);
+  toast('Bir aksaklık oldu: ' + (e.reason?.message || e.reason || 'bilinmeyen'), { warn: true, sticky: true, label: 'Kapat', action: () => {} });
+});

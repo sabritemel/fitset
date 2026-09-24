@@ -265,12 +265,83 @@ export async function exportBlob() {
   return { blob: new Blob([json], { type: 'application/json' }), filename: `fitset-yedek-${stamp}.json` };
 }
 
+/* ── İçe aktarım doğrulaması ──────────────────────────────────────────────
+ * ⚠️ Eskiden yalnız `app` ve `schemaVersion` bakılıyordu; içerik olduğu gibi
+ * diske iniyordu. 24 Eyl'de tarayıcıda ölçüldü: programda olmayan bir gün
+ * (dayIndex 7) Geçmiş ekranını çökertiyor, seans kimliğine gömülü HTML
+ * sayfaya KAÇIŞSIZ basılıyordu. app.js zaten "düşmanca yedek dosyası" tehdidini
+ * tanıyıp toast'ı korumuştu — ama asıl kapı burasıydı.
+ *
+ * Kural: yalnız ÇİZİMİ ve HESABI etkileyen alanlar sınanır; bilinmeyen ek
+ * alanlar (carriedFrom, dayChosen…) korunur. Geçersiz kayıt ATLANIR ve
+ * SAYILIR — sessiz kayıp yok, sessiz kabul de yok.
+ */
+const KIMLIK = /^[A-Za-z0-9_-]{1,80}$/;
+const DURUMLAR = new Set(['active', 'done', 'deleted']);
+const sayiMi = (v, alt = 0) => typeof v === 'number' && Number.isFinite(v) && v >= alt;
+
+function gecerliSet(x) {
+  if (!x || typeof x !== 'object') return false;
+  if (x.type === 'weight_reps') return (x.weight === null || x.weight === undefined || sayiMi(x.weight)) && sayiMi(x.reps);
+  if (x.type === 'time') return sayiMi(x.seconds);
+  if (x.type === 'cardio') return sayiMi(x.minutes) && (x.km == null || sayiMi(x.km));
+  return false;
+}
+
+/** Seans geçerliyse null, değilse SEBEBİ döner (test ve tanı için) */
+export function gecersizSeans(s, { gunSayisi = Infinity } = {}) {
+  if (!s || typeof s !== 'object') return 'nesne değil';
+  if (typeof s.id !== 'string' || !KIMLIK.test(s.id)) return 'kimlik';
+  if (!Number.isInteger(s.dayIndex) || s.dayIndex < 0 || s.dayIndex >= gunSayisi) return 'gün';
+  if (!DURUMLAR.has(s.status)) return 'durum';
+  if (!sayiMi(s.startedAt)) return 'başlangıç';
+  if (s.finishedAt != null && !sayiMi(s.finishedAt)) return 'bitiş';
+  if (!Array.isArray(s.entries)) return 'kayıtlar';
+  for (const e of s.entries) {
+    if (typeof e?.exerciseId !== 'string' || !KIMLIK.test(e.exerciseId)) return 'hareket kimliği';
+    if (!Array.isArray(e.sets) || !e.sets.every(gecerliSet)) return 'set';
+  }
+  return null;
+}
+
+const gecerliKilo = b => typeof b?.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.d)
+  && sayiMi(b.kg) && b.kg > 0 && (b.ts == null || sayiMi(b.ts));
+
+/** Ayarlardan yalnız TANINAN ve DOĞRU TİPTE alanları al */
+function temizAyar(a) {
+  if (!a || typeof a !== 'object') return null;
+  const o = {};
+  if (sayiMi(a.restSeconds) && a.restSeconds <= 600) o.restSeconds = a.restSeconds;
+  if (Array.isArray(a.trainingDays) && a.trainingDays.length
+      && a.trainingDays.every(g => Number.isInteger(g) && g >= 0 && g <= 6))
+    o.trainingDays = [...new Set(a.trainingDays)].sort((x, y) => x - y);
+  if (a.heightCm === null || (sayiMi(a.heightCm) && a.heightCm >= 100 && a.heightCm <= 250)) o.heightCm = a.heightCm;
+  if (Number.isInteger(a.backupNagEvery) && a.backupNagEvery > 0) o.backupNagEvery = a.backupNagEvery;
+  if (a.overrides && typeof a.overrides === 'object' && !Array.isArray(a.overrides)) {
+    o.overrides = {};
+    for (const [id, v] of Object.entries(a.overrides)) {
+      if (!KIMLIK.test(id) || !v || typeof v !== 'object') continue;
+      const temiz = {};
+      for (const k of ['sets', 'reps', 'seconds', 'minutes', 'weight']) if (sayiMi(v[k])) temiz[k] = v[k];
+      o.overrides[id] = temiz;
+    }
+  }
+  return o;
+}
+
 /**
  * İçe aktarım. Varsayılan 'merge': aynı id'li seansta DAHA YENİ olan kazanır,
  * bilinmeyen id eklenir. 'replace' her şeyi siler — çağıran onay almalı.
  * Sessizce veri kaybettirmemek için ne yapıldığını sayarak döner.
+ *
+ * Dönüş: { eklendi, güncellendi, atlandı, geçersiz, kilo:{eklendi,güncellendi,atlandı} }
+ * — üst düzey sayaçlar SEANS içindir; kilo kayıtları ayrı sayılır ("28 yeni"
+ * eskiden 14 seans + 14 kilo demekti).
+ *
+ * @param {{gunSayisi?:number}} [secenek] programdaki gün sayısı — bundan
+ *        büyük dayIndex taşıyan seans, onu çizemeyecek ekranlara girmesin diye atlanır
  */
-export async function importData(raw, mode = 'merge') {
+export async function importData(raw, mode = 'merge', secenek = {}) {
   const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
   if (data?.app !== 'fitset') throw new Error('Bu dosya bir FitSet yedeği değil.');
   if (typeof data.schemaVersion !== 'number') throw new Error('Yedek sürümsüz — okunamıyor.');
@@ -281,28 +352,31 @@ export async function importData(raw, mode = 'merge') {
     await driver.clear('sessions'); await driver.clear('settings'); await driver.clear('body');
   }
 
-  const stat = { eklendi: 0, güncellendi: 0, atlandı: 0 };
-  for (const s of data.sessions ?? []) {
+  const stat = { eklendi: 0, güncellendi: 0, atlandı: 0, geçersiz: 0, kilo: { eklendi: 0, güncellendi: 0, atlandı: 0 } };
+  for (const ham of Array.isArray(data.sessions) ? data.sessions : []) {
+    const s = migrate(ham);
+    if (gecersizSeans(s, secenek)) { stat.geçersiz++; continue; }
     const cur = await getSession(s.id);
-    if (!cur) { await saveSession(migrate(s)); stat.eklendi++; }
-    else if ((s.finishedAt ?? s.startedAt) > (cur.finishedAt ?? cur.startedAt)) { await saveSession(migrate(s)); stat.güncellendi++; }
+    if (!cur) { await saveSession(s); stat.eklendi++; }
+    else if ((s.finishedAt ?? s.startedAt) > (cur.finishedAt ?? cur.startedAt)) { await saveSession(s); stat.güncellendi++; }
     else stat.atlandı++;
   }
   // Kilo kayıtları: gün anahtarı benzersiz, YENİ ölçüm eskinin üstüne yazar
-  for (const b of data.body ?? []) {
-    if (typeof b?.d !== 'string' || !(b.kg > 0)) { stat.atlandı++; continue; }
+  for (const b of Array.isArray(data.body) ? data.body : []) {
+    if (!gecerliKilo(b)) { stat.geçersiz++; continue; }
     const cur = await driver.get('body', b.d);
-    if (!cur) { await driver.put('body', b); stat.eklendi++; }
-    else if ((b.ts ?? 0) > (cur.ts ?? 0)) { await driver.put('body', b); stat.güncellendi++; }
-    else stat.atlandı++;
+    if (!cur) { await driver.put('body', b); stat.kilo.eklendi++; }
+    else if ((b.ts ?? 0) > (cur.ts ?? 0)) { await driver.put('body', b); stat.kilo.güncellendi++; }
+    else stat.kilo.atlandı++;
   }
-  if (data.settings) await saveSettings(data.settings);
+  const ayar = temizAyar(data.settings);
+  if (ayar) await saveSettings(ayar);
   return stat;
 }
 
 /** Eski şemadan yeniye taşıma. Şimdilik v1 tek sürüm; ileride buraya eklenecek. */
 function migrate(session) {
-  if (!session.schemaVersion) session.schemaVersion = 1;
+  if (session && typeof session === 'object' && !session.schemaVersion) session.schemaVersion = 1;
   return session;
 }
 

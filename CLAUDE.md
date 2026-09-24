@@ -1,7 +1,8 @@
 # FitSet — Agent Context
 
 > **Salon antrenman defteri.** Çevrimdışı çalışan PWA; veri telefonda kalır.
-> Saf HTML/CSS/JS, **sıfır çalışma-zamanı bağımlılığı**, IndexedDB.
+> Saf HTML/CSS/JS, IndexedDB, derleme yok. Çalışma-zamanı bağımlılığı **tek ve bilinçli**:
+> hareket çizimi için **three.js** alt kümesi (MIT), depoda paketli — bkz. "3B çizim" aşağıda.
 
 ## ⚠️ EN ÖNEMLİ KISIT: bu proje SmartVisor suite'inin PARÇASI DEĞİL
 
@@ -14,21 +15,42 @@ FinLens ve SmartCRM gibi ayrı bir üründür. Bunun somut karşılıkları:
 | Çıktılar | `artifacts/`'a **YAZILMAZ** — o depo QVS + STS + SVS içindir |
 | Port tablosu | FitSet'in portu **yoktur**; suite port tablosuna eklenmez |
 | Tasarım dili | suite'inkinden farklı olabilir; ISA-101 / endüstriyel HMI kuralları **burada geçerli değildir** (bu bir tüketici uygulaması, kontrol odası ekranı değil) |
-| Lisans borcu | suite'in AGPL kısıtları burada ayrıca değerlendirilir; bugün sıfır bağımlılık var, **öyle kalması tercih edilir** |
+| Lisans borcu | suite'in AGPL kısıtları burada ayrıca değerlendirilir. Tek bağımlılık three.js (**MIT**, 24 Eyl — Sabri: *"girsin, SVG yedekle"*); yenisi eklenmeden önce lisansı **birincil kaynaktan** okunur (bu turda "tam bu iş için yazılmış" mannequin.js **GPL-3.0** çıktı) |
 
 ⚠️ Suite'in kök `CLAUDE.md`'sindeki uygulama/port/altın-kural tablosu **bu
 projeyi kapsamaz**. Buradaki tek üst kural şudur: *kök depoya sızma.*
 
-## Yapı (ölçüldü, 7 Eyl 2026)
+## Yapı (ölçüldü, 24 Eyl 2026 — 3B geçişinden sonra)
 
 ```
-js/     10 dosya · 3 120 satır   app.js · store.js · session.js · schedule.js
-                                 timer.js · ui/ · anim/ · data/
-tools/  17 betik · 2 661 satır   doğrulayıcılar + üreticiler
-css/    style.css (519 satır)
-sw.js   98 satır — service worker · CACHE sürümü İÇERİKTEN türetilir
-5 HTML  index.html + 4 mokap (cizimler · isinma · izometrik · genel)
+js/        15 dosya · 4 990 satır (vendor hariç)   app · store · session · schedule · timer
+                                                   ui · ilerleme · data/ · anim/ · anim3d/
+js/anim3d/ 4 dosya · 1 424 satır   manken3d (iskelet+IK, SVG çizim, çerçeve) · hareketler3d
+                                   (22 hareket, kısıtlarıyla) · webgl (three.js çizici) · sahne (giriş)
+js/vendor/ three.min.js (530 KB · 135 KB gzip, MIT) + three-LICENSE.txt
+tools/     21 betik · 3 293 satır  doğrulayıcılar + üreticiler (+ three-giris.js: paketi yeniden üretir)
+css/       style.css (529 satır)
+sw.js      119 satır — service worker · CACHE sürümü İÇERİKTEN türetilir
+7 HTML     index.html + 6 mokap (cizimler · isinma · izometrik · genel · 3b · 3b-figur)
 ```
+
+### 3B çizim (24 Eyl 2026)
+
+- **Tek giriş `js/anim3d/sahne.js`.** WebGL (three.js) varsa ışıklı manken, yoksa aynı motorun
+  **SVG** çizimi. three.js açılışı yavaşlatmasın diye **ilk kullanımda** dinamik yüklenir; o arada
+  SVG çizer. GPU bağlamı kaybolursa (telefon arka plan) yine SVG. Tek paylaşılan WebGL bağlamı,
+  görünümler 2B tuvale kopyalanır (tarayıcı ~16 bağlam sınırı; ekran HTML'i sık yeniden kurulur).
+- **Hareket motoru çiziciden bağımsız:** iskelet `an(h,t)` ve ekipman hareketin kendi tanımından;
+  `tools/fizik-denetimi.js` konum ölçer, çiziciyi değil. Yeni hareket = `hareketler3d.js`'e aynı
+  `id` ile giriş + `kisit` beyanı. 3B'si olmayan kayıt `npm test`'i kırmızı yakar (`hareketBul`,
+  uygulama ve denetim AYNI fonksiyonu çağırır).
+- ⚠️ **three.js paketi:** `node_modules` yok; `tools/three-giris.js` hangi sınıfların alındığını ve
+  paketleme komutunu taşır. MIT bildirimi paketin başında ve `three-LICENSE.txt`'te — esbuild'in
+  `--legal-comments=none`'ı bildirimi SİLER, başlık `--banner` ile eklenir.
+- ⚠️ `CylinderGeometry` MERKEZLİDİR, bu motorun lathe'leri 0…1 → `translate(0, 0.5, 0)` şart.
+- **2B çizim emekli:** `js/anim/engine.js` uygulamada kullanılmıyor, yalnız eski mokaplar ve
+  araçları (`verify-poses`, `verify-port`, `make-mockup*`, `audit-*`) için duruyor; `npm test`'te
+  değiller. `exercises.js`'teki `a/b/eq` poz alanları ölü veri. Temizliği ayrı iş.
 
 Derleme **yok** — saf statik dosyalar. `package.json` yalnız betikleri taşır
 (`"private": true`, `"type": "module"`).
@@ -36,15 +58,24 @@ Derleme **yok** — saf statik dosyalar. `package.json` yalnız betikleri taşı
 ## Komutlar
 
 ```bash
-npm test      # bump-sw + check-contrast + verify-poses + verify-port
-              # + test-store + test-session   ← tam kapı
-npm run verify   # yalnız poz denetimi
+npm test      # bump-sw (+ çevrimdışı kapısı) + check-contrast + fizik-denetimi
+              # + test-store + test-session + test-timer + check-docs   ← tam kapı
+npm run verify   # yalnız 3B fizik denetimi
 npm run bump     # sw.js CACHE sürümünü artır
 npm run icons    # ikon üretimi
 npm run fonts    # font indirme
 ```
 
-**Ölçüldü (7 Eyl 2026): `npm test` → 187 geçti · 0 kaldı.**
+**Ölçüldü (24 Eyl 2026, 3B geçişi sonrası): `npm test` exit 0** — `test-store` 68 ·
+`test-session` 235 · `test-timer` 14 · `check-docs` 15 · `fizik-denetimi` tümü temiz (22 hareket,
+6 olumsuz fikstür, 25 kaydın 3B kapsamı, plank varyantları) · `bump-sw` çevrimdışı kapısı: `app.js`'ten
+erişilen 15 modülün hepsi ASSETS'te (dinamik `import()` dahil).
+⚠️ 7 Eyl'de burada yazan "187 geçti" `npm test`'in SON satırıydı, yani yalnız
+`test-session`'ın sayısı — toplam değil. Sayı betik başına okunur.
+
+⚠️ **Kullanıcı belgesi koda bağlı:** `check-docs.js`, `index.html`'deki her ekranın
+ve `npm test`'teki her betiğin `KULLANIM.md`'de anlatıldığını denetler. Yeni ekran
+eklersen tablosuna adını ver ve kılavuza bölüm yaz — yoksa kapı kırmızı.
 
 ⚠️ `npm test` **`bump-sw.js` ile başlar** ve bu bilerek böyledir.
 
@@ -58,8 +89,13 @@ KURALIYDI ve tam da beklendiği gibi unutuldu* — tarayıcı eski CSS'i servis
 etmeye devam etti, değişiklik "gitmemiş" gibi göründü.
 **Unutulabilen bir adım kurala değil ARACA bağlanır.**
 
-⚠️ `sw.js`'in kendi başlığındaki *"SÜRÜM ARTIRMAYI UNUTMA"* yorumu bu araçtan
-ÖNCEsine ait — **bayattır**, ona göre davranma.
+*(`sw.js` başlığındaki eski "SÜRÜM ARTIRMAYI UNUTMA" yorumu 24 Eyl'de düzeltildi.)*
+
+⚠️ **Yerel denemede de aynı tuzak:** kaynağı düzenleyip `bump-sw`'yi koşmadan
+tarayıcıyı yenilersen service worker **önbellekteki eski dosyayı** sunar
+(önbellek öncelikli). Canlı doğrulamadan önce `node tools/bump-sw.js` + iki yenileme,
+sonra *"koşan kod benim kodum mu?"* diye kaynağı `fetch` ile oku (24 Eyl'de
+yakalandı: düzeltme diskteydi, tarayıcı eskisini çalıştırıyordu).
 
 ## ⭐⭐ Bu projede pahalıya öğrenilmiş dersler
 

@@ -40,7 +40,28 @@ if (fs.existsSync(fc)) h.update(fs.readFileSync(fc));
 const yeni = 'fitset-' + h.digest('hex').slice(0, 10);
 const eski = src.match(/const CACHE = '([^']+)'/)?.[1];
 
-if (eksik.length) console.warn(`⚠ ASSETS'te olup diskte olmayan: ${eksik.join(', ')}`);
+// ⚠️ Eskiden yalnız UYARIYDI: eksik dosya önbelleğe girmez ve uygulama çevrimdışı açılmaz, ama
+// yeni sürüm yine yayınlanırdı. Artık kapı.
+if (eksik.length) { console.error(`✗ ASSETS'te olup diskte olmayan: ${eksik.join(', ')}`); process.exit(1); }
+
+// TERS YÖN: uygulamanın ERİŞTİĞİ her modül ASSETS'te olmalı — yoksa çevrimdışı açılışta o modül
+// gelmez ve ekran boş kalır. app.js'ten başlayıp statik ve dinamik import'lar izlenir (24 Eyl:
+// 3B çizici 6 yeni dosya getirdi; birini listeye yazmayı unutmak tam da bu sınıfın hatası).
+{
+  const gorulen = new Set(), kuyruk = ['js/app.js'], listede = new Set(dosyalar);
+  while (kuyruk.length) {
+    const f = kuyruk.pop();
+    if (gorulen.has(f)) continue;
+    gorulen.add(f);
+    const kod = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    for (const m of kod.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)['"](\.{1,2}\/[^'"]+)['"]/g)) {
+      kuyruk.push(path.posix.normalize(path.posix.join(path.posix.dirname(f), m[1])));
+    }
+  }
+  const disarida = [...gorulen].filter(f => !listede.has(f));
+  if (disarida.length) { console.error(`✗ uygulamanın eriştiği ama ASSETS'te OLMAYAN modül: ${disarida.join(', ')}`); process.exit(1); }
+  console.log(`· çevrimdışı: app.js'ten erişilen ${gorulen.size} modülün hepsi ASSETS'te`);
+}
 
 if (eski === yeni) { console.log(`· sw.js sürümü güncel (${yeni}, ${okunan} dosya)`); process.exit(0); }
 src = src.replace(/const CACHE = '[^']+'/, `const CACHE = '${yeni}'`);

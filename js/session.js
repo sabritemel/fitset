@@ -164,9 +164,8 @@ export function canSwitchDay(session) {
 export async function chooseDay(session, dayIndex) {
   const izin = canSwitchDay(session);
   if (!izin.ok) return izin;
-  session.dayIndex = dayIndex;
-  session.dayChosen = true;              // "kullanıcı seçti" — sıra bunu ezmesin
-  await persist(session);
+  // İşlemsel: yazma başarısızsa bellekteki gün de DEĞİŞMEZ
+  await transact(session, s => { s.dayIndex = dayIndex; s.dayChosen = true; });   // "kullanıcı seçti" — sıra bunu ezmesin
   return { ok: true };
 }
 
@@ -336,8 +335,57 @@ export const hasAnyRecord = session =>
   hasAnySet(session) || KARAR_BAYRAKLARI.some(k => !!session[k]);
 
 export async function persist(session) {
-  if (!hasAnyRecord(session)) return;       // gerçekten boş seansı yazma
-  await store.saveSession(session);
+  if (hasAnyRecord(session)) { await store.saveSession(session); return; }
+  // Gerçekten boş seans YAZILMAZ — ama daha önce yazılmışsa diskte de KALMAZ.
+  // ⚠️ Eskiden burada yalnız `return` vardı. İlk seti "geri al"ınca seans
+  // bellekte boşalıyor, disk ise o seti taşımaya devam ediyordu; uygulama
+  // yeniden açılınca geri alınan set GERİ GELİYORDU (24 Eyl, ölçüldü:
+  // bellekte 0 · diskte 1 · yeniden açılışta 1).
+  await abandon(session);
+}
+
+/**
+ * İŞLEMSEL DEĞİŞİKLİK — önce DİSK, sonra BELLEK.
+ *
+ * ⚠️ Kök hata (24 Eyl, tarayıcıda üretildi): set önce bellekteki seansa
+ * ekleniyor, sonra diske yazılıyordu. Yazma başarısız olunca (kota, depolama
+ * hatası) bellek İLERLEMİŞ kalıyor ama ekran değişmiyordu; kullanıcı "basmadım
+ * galiba" deyip tekrar basıyor, depolama düzelince TEK dokunuş üç set yazıyordu
+ * (ikisi hayalet). Hata oluştuğu yerde değil, bir sonraki DOĞRU işlemde görünür.
+ *
+ * Çözüm: değişiklik bir KOPYADA yapılır, kopya diske yazılır; yalnız yazma
+ * başarılıysa kopya belleğe geçer. Yazma hata verirse `session` DOKUNULMAMIŞ
+ * kalır ve hata çağırana fırlar — arayüz onu kullanıcıya söylemek zorunda.
+ *
+ * @param {object} session  bellekteki seans (başarıda YERİNDE güncellenir)
+ * @param {(kopya:object)=>any} degistir  kopya üzerinde çalışan değişiklik
+ * @returns {Promise<any>} degistir'in dönüşü (kopyanın nesnelerine işaret eder;
+ *          başarıdan sonra bunlar session'ın nesneleridir)
+ */
+export async function transact(session, degistir) {
+  const kopya = structuredClone(session);
+  const sonuc = degistir(kopya);
+  await persist(kopya);                     // hata burada fırlar → session aynen kalır
+  Object.assign(session, kopya);
+  return sonuc;
+}
+
+/**
+ * Yeni sürüm SW'si beklerken ne yapılmalı?
+ *   'uygula' → hiçbir şey kaybolmaz, sayfa yeniden yüklenebilir
+ *   'bekle'  → kaybolacak bir şey var ama set değil (ekran konumu, sayaç,
+ *              yazılmış ama kaydedilmemiş değer) — liste ekranına dönülünce uygula
+ *   'sor'    → seansta set var; kesintinin bedeli kullanıcının kararı
+ *
+ * ⚠️ Eskiden tek ölçüt "set var mı"ydı. Isınma ekranındayken, ağırlık yazmışken
+ * ya da ilk Plank sayacı çalışırken uygulamaya dönünce yeni sürüm sayfayı
+ * yeniden yüklüyor ve kullanıcıyı listeye atıyordu. Kural buraya (app.js'e
+ * değil) taşındı ki test edilebilsin.
+ */
+export function guncellemeKarari({ ekran, seansSetli, sayacCalisiyor }) {
+  if (seansSetli) return 'sor';
+  if (ekran !== 'list' || sayacCalisiyor) return 'bekle';
+  return 'uygula';
 }
 
 /** Anlık hacim — liste ekranındaki özet şeridi için (senkron) */
@@ -397,6 +445,20 @@ export function deleteSet(session, exerciseId, index) {
   const silinen = e.sets.splice(index, 1)[0];
   if (!e.sets.length) session.entries = session.entries.filter(x => x !== e);
   return { ok: true, silinen, bosaldi: !hasAnySet(session) };
+}
+
+/**
+ * Silinen seti AYNI YERİNE geri koy — deleteSet'in geri-alı.
+ *
+ * Geçmişte tek set silmek tek dokunuşluktu ve geri alınamıyordu; oysa bu
+ * uygulamanın kendi ilkesi "terli parmakla yanlış dokunuş KESİN, geri al
+ * zorunluluk" (bkz. undoLastSet). Egzersiz kaydı son setle birlikte
+ * temizlendiyse yeniden kurulur.
+ */
+export function restoreSet(session, exerciseId, index, set) {
+  const e = entryFor(session, exerciseId);
+  e.sets.splice(Math.min(Math.max(0, index), e.sets.length), 0, set);
+  return e;
 }
 
 /**

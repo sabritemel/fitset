@@ -3,9 +3,12 @@
  *
  * ⚠️ İKİ KURAL, ikisi de gerçek acılardan geliyor:
  *
- * 1) SÜRÜM ARTIRMAYI UNUTMA. Dosya değiştirdiysen CACHE'i artır. Artırmazsan
- *    telefonda eski sürüm servis edilmeye devam eder ve "güncellemem gitmemiş"
- *    sanırsın. Bu, PWA'ların en yaygın hayal kırıklığıdır.
+ * 1) CACHE SÜRÜMÜ ELLE YAZILMAZ. `tools/bump-sw.js` onu ASSETS listesindeki
+ *    dosyaların İÇERİĞİNDEN türetir (npm test ilk iş onu koşar). Dosya
+ *    değişince hash değişir, önbellek adı değişir, güncelleme kendiliğinden
+ *    tetiklenir. (Bu satır eskiden "sürümü artırmayı unutma" diyordu — araçtan
+ *    önceki insan kuralıydı ve aracın kaldırdığı işi öğretmeye devam ediyordu.)
+ *    Yeni bir dosya eklersen ASSETS'e de ekle; araç yalnız listedekileri okur.
  *
  * 2) sw.js NO-CACHE İLE SERVİS EDİLMELİ. Tarayıcı sw.js'in kendisini önbelleğe
  *    alırsa yeni sürümü hiç göremez. GitHub Pages bunu doğru yapar; başka bir
@@ -16,7 +19,7 @@
  * gelir → devralır → sayfa yenilenir. Kullanıcı antrenman ortasında sürüm
  * değiştirmez; kararı o verir.
  */
-const CACHE = 'fitset-409effe834';
+const CACHE = 'fitset-038f2504cd';
 
 const ASSETS = [
   './',
@@ -30,14 +33,23 @@ const ASSETS = [
   './js/schedule.js',
   './js/session.js',
   './js/timer.js',
-  './js/anim/engine.js',
-  './js/anim/equipment.js',
+  './js/ilerleme.js',
+  './js/anim/equipment.js',          // hareket verisi hâlâ içe aktarıyor (2B çizim emekli, bkz. CLAUDE.md)
+  './js/anim3d/manken3d.js',
+  './js/anim3d/hareketler3d.js',
+  './js/anim3d/sahne.js',
+  './js/anim3d/webgl.js',
+  './js/vendor/three.min.js',         // three.js r186 alt kümesi (MIT) — çevrimdışı da 3B çizsin
+  './js/vendor/three-LICENSE.txt',
   './js/data/exercises.js',
   './js/data/warmup.js',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];
+
+/** ASSETS'in mutlak yolları — yayında kök '/fitset/', yerelde '/' (scope'tan çözülür) */
+const UYGULAMA_YOLLARI = new Set(ASSETS.map(a => new URL(a, self.registration.scope).pathname));
 
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
@@ -83,7 +95,16 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Diğer varlıklar: önbellek öncelikli, kaçanlar ağdan gelip önbelleğe eklenir
+  // Önbellek YALNIZ uygulamanın kendi dosyaları (ASSETS) ve fontlar içindir.
+  // ⚠️ Eskiden aynı kökenden gelen HER dosya önbelleğe alınıp önbellekten
+  // sunuluyordu — mokaplar ve araç betikleri dahil. Sürüm adı yalnız ASSETS'in
+  // içeriğinden türediği için bu dosyalar değişince önbellek YENİLENMİYOR ve
+  // tarayıcı bayat mokabı gösteriyordu (24 Eyl, iki kez: düzeltilmiş 3B mokap
+  // yerine eskisi çalıştı). Uygulamaya ait olmayan istek SW'den hiç geçmez.
+  const yol = new URL(req.url).pathname;
+  if (!UYGULAMA_YOLLARI.has(yol) && !yol.includes('/fonts/')) return;
+
+  // Uygulama varlıkları: önbellek öncelikli, kaçanlar (fontlar) ağdan gelip önbelleğe eklenir
   e.respondWith((async () => {
     const hit = await caches.match(req);
     if (hit) return hit;

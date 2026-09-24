@@ -160,10 +160,10 @@ input { font: inherit; }
 .wlist .li { flex: 1; }
 .amt { flex: none; font-size: 13px; font-weight: 600; color: var(--ink2);
   font-variant-numeric: tabular-nums; }
-.mini { flex: none; width: 80px; height: 62px; color: var(--ink); stroke: currentColor; opacity: .92; }
+.mini { flex: none; width: 92px; height: 80px; color: var(--ink); stroke: currentColor; opacity: .92; }   /* 3B figür: 80×62'de yüzsüz manken fazla küçüktü */
 .mini .eq, .mini .cbl { stroke: #4A5058; }
 .mini .gr { stroke: #242A30; }
-@media (max-height: 720px) { .mini { width: 66px; height: 50px; } }
+@media (max-height: 720px) { .mini { width: 72px; height: 60px; } }
 
 .finisher { margin: 18px 20px 0; padding: 14px 16px; border: 1px dashed var(--line2); border-radius: var(--r2); }
 .finisher h3 { font-size: 14px; font-weight: 600; margin: 0 0 3px; }
@@ -195,7 +195,10 @@ input { font: inherit; }
 /* Esneyen tek bölge — kalan boşluğun tamamını alır, kart YOK */
 .viz { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
   color: var(--ink); padding: 10px 20px 0; }
-.viz svg { width: 100%; height: 100%; }
+.viz .sahne3d { width: 100%; height: 100%; touch-action: none; cursor: grab; }   /* sürükleyerek döndürülür */
+.viz .sahne3d:active { cursor: grabbing; }
+/* 3B sahne kabı — anim3d/sahne.js içine WebGL tuvali ya da SVG yedeği koyar */
+.sahne3d > canvas, .sahne3d > svg { display: block; width: 100%; height: 100%; }
 .art { stroke: var(--fig); }
 .far { stroke: #3E444C; }
 .eq, .cbl { stroke: #4A5058; stroke-width: 3; }
@@ -204,15 +207,17 @@ input { font: inherit; }
 .ghost { stroke: #2E343B; stroke-width: 3; stroke-dasharray: 5 5; }
 .trail { stroke: #6E4148; stroke-width: 2.5; fill: none; }
 
-/* İzometrik hareketler: doğru duruş + yaygın hatalar yan yana */
-.variants { flex: 1; min-height: 0; display: flex; gap: 10px; padding: 10px 20px 0; }
-.variants figure { flex: 1; margin: 0; display: flex; flex-direction: column; min-width: 0; }
-.variants svg { flex: 1; min-height: 0; width: 100%; }
-.variants figcaption { padding-top: 6px; border-top: 1px solid var(--line); }
+/* İzometrik hareketler: doğru duruş + yaygın hatalar ALT ALTA.
+   ⚠️ Eskiden yan yanaydı: plank YATAY bir figür, 3 dar sütunda (110 px) kalçanın düşüp kalktığı
+   seçilmiyordu (24 Eyl, 3B geçişinde ölçüldü) — oysa ekranın tek işi o farkı göstermek. */
+.variants { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 20px 0; }
+.variants figure { flex: 1; min-height: 0; margin: 0; display: flex; align-items: center; gap: 12px; }
+.variants .sahne3d { flex: 1.6; min-width: 0; height: 100%; }
+.variants figcaption { flex: 1; min-width: 0; padding-left: 10px; border-left: 1px solid var(--line); }
 .variants b { display: block; font-size: 12px; font-weight: 600; margin-bottom: 2px; }
 .variants figure.ok b { color: var(--ink); }
 .variants figure:not(.ok) b { color: var(--ink3); }
-.variants figure.ok figcaption { border-top-color: var(--ink2); }
+.variants figure.ok figcaption { border-left-color: var(--ink2); }
 .variants figcaption span { display: block; font-size: 11px; line-height: 1.35; color: var(--ink3); }
 
 /* Rozetler: dolgu yok, kıl payı çerçeve — kayıt izi sessizdir */
@@ -264,6 +269,11 @@ input { font: inherit; }
 .foot { padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 10px; flex: none; }
 .foot .t-m { margin: 0; }
 .foot .t-m b { color: var(--ink); font-weight: 550; }
+/* Ağırlık önerisi: bilgi satırı, vurgu rengi yok (kırmızı yalnız canlıya ayrılı) */
+.oneri { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 12.5px; line-height: 1.4; color: var(--ink2); }
+.oneri b { color: var(--ink); font-weight: 600; }
+.oneri .b3 { flex: none; }
 .split { display: flex; gap: 10px; }
 .split .b2 { flex: 1; }
 .split .b1 { flex: 2; }
@@ -365,7 +375,7 @@ input { font: inherit; }
   display: flex; align-items: center; gap: 12px;
   max-width: calc(var(--wrap) - 32px); margin: 0 auto;
   box-shadow: 0 12px 40px rgb(0 0 0 / .6); }
-.toast.warn { border-color: var(--live); }
+.toast.warn { border-color: var(--warn); }   /* amber: kırmızı yalnız CANLI olana ayrılı (tasarım dili kural 2) */
 .toast span { flex: 1; }
 .toast button { pointer-events: auto; flex: none; border: 1px solid var(--line2); padding: 8px 12px;
   border-radius: var(--r1); font-size: 13px; min-height: 38px; }

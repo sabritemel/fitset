@@ -114,19 +114,32 @@ export class Countdown {
   }
 
   async #wake() {
-    try { this.#lock = await navigator.wakeLock?.request('screen') ?? null; }
-    catch { this.#lock = null; }        // izin yok / desteklenmiyor — sayaç yine çalışır
+    try {
+      const kilit = await navigator.wakeLock?.request('screen') ?? null;
+      // Tarayıcı kilidi SAYFA GİZLENİNCE kendiliğinden bırakır; nesne yine de
+      // elde kalır (released = true). Bırakıldığını bilmezsek geri de almayız.
+      kilit?.addEventListener?.('release', () => { if (this.#lock === kilit) this.#lock = null; });
+      this.#lock = kilit;
+    } catch { this.#lock = null; }      // izin yok / desteklenmiyor — sayaç yine çalışır
   }
-  #release() { try { this.#lock?.release(); } catch { } this.#lock = null; }
+  #release() { const k = this.#lock; this.#lock = null; try { k?.release(); } catch { } }
+
+  /** Ekran kilidi şu an GERÇEKTEN tutuluyor mu? (test ve tanı için) */
+  get awake() { return !!this.#lock && !this.#lock.released; }
 
   /**
    * Sekmeye geri dönüldüğünde çağrılır. Ekran kilidi kaybolmuş olabilir,
    * geri alınır; sayaç arka planda dolduysa bitiş burada işlenir.
+   *
+   * ⚠️ Eskiden `if (!this.#lock)` bakılıyordu. Sayfa gizlenince tarayıcı kilidi
+   * bırakıyor ama referans duruyordu → koşul yanlış, kilit HİÇ geri alınmıyordu.
+   * Bir kez başka uygulamaya geçip dönen kullanıcının ekranı dinlenme sırasında
+   * kararabiliyor, bitiş titreşimi kaçıyordu (24 Eyl, kodla bulundu).
    */
   async resume() {
     if (!this.running) return;
     if (this.remaining <= 0) { this.#loop(); return; }
-    if (!this.#lock) await this.#wake();
+    if (!this.awake) await this.#wake();
     if (!this.#raf) this.#loop();
   }
 }

@@ -7,20 +7,44 @@
  * tek vurgu rengi (yalnız CANLI olana), kart yerine kıl payı çizgi.
  * Ayrıntı: css/style.css başlığı.
  */
-import * as E from './anim/engine.js';
 import * as N from './session.js';
 import * as C from './schedule.js';
+import { dayKey } from './store.js';
 import { mmss } from './timer.js';
+import * as I from './ilerleme.js';
 
 /* ── Yardımcılar ───────────────────────────────────────────────────────── */
+
+/**
+ * TEK SAYI BİÇİMİ — Türkçe: ondalık VİRGÜL, binlik NOKTA.
+ *
+ * ⚠️ Eskiden her yer kendi biçimini seçiyordu ve aynı Geçmiş ekranında
+ * "80.8 kg" (nokta = ondalık) ile "12.870 kg" (nokta = binlik) yan yana
+ * duruyordu; odak ekranında giriş "27,5", rozet "27.5×12" diyordu. Ekranda
+ * sayı basan her yer BUNU kullanır.
+ *
+ * @param {number|null} n
+ * @param {number} [enCok=2]  en fazla ondalık hane
+ * @param {number} [enAz=0]   en az ondalık hane (kilo gibi hep 1 hane gösterilecekler için)
+ */
+export const fmt = (n, enCok = 2, enAz = 0) => (n == null || !Number.isFinite(+n)) ? '—'
+  : (+n).toLocaleString('tr-TR', { minimumFractionDigits: enAz, maximumFractionDigits: enCok });
+
+/**
+ * HTML kaçışı — VERİDEN gelip işaretlemeye giren her metin için.
+ * İçe aktarım artık kimlikleri doğruluyor (store.gecersizSeans); bu ikinci
+ * kemer: doğrulayıcı bir gün gevşerse bile sayfa kod çalıştırmasın.
+ */
+export const esc = v => String(v).replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 /** Odak ekranında aynı anda duran set rozeti sayısı; gerisi "+N" ardında. */
 export const GORUNUR_ROZET = 3;
 
-const setLabel = (s, birim) =>
-  s.type === 'time' ? `${s.seconds} sn`
-    : s.type === 'cardio' ? `${s.minutes} dk`
-      : `${s.weight ?? '—'}×${s.reps}`;
+export const setLabel = (s, birim) =>
+  s.type === 'time' ? `${fmt(s.seconds)} sn`
+    : s.type === 'cardio' ? `${fmt(s.minutes)} dk`
+      : `${fmt(s.weight)}×${fmt(s.reps)}`;
 
 /** "Geçen sefer · 3 gün önce · 35×12 · 35×12" */
 export function lastTime(ex, lastPerf, birim, bugünVar = false) {
@@ -149,7 +173,7 @@ export function listHTML(ctx) {
     ${gunSeciciHTML(ctx)}
     <div class="stat">
       <div><span class="t-l">Set</span><b>${p.done}<i>/${p.total}</i></b></div>
-      <div><span class="t-l">Hacim</span><b>${v.kg.toLocaleString('tr-TR')}<i>${settings.unit}</i></b></div>
+      <div><span class="t-l">Hacim</span><b>${fmt(v.kg, 0)}<i>${settings.unit}</i></b></div>
       <div><span class="t-l">Süre</span><b>${dk}<i>dk</i></b></div>
     </div>
     ${carryHTML(yarim)}
@@ -168,25 +192,23 @@ export function listHTML(ctx) {
 
 /* ══ ODAK EKRANI ══════════════════════════════════════════════════════════ */
 
-/** Animasyon sahnesi ya da izometrik hareketler için doğru/yanlış duruşlar */
+/**
+ * Hareket görseli — 3B sahne kapları. Çizimi app.js yapar (anim3d/sahne.js): ekran HTML'i
+ * her durum değişikliğinde yeniden kurulur, çizim ise kare kare; ikisi ayrı tutulur.
+ * İzometrik harekette (plank) oynatacak hareket yok — ama GÖRSEL ŞART: öğretici olan tek
+ * doğru kare değil, doğru ile yanlış arasındaki fark (3B varyantlar, sıra metinlerle aynı —
+ * tools/fizik-denetimi.js sınar).
+ */
 function vizHTML(ex) {
   if (ex.hold) {
-    // Oynatacak hareket yok — ama GÖRSEL ŞART. Öğretici olan tek doğru kare
-    // değil, doğru ile yanlış arasındaki fark.
-    return `<div class="variants">${ex.variants.map(v => {
-      const s = E.skeleton(v.pose, ex.view);
-      return `<figure class="${v.ok ? 'ok' : ''}">
-        <svg viewBox="0 40 260 155" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <g class="art" fill="none" stroke-width="4" stroke-linecap="round"
-             stroke-linejoin="round">${ex.eq(s) + E.figure(s, ex)}</g></svg>
+    return `<div class="variants">${ex.variants.map((v, i) => `<figure class="${v.ok ? 'ok' : ''}">
+        <div class="sahne3d" data-varyant="${i}" aria-hidden="true"></div>
         <figcaption><b>${v.ok ? '✓' : '✗'} ${v.label}</b><span>${v.note}</span></figcaption>
-      </figure>`;
-    }).join('')}</div>`;
+      </figure>`).join('')}</div>`;
   }
   return `<div class="viz">
-    <svg viewBox="0 0 260 200" id="fig" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-      <g class="art" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></g>
-    </svg>
+    <div class="sahne3d" id="fig3d" role="img" aria-label="${esc(ex.tr)} — hareket çizimi; sürükleyerek döndürülür"
+         title="Sürükleyerek döndür · çift dokunuş: ilk açı"></div>
   </div>`;
 }
 
@@ -321,10 +343,7 @@ export function warmupHTML(ctx) {
   const satır = adımlar.map(w => `<div class="li" data-warm="${w.id}">
       <span class="nm"><span class="t-h2">${w.ad}</span><span class="t-m">${w.not}</span></span>
       <span class="amt">${w.miktar}</span>
-      <svg class="mini" data-anim="${w.id}" viewBox="10 25 240 170"
-           preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        <g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></g>
-      </svg>
+      <div class="mini sahne3d" data-anim="${w.id}" aria-hidden="true"></div>
     </div>`).join('');
 
   return `
@@ -346,6 +365,24 @@ export function warmupHTML(ctx) {
       <button class="b1" data-act="warmup-done">Isınma bitti — 1. harekete geç →</button>
       <p class="t-m" style="text-align:center">Sete ve hacme sayılmaz.</p>
     </div>`;
+}
+
+/**
+ * AĞIRLIK ÖNERİSİ satırı — "Geçen sefer"in altında, sessiz tonda. Vurgu rengi YOK
+ * (kırmızı yalnız canlı olana ayrılı); öneri bir bilgi, alarm değil.
+ * Bugün önerilen ağırlığa zaten çıkıldıysa gizlenir.
+ */
+export function oneriHTML(ex, ctx) {
+  const o = ctx.oneri?.[ex.id];
+  const bugun = ctx.session.entries.find(e => e.exerciseId === ex.id)?.sets;
+  if (!I.oneriGecerliMi(o, bugun)) return '';
+  const birim = ctx.settings.unit;
+  if (o.tur === 'agirlik') return `<div class="oneri">
+      <span>İki seanstır ${o.setler} × ${o.tekrar} tamam — <b>${fmt(o.agirlik)} ${birim}</b> dene</span>
+      ${ctx.draft.weight === o.agirlik ? '' : '<button class="b3" data-act="oneri-uygula">uygula</button>'}
+    </div>`;
+  return `<div class="oneri"><span>İki seanstır ${fmt(o.agirlik)} ${birim} ile hedef tamam. Sonraki ağırlık
+      adımı büyük (%${Math.round(o.adimOrani * 100)}) — önce <b>${o.hedefTekrar} tekrara</b> çık.</span></div>`;
 }
 
 export function focusHTML(ctx) {
@@ -394,6 +431,7 @@ export function focusHTML(ctx) {
     ${girisHTML(ex, ctx)}
     <div class="foot">
       <p class="t-m">${lastTime(ex, lastPerf, settings.unit, q.sets.length > 0)}</p>
+      ${oneriHTML(ex, ctx)}
       ${q.tamam
         ? `<div class="split">
              <button class="b2" data-act="save">Fazladan</button>
@@ -444,7 +482,7 @@ function sparkHTML(vals, { w = 280, h = 52 } = {}) {
   const Y = v => m + (h - 2 * m) - ((v - alt) / (ust - alt)) * (h - 2 * m);
   const nokta = vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img"
-      aria-label="${vals.length} ölçüm: ${vals[0]} → ${vals.at(-1)}">
+      aria-label="${vals.length} ölçüm: ${fmt(vals[0])} → ${fmt(vals.at(-1))}">
     <polyline points="${nokta}"/>
     <circle cx="${X(vals.length - 1).toFixed(1)}" cy="${Y(vals.at(-1)).toFixed(1)}" r="3.5"/>
   </svg>`;
@@ -456,7 +494,7 @@ const kiloDelta = (kilolar) => {
   const gun = Math.round((kilolar.at(-1).ts - kilolar[0].ts) / 86400000);
   const sure = gun >= 14 ? `${Math.round(gun / 7)} haftada` : `${gun} günde`;
   if (Math.abs(d) < 0.05) return `<span class="delta">değişmedi · ${sure}</span>`;
-  return `<span class="delta">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)} kg · ${sure}</span>`;
+  return `<span class="delta">${d > 0 ? '+' : '−'}${fmt(Math.abs(d), 1, 1)} kg · ${sure}</span>`;
 };
 
 export function historyHTML(ctx) {
@@ -466,14 +504,14 @@ export function historyHTML(ctx) {
   const kiloBolum = `
     <div class="sect">
       <p class="t-l">Kilo</p>
-      ${son ? `<div class="hero"><b>${son.kg.toFixed(1)}</b><i>kg</i> ${kiloDelta(kilolar)}</div>
+      ${son ? `<div class="hero"><b>${fmt(son.kg, 1, 1)}</b><i>kg</i> ${kiloDelta(kilolar)}</div>
                ${sparkHTML(kilolar.map(k => k.kg))}
                <p class="hint">${kilolar.length} ölçüm · son giriş ${C.relativeLabel(new Date(son.ts))}</p>`
             : '<p class="hint">Henüz kilo kaydı yok. Aşağıya yazınca burada takip edilir.</p>'}
       <div class="frow kilogir">
         <label for="h-weight">Bugün</label>
         <input type="number" id="h-weight" inputmode="decimal" step="0.1" min="20" max="400"
-               value="${son && son.d === (new Date()).toISOString().slice(0, 10) ? son.kg : ''}"
+               value="${son && son.d === dayKey() ? son.kg : ''}"
                placeholder="—" aria-label="Bugünkü kilo">
         <span class="unit">kg</span>
         <button class="b3" data-act="weight-save">Kaydet</button>
@@ -484,12 +522,12 @@ export function historyHTML(ctx) {
     <div class="sect">
       <p class="t-l">Son seanslar</p>
       ${gecmis.length ? `<div class="hrows">${gecmis.map(r => `
-        <button class="hrow" data-seans="${r.id}">
+        <button class="hrow" data-seans="${esc(r.id)}">
           <span class="hdate">${C.fmtShort(new Date(r.at))}</span>
           <span class="hday">${N.DAY_NAMES[r.dayIndex].split(' — ')[0]}</span>
           <span class="hcount">${r.kayitsiz ? '<em class="kyt">kayıtsız</em>'
             : `${r.yapilan}/${r.toplam}${r.yarim ? ' <em>yarım</em>' : ''}`}</span>
-          <span class="hvol">${r.kayitsiz ? '—' : r.hacim.kg.toLocaleString('tr-TR') + ' ' + settings.unit}</span>
+          <span class="hvol">${r.kayitsiz ? '—' : fmt(r.hacim.kg, 0) + ' ' + settings.unit}</span>
         </button>`).join('')}</div>`
         : '<p class="hint">Henüz tamamlanmış seans yok.</p>'}
     </div>`;
@@ -501,7 +539,7 @@ export function historyHTML(ctx) {
         <div class="prog">
           <span class="prog-ad" lang="en">${p.ex.en}</span>
           <span class="prog-spark">${sparkHTML(p.seri.map(s => s.v), { w: 96, h: 26 })}</span>
-          <span class="prog-say">${p.seri[0].v} → <b>${p.seri.at(-1).v}</b> ${p.birim}</span>
+          <span class="prog-say">${fmt(p.seri[0].v)} → <b>${fmt(p.seri.at(-1).v)}</b> ${p.birim}</span>
         </div>`).join('')}</div>
         <p class="hint">${ilerleme.length} harekette <b>en ağır set</b> izleniyor; çizgi en fazla son ${Math.max(...ilerleme.map(p => p.seri.length))} seansı gösterir. Ortalama yerine en ağır set seçildi — hafif setler gerçek artışı gizlerdi.</p>`
         : '<p class="hint">İlerleme grafiği için bir hareketin en az iki seansta kaydı gerekiyor.</p>'}
@@ -531,22 +569,28 @@ export function sessionEditHTML(ctx) {
   const bloklar = N.exercisesFor(d.dayIndex).map(ex => {
     const e = d.entries.find(x => x.exerciseId === ex.id);
     if (!e?.sets.length) return '';
+    /* Numaralar odak ekranıyla AYNI kurala uyar: yalnız ÇALIŞMA setleri
+       sayılır, ısınma numarasızdır. Eskiden dizi sırası (i + 1) basılıyordu;
+       ısınmayla başlayan harekette odak "ısınma, 1, 2, 3" derken burası
+       "ıs, 2, 3, 4" diyordu. `i` yalnız veri adresi olarak kalır. */
+    let no = 0;
     const satirlar = e.sets.map((s, i) => {
       const alanlar = s.type === 'time'
         ? [['seconds', s.seconds, 'sn', 5]]
         : s.type === 'cardio'
           ? [['minutes', s.minutes, 'dk', 5]]
           : [['weight', s.weight, settings.unit, 2.5], ['reps', s.reps, 'tekrar', 1]];
+      const et = s.warmup ? 'ısınma' : `${++no}.`;
       return `<div class="eset">
-        <span class="eno">${s.warmup ? 'ıs' : i + 1}</span>
+        <span class="eno">${s.warmup ? 'ıs' : no}</span>
         ${alanlar.map(([alan, deger, birim, adim]) => `
           <label class="efield">
             <input type="number" inputmode="decimal" step="${adim}" min="0"
                    value="${deger ?? ''}" placeholder="—"
-                   data-eset="${ex.id}:${i}:${alan}" aria-label="${ex.tr} ${i + 1}. set ${birim}">
+                   data-eset="${ex.id}:${i}:${alan}" aria-label="${ex.tr} ${et} set ${birim}">
             <span class="eunit">${birim}</span>
           </label>`).join('')}
-        <button class="esil" data-eset-sil="${ex.id}:${i}" aria-label="${i + 1}. seti sil">sil</button>
+        <button class="esil" data-eset-sil="${ex.id}:${i}" aria-label="${et} seti sil">sil</button>
       </div>`;
     }).join('');
     return `<div class="eex">
@@ -565,7 +609,7 @@ export function sessionEditHTML(ctx) {
     <div class="sect">
       <p class="hint">Bir değeri düzeltmek için üstüne yaz — alandan çıkınca kaydedilir.
         Hacim, "geçen sefer" ve ilerleme grafiği kendiliğinden yeniden hesaplanır.</p>
-      <p class="hint"><b>${v.sets} set · ${v.kg.toLocaleString('tr-TR')} ${settings.unit}</b></p>
+      <p class="hint"><b>${v.sets} set · ${fmt(v.kg, 0)} ${settings.unit}</b></p>
     </div>
     <div class="eex-list">${bloklar}</div>
     <div class="sect">
@@ -648,5 +692,7 @@ export function settingsHTML(ctx) {
       </div>
     </div>
 
-    <div class="grow"></div>`;
+    <div class="grow"></div>
+    <p class="hint lisans">Hareket çizimleri <a href="js/vendor/three-LICENSE.txt" target="_blank" rel="noopener">three.js</a>
+      ile yapılır (MIT lisansı).</p>`;
 }

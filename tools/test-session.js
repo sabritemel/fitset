@@ -610,6 +610,156 @@ console.log('24) SON SET SİLİNİRSE SEANS SİLİNİR — Sabri kararı (6 Eyl)
   ok((await N.restoreSession('bosal')).status === 'done', 'geri getirildi');
 }
 
+console.log('');
+console.log('25) ⭐ İŞLEMSEL KAYIT — yazma başarısızsa HAYALET SET YOK (24 Eyl, tarayıcıda üretilen hata)');
+{
+  await S.driver.clear('sessions');
+  const s = S.newSession(0);
+  const veri = { type: 'weight_reps', weight: 30, reps: 12, warmup: false };
+  const asil = S.driver.put;
+  S.driver.put = async () => { throw new Error('kota doldu (simüle)'); };
+  let firladi = 0;
+  for (let k = 0; k < 2; k++) {                      // kullanıcı "basmadım galiba" deyip iki kez basıyor
+    try { await N.transact(s, x => N.recordSet(x, 'db_two_arm_row', veri)); } catch { firladi++; }
+  }
+  S.driver.put = asil;
+  ok(firladi === 2, 'yazma hatası ÇAĞIRANA fırlıyor (arayüz kullanıcıya söyleyebilsin)');
+  ok(!N.hasAnySet(s), 'başarısız yazmalar belleği DEĞİŞTİRMEDİ');
+  await N.transact(s, x => N.recordSet(x, 'db_two_arm_row', veri));
+  const disk = await S.getSession(s.id);
+  ok(s.entries[0].sets.length === 1, 'depolama düzelince TEK dokunuş = TEK set (eskiden 3 yazıyordu)');
+  ok(disk.entries[0].sets.length === 1, 'diskte de tek set');
+  ok(s.entries[0].sets[0].ts === disk.entries[0].sets[0].ts, 'bellek ile disk aynı seti taşıyor');
+}
+
+console.log('');
+console.log('26) ⭐ İLK SETİ GERİ ALMAK DİSKTEN DE SİLER (24 Eyl, ölçüldü: bellekte 0 · diskte 1)');
+{
+  await S.driver.clear('sessions');
+  const s = S.newSession(0);
+  await N.transact(s, x => N.recordSet(x, 'bb_bench_press', { type: 'weight_reps', weight: 40, reps: 12, warmup: false }));
+  ok(!!(await S.getSession(s.id)), 'ilk set yazıldı');
+  const geri = await N.transact(s, x => N.undoLastSet(x, 'bb_bench_press'));
+  ok(geri?.weight === 40, 'geri alınan set döndü (geri getir için)');
+  ok(!(await S.getSession(s.id)), 'boşalan seans diskte KALMADI');
+  const acilis = await N.startOrResume();
+  ok(!acilis.resumed && !N.hasAnySet(acilis.session), 'yeniden açılışta geri alınan set GERİ GELMİYOR');
+
+  // Karar bayrağı varsa seans boşalsa da yazılı kalmalı (ısınma işareti kaybolmasın)
+  const w = S.newSession(0); w.warmupDone = true;
+  await N.transact(w, x => N.recordSet(x, 'bb_bench_press', { type: 'weight_reps', weight: 40, reps: 12, warmup: false }));
+  await N.transact(w, x => N.undoLastSet(x, 'bb_bench_press'));
+  ok((await S.getSession(w.id))?.warmupDone === true, 'ısınma işaretli seans set geri alınınca SİLİNMİYOR');
+}
+
+console.log('');
+console.log('27) TEK SET SİLMENİN GERİ ALI — aynı yerine döner');
+{
+  const s = S.newSession(0); s.status = 'done'; s.startedAt = s.finishedAt = 1;
+  for (const kg of [40, 42.5, 45]) N.recordSet(s, 'bb_bench_press', { type: 'weight_reps', weight: kg, reps: 12, warmup: false });
+  const r = N.deleteSet(s, 'bb_bench_press', 1);
+  N.restoreSet(s, 'bb_bench_press', 1, r.silinen);
+  ok(s.entries[0].sets.map(x => x.weight).join() === '40,42.5,45', 'ortadaki set AYNI YERİNE döndü');
+  const t = S.newSession(0);
+  N.recordSet(t, 'plank', { type: 'time', seconds: 15, warmup: false });
+  const r2 = N.deleteSet(t, 'plank', 0);
+  ok(t.entries.length === 0, 'son set gidince egzersiz kaydı temizlendi');
+  N.restoreSet(t, 'plank', 0, r2.silinen);
+  ok(t.entries[0]?.sets[0]?.seconds === 15, 'temizlenen egzersiz kaydı geri kuruldu');
+}
+
+console.log('');
+console.log('28) GÜNCELLEME KARARI — yalnız KAYBEDİLECEK ŞEY YOKKEN uygula');
+{
+  const K = N.guncellemeKarari;
+  ok(K({ ekran: 'list', seansSetli: false, sayacCalisiyor: false }) === 'uygula', 'listede, boş seans, sayaç yok → uygula');
+  ok(K({ ekran: 'warmup', seansSetli: false, sayacCalisiyor: false }) === 'bekle', 'ısınma ekranında → BEKLE (eskiden listeye atıyordu)');
+  ok(K({ ekran: 'focus', seansSetli: false, sayacCalisiyor: false }) === 'bekle', 'odakta (yazılmış ağırlık olabilir) → bekle');
+  ok(K({ ekran: 'list', seansSetli: false, sayacCalisiyor: true }) === 'bekle', 'Plank/dinlenme sayacı çalışırken → bekle');
+  ok(K({ ekran: 'list', seansSetli: true, sayacCalisiyor: false }) === 'sor', 'seansta set varsa → SOR (kararı kullanıcı verir)');
+  ok(K({ ekran: 'focus', seansSetli: true, sayacCalisiyor: true }) === 'sor', 'set varsa ekran fark etmez → sor');
+}
+
+console.log('');
+console.log('29) SAYI BİÇİMİ — Türkçe tek biçim (virgül ondalık, nokta binlik)');
+{
+  const UI = await import('../js/ui.js');
+  ok(UI.fmt(27.5) === '27,5', `ağırlık: ${UI.fmt(27.5)}`);
+  ok(UI.fmt(80.75, 1, 1) === '80,8' && UI.fmt(80, 1, 1) === '80,0', `kilo hep tek hane: ${UI.fmt(80.75, 1, 1)} · ${UI.fmt(80, 1, 1)}`);
+  ok(UI.fmt(12870, 0) === '12.870', `hacim binlik: ${UI.fmt(12870, 0)}`);
+  ok(UI.fmt(null) === '—' && UI.fmt(NaN) === '—', 'boş değer "—"');
+  ok(UI.setLabel({ type: 'weight_reps', weight: 27.5, reps: 12 }) === '27,5×12', `rozet: ${UI.setLabel({ type: 'weight_reps', weight: 27.5, reps: 12 })} (eskiden 27.5×12)`);
+  ok(UI.esc('"><img src=x onerror=alert(1)>') === '&quot;&gt;&lt;img src=x onerror=alert(1)&gt;', 'HTML kaçışı');
+
+  // Düzenleme ekranı numaraları odak ekranıyla aynı kurala uymalı
+  const d = S.newSession(0); d.status = 'done'; d.startedAt = d.finishedAt = 1;
+  N.recordSet(d, 'bb_bench_press', { type: 'weight_reps', weight: 20, reps: 10, warmup: true });
+  for (let k = 0; k < 3; k++) N.recordSet(d, 'bb_bench_press', { type: 'weight_reps', weight: 40, reps: 12, warmup: false });
+  const html = UI.sessionEditHTML({ duzenlenen: d, settings: { unit: 'kg' } });
+  const nolar = [...html.matchAll(/<span class="eno">([^<]*)<\/span>/g)].map(m => m[1]).join(',');
+  ok(nolar === 'ıs,1,2,3', `ısınma numarasız, çalışma setleri 1'den: ${nolar} (eskiden ıs,2,3,4)`);
+
+  // Geçmiş satırı: kimlik kaçışlı basılır
+  const h = UI.historyHTML({ settings: { unit: 'kg' }, gecmis: [{ id: '"><b>x</b>', at: 1, dayIndex: 0, yapilan: 9, toplam: 9, kayitsiz: false, yarim: false, hacim: { kg: 12870 } }] });
+  ok(!h.includes('"><b>x</b>') && h.includes('12.870 kg'), 'geçmişte kimlik kaçışlı, hacim Türkçe biçimli');
+}
+
+
+console.log('');
+console.log('30) ⭐ AĞIRLIK ARTIRMA ÖNERİSİ — iki seans kuralı (Sabri, 24 Eyl; ACSM 2009 + çift ilerleme)');
+{
+  const I = await import('../js/ilerleme.js');
+  const ex = id => N.byId[id];
+  const seans = (id, setler, ek = {}) => ({ id: 's' + Math.random(), status: 'done', entries: [{ exerciseId: id, sets: setler }], ...ek });
+  const set = (w, r, warmup = false) => ({ type: 'weight_reps', weight: w, reps: r, warmup });
+  const uc = (w, r) => [set(w, r), set(w, r), set(w, r)];
+  const H = { sets: 3, reps: 12 };
+
+  // Bileşik, bar: 40 × 1,05 = 42 → 2,5'e yukarı → 42,5
+  let o = I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', uc(40, 12)), seans('bb_bench_press', uc(40, 12))], H);
+  ok(o?.tur === 'agirlik' && o.agirlik === 42.5, `iki seans 3×12 @40 → ${o?.agirlik} kg öneriliyor (bileşik %5, adım 2,5)`);
+  ok(I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', uc(40, 12))], H) === null, 'TEK seans yetmez (iki seans şartı)');
+  ok(I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', [set(40, 12), set(40, 12), set(40, 11)]), seans('bb_bench_press', uc(40, 12))], H) === null, 'bir set hedefin altındaysa öneri YOK');
+  ok(I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', uc(40, 12)), seans('bb_bench_press', uc(37.5, 12))], H) === null, 'iki seansın ağırlığı farklıysa öneri YOK (aynı ağırlıkta iki kez)');
+  ok(I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', [set(40, 12), set(40, 12)]), seans('bb_bench_press', uc(40, 12))], H) === null, 'hedef set sayısı tamamlanmadıysa öneri YOK');
+  ok(I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', [set(40, 12), set(42.5, 12), set(40, 12)]), seans('bb_bench_press', uc(40, 12))], H) === null, 'seans içinde farklı ağırlıklar → öneri YOK');
+  o = I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', [set(20, 10, true), ...uc(40, 12)]), seans('bb_bench_press', uc(40, 12))], H);
+  ok(o?.agirlik === 42.5, 'ısınma seti sayılmıyor');
+  o = I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', uc(40, 12)), seans('x', [], { kayitsiz: true }), seans('bb_bench_press', uc(40, 12))], H);
+  ok(o?.agirlik === 42.5, 'kayıtsız gün ve o hareketi içermeyen seans atlanıyor');
+  ok(I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', uc(40, 12)), seans('bb_bench_press', uc(40, 12)), seans('bb_bench_press', uc(40, 8))], H)?.agirlik === 42.5, 'yalnız SON İKİ seans bakılıyor (eskisi önemsiz)');
+
+  // İzole, dambıl: 10 → 12,5 = %25 adım → önce tekrar
+  o = I.oneri(ex('db_bench_fly'), [seans('db_bench_fly', uc(10, 12)), seans('db_bench_fly', uc(10, 12))], H);
+  ok(o?.tur === 'tekrar' && o.hedefTekrar === 14, `büyük adım (%${Math.round((o?.adimOrani ?? 0) * 100)}) → önce ${o?.hedefTekrar} tekrar, ağırlık önerilmiyor`);
+  o = I.oneri(ex('db_bench_fly'), [seans('db_bench_fly', uc(10, 14)), seans('db_bench_fly', uc(10, 14))], H);
+  ok(o?.tur === 'agirlik' && o.agirlik === 12.5, 'büyük adımda üst+2 tekrar tutunca ağırlık öneriliyor (12,5)');
+  o = I.oneri(ex('db_bench_fly'), [seans('db_bench_fly', uc(30, 12)), seans('db_bench_fly', uc(30, 12))], H);
+  ok(o?.agirlik === 32.5, `izole %2,5: 30 → ${o?.agirlik} (adım 2,5, oran %8 ≤ %10)`);
+
+  // Oranı AYIRT EDEN ağırlıklar: 40'ta %5 ile %2,5 aynı sonuca yuvarlanıyordu (42,5), test oranı görmüyordu
+  o = I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', uc(60, 12)), seans('bb_bench_press', uc(60, 12))], H);
+  ok(o?.agirlik === 65, `bileşik %5: 60 → ${o?.agirlik} (izole oranla 62,5 olurdu)`);
+  o = I.oneri(ex('db_bench_fly'), [seans('db_bench_fly', uc(60, 12)), seans('db_bench_fly', uc(60, 12))], H);
+  ok(o?.agirlik === 62.5, `izole %2,5: 60 → ${o?.agirlik} (bileşik oranla 65 olurdu)`);
+
+  // Makine: 50 × 1,05 = 52,5 → 5'e yukarı → 55 (oran %10, sınırda — büyük sayılmaz)
+  o = I.oneri(ex('machine_incline_press'), [seans('machine_incline_press', uc(50, 12)), seans('machine_incline_press', uc(50, 12))], H);
+  ok(o?.agirlik === 55, `makine adımı 5: 50 → ${o?.agirlik}`);
+
+  // Kapsam dışı: süreli ve vücut ağırlığı hareketleri
+  ok(I.oneri(ex('plank'), [], H) === null, 'süreli hareket (plank) için öneri yok');
+  ok(I.oneri(ex('lunge'), [seans('lunge', uc(0, 12)), seans('lunge', uc(0, 12))], H) === null, 'vücut ağırlığı hareketi için öneri yok');
+
+  // Hedef tekrar kullanıcının kendi hedefinden gelir (override)
+  ok(I.oneri(ex('bb_bench_press'), [seans('bb_bench_press', uc(40, 12)), seans('bb_bench_press', uc(40, 12))], { sets: 3, reps: 15 }) === null, 'hedef 15 tekrarken 12 tekrar yetmez (kullanıcının hedefi)');
+
+  // Bugün önerilen ağırlığa çıkıldıysa öneri gizlenir
+  const o2 = { tur: 'agirlik', agirlik: 42.5 };
+  ok(I.oneriGecerliMi(o2, [set(40, 12)]) === true, 'bugün hâlâ eski ağırlıktaysa öneri duruyor');
+  ok(I.oneriGecerliMi(o2, [set(42.5, 10)]) === false, 'bugün önerilen ağırlığa çıkıldıysa öneri GİZLENİYOR');
+  ok(I.oneriGecerliMi(o2, [set(45, 12, true)]) === true, 'ısınma setinde çıkmak sayılmıyor');
+}
 
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);
