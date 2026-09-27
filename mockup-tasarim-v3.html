@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitSet Tasarım Dili 3</title>
+<meta name="description" content="FitSet tasarım dili 3 önerisi: bugünkü ekranlarla yan yana mokap.">
+<!-- MOKAP: uygulama koduna dokunmaz. Öneri stilleri yalnız .v3 kabının içinde tanımlı;
+     "bugün" görselleri canlı uygulamadan alınmış ekran görüntüleri (docs/tasarim-2026-09-27/).
+     Öneri ekranlarındaki figürler uygulamanın GERÇEK 3B motoruyla çizilir (js/anim3d/sahne.js). -->
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* ══ ÖNERİ: TASARIM DİLİ 3 — "Grafit" ═══════════════════════════════════════
+   2. sürümün üç kararı KORUNUR: tek aile (Archivo) · tek vurgu · kart yok.
+   Değişen: ölçek (18 punto → 7), ton (üç gri net ayrışır, sönük ton azınlık),
+   şekil (tek düğme dili, dolgu > çizgi), dokunma (≥44 px, ana eylem 56),
+   seçili durum ters dolguyla, küçük harfli etiketler, çizgisel ikon seti. */
+:root, .v3 {
+  --bg: #0B0C0E;
+  --s1: #141619;           /* tonlu grup: seçili satır, kontroller */
+  --s2: #1B1E22;           /* yükseltilmiş kontrol */
+  --s3: #24282D;           /* basılı */
+  --line: rgba(255, 255, 255, .07);
+  --line2: rgba(255, 255, 255, .12);
+  --t1: #D2D6DC;           /* 13,4:1 — birincil (uygulamada parlaklık tavanı 0,70 için #DADDE2'den indirildi) */
+  --t2: #A2A8B0;           /*  8,1:1 — ikincil (yeni varsayılan "sönük") */
+  --t3: #7F868F;           /*  5,3:1 zeminde · 4,55:1 en koyu yüzeyde (s2) — yalnız birim, sıra no, dipnot */
+  --btn: #D4D8DE;          /* ana eylem dolgusu — ekranın en parlak yüzeyi, tavanın altında */
+  --on-btn: #0B0C0E;
+  --acc: #F06A5D;          /* vurgu: yalnız CANLI ve ŞİMDİ olan */
+  --acc-soft: color-mix(in oklab, var(--acc) 16%, transparent);
+  --acc-line: color-mix(in oklab, var(--acc) 55%, transparent);
+  --warn: #D9AE63;
+  --r-s: 10px; --r-m: 14px; --r-l: 18px;
+  --f-xs: 12px; --f-sm: 14px; --f-md: 16px; --f-lg: 18px; --f-xl: 22px; --f-2xl: 32px; --f-hero: 80px;
+  --w-reg: 450; --w-med: 560; --w-bold: 650;
+}
+body[data-vurgu="turuncu"] { --acc: #FF8B3E; }
+body[data-vurgu="buz"] { --acc: #7DC3EE; }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body { background: #060708; color: var(--t1); font-family: 'Archivo', system-ui, sans-serif;
+  font-size: 16px; line-height: 1.5; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── SUNUM KABUĞU (mokabın kendisi, ürün değil) ─────────────────────────── */
+.sayfa { max-width: 1180px; margin: 0 auto; padding: 40px 24px 96px; }
+.sayfa > header h1 { font-size: 34px; font-weight: 650; letter-spacing: -.025em; margin: 0 0 8px; text-wrap: balance; }
+.sayfa > header p { color: var(--t2); max-width: 70ch; margin: 0 0 20px; }
+.secici { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 0; }
+.secici span { color: var(--t2); font-size: 14px; margin-right: 4px; }
+.secici button { height: 40px; padding: 0 16px; border-radius: 999px; background: var(--s1); color: var(--t2);
+  font-size: 15px; font-weight: var(--w-med); display: inline-flex; align-items: center; gap: 8px; }
+.secici button i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.secici button[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+
+.bolum { margin-top: 72px; }
+.bolum > h2 { font-size: 24px; font-weight: 650; letter-spacing: -.02em; margin: 0 0 6px; }
+.bolum > p.giris { color: var(--t2); max-width: 72ch; margin: 0 0 24px; }
+
+.bulgular { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.bulgu { background: var(--s1); border-radius: var(--r-l); padding: 18px 20px; }
+.bulgu b { display: block; font-size: 32px; font-weight: 650; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.bulgu b small { font-size: 16px; color: var(--t2); font-weight: var(--w-med); letter-spacing: 0; }
+.bulgu span { display: block; color: var(--t2); font-size: 14px; margin-top: 6px; }
+
+.ikili { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.ikili > * { min-width: 0; }
+@media (max-width: 860px) { .ikili { grid-template-columns: 1fr; } }
+.kutu { background: var(--s1); border-radius: var(--r-l); padding: 20px; }
+.kutu h3 { font-size: 15px; font-weight: var(--w-med); color: var(--t2); margin: 0 0 14px; }
+
+/* tipografi karşılaştırması */
+.puntolar { display: flex; align-items: flex-end; gap: 4px; height: 90px; }
+.puntolar i { flex: 1; background: var(--t3); border-radius: 3px 3px 0 0; opacity: .8; }
+.puntolar i.v { background: var(--t1); opacity: 1; }
+.olcek { display: flex; flex-direction: column; gap: 10px; }
+.olcek div { display: flex; align-items: baseline; gap: 14px; }
+.olcek code { flex: none; width: 92px; color: var(--t3); font-size: 12px; font-family: ui-monospace, monospace; }
+
+/* renk tonları */
+.tonlar { display: flex; flex-direction: column; gap: 10px; }
+.ton { display: flex; align-items: center; gap: 12px; }
+.ton .ornek { width: 44px; height: 44px; border-radius: 12px; flex: none; border: 1px solid var(--line); }
+.ton .ad { flex: 1; font-size: 15px; }
+.ton .ad small { display: block; color: var(--t3); font-size: 12px; }
+.ton .pay { width: 120px; height: 8px; border-radius: 4px; background: var(--s3); overflow: hidden; }
+.ton .pay i { display: block; height: 100%; background: var(--t2); }
+.ton .yuzde { width: 44px; text-align: right; font-size: 13px; color: var(--t2); font-variant-numeric: tabular-nums; }
+
+/* ekran karşılaştırması */
+.ekran { margin-top: 56px; }
+.ekran > h3 { font-size: 19px; font-weight: 650; margin: 0 0 4px; letter-spacing: -.015em; }
+.ekran > p { color: var(--t2); margin: 0 0 18px; max-width: 76ch; font-size: 15px; }
+.ekran > ul { color: var(--t2); margin: 0 0 18px; padding-left: 20px; font-size: 15px; max-width: 80ch; }
+.ekran > ul li { margin-bottom: 4px; }
+.ekran > ul b { color: var(--t1); font-weight: var(--w-med); }
+.yanyana { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.yanyana figure { margin: 0; }
+.yanyana figcaption { font-size: 13px; color: var(--t2); margin: 0 0 10px; font-weight: var(--w-med); }
+.cerceve { width: min(390px, calc(100vw - 48px)); height: 844px; border-radius: 34px; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--line2); position: relative;
+  box-shadow: 0 30px 80px rgb(0 0 0 / .55); }
+.cerceve.kaydir { overflow-y: auto; scrollbar-width: none; }
+.cerceve.kaydir::-webkit-scrollbar { display: none; }
+.cerceve > img { display: block; width: 100%; }
+
+/* ══ ÖNERİ BİLEŞENLERİ ═══════════════════════════════════════════════════ */
+.v3 { background: var(--bg); color: var(--t1); font-size: var(--f-md); font-weight: var(--w-reg); line-height: 1.45;
+  display: flex; flex-direction: column; min-height: 100%; }
+.v3.sabit { height: 100%; }
+.v3 .num { font-variant-numeric: tabular-nums; }
+.v3 b, .v3 strong { font-weight: var(--w-bold); }   /* tarayıcı varsayılanı 700 → ölçeğin kalın basamağı */
+
+/* Üst çubuk */
+.v3 .ust { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 0; flex: none; }
+.v3 .ib { width: 44px; height: 44px; border-radius: 50%; background: var(--s1); color: var(--t1);
+  display: grid; place-items: center; flex: none; }
+.v3 .ib:active { background: var(--s3); }
+.v3 .ust .orta { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.v3 .ust .orta b { font-size: var(--f-sm); font-weight: var(--w-med); color: var(--t2); font-variant-numeric: tabular-nums; }
+.v3 .seritler { display: flex; gap: 3px; width: 132px; }
+.v3 .seritler i { flex: 1; height: 4px; border-radius: 2px; background: var(--line2); }
+.v3 .seritler i.f { background: var(--t2); }
+.v3 .seritler i.c { background: var(--acc); }
+
+/* Başlıklar */
+.v3 .tarih { font-size: var(--f-sm); color: var(--t2); font-weight: var(--w-med); }
+.v3 .gun-btn { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; }
+.v3 .gun-btn h1 { font-size: var(--f-2xl); font-weight: var(--w-bold); letter-spacing: -.03em; margin: 0; line-height: 1.1; }
+.v3 .gun-btn .ib { width: 32px; height: 32px; background: var(--s2); color: var(--t2); }
+.v3 .kas { color: var(--t2); font-size: var(--f-md); margin-top: 2px; }
+.v3 .gunad { font-size: var(--f-2xl); font-weight: var(--w-bold); letter-spacing: -.03em; line-height: 1.12; margin: 10px 0 0; text-wrap: balance; }
+.v3 .baslik h1 { font-size: var(--f-xl); font-weight: var(--w-bold); letter-spacing: -.02em; margin: 0; line-height: 1.15; }
+.v3 .baslik p { margin: 2px 0 0; color: var(--t2); font-size: var(--f-sm); }
+.v3 .etiket { font-size: var(--f-sm); font-weight: var(--w-med); color: var(--t2); letter-spacing: .005em; }
+
+/* Bilgi notu: paragraf değil tek satırlık, ikonlu */
+.v3 .not { display: flex; gap: 10px; align-items: flex-start; font-size: var(--f-sm); color: var(--t2);
+  background: var(--s1); border-radius: var(--r-m); padding: 11px 14px; }
+.v3 .not .i { width: 18px; height: 18px; margin-top: 1px; color: var(--warn); }
+.v3 .not b { color: var(--t1); font-weight: var(--w-med); }
+
+/* Özet */
+.v3 .ozet { display: flex; gap: 28px; }
+.v3 .ozet div b { display: block; font-size: var(--f-xl); font-weight: var(--w-bold); letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; line-height: 1.2; }
+.v3 .ozet div b small { font-size: var(--f-sm); color: var(--t2); font-weight: var(--w-reg); letter-spacing: 0; margin-left: 2px; }
+.v3 .ozet div span { font-size: var(--f-sm); color: var(--t2); font-weight: var(--w-med); }
+
+/* Satır: durum dairesi + ad + sağda üstveri */
+.v3 .liste { display: flex; flex-direction: column; padding: 0 8px; }
+.v3 .satir { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 10px 12px;
+  border-radius: var(--r-l); text-align: left; width: 100%; position: relative; }
+.v3 .satir + .satir::before { content: ''; position: absolute; left: 52px; right: 12px; top: 0; height: 1px; background: var(--line); }
+.v3 .satir.simdi { background: var(--s1); }
+.v3 .satir.simdi + .satir::before, .v3 .satir.simdi::before { display: none; }
+.v3 .satir .ad { flex: 1; min-width: 0; }
+/* Hareket adı KESİLMEZ: dar telefonda (360 px) iki satıra sarar; üç nokta yalnız üçüncü satırda devreye girer */
+.v3 .satir .ad b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  font-size: var(--f-lg); font-weight: var(--w-med); letter-spacing: -.01em; line-height: 1.25; text-wrap: pretty; }
+.v3 .satir .ad span { display: block; font-size: var(--f-sm); color: var(--t2); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v3 .satir.bitti .ad b { color: var(--t2); }
+/* Durum dairesi olmayan satır (ısınma): ayırıcı metinle aynı hizadan başlar, açıklama iki satıra kadar sarar */
+.v3 .satir.yalin::before { left: 12px; }
+.v3 .satir.yalin .ad span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.v3 .satir .sag { flex: none; text-align: right; font-size: var(--f-sm); color: var(--t2); font-variant-numeric: tabular-nums; }
+.v3 .satir .sag b { display: block; color: var(--t1); font-weight: var(--w-med); font-size: var(--f-md); }
+
+/* Durum dairesi: boş halka · kısmi yay (vurgu) · dolu tik */
+.v3 .durum { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; position: relative; }
+.v3 .durum.bos { box-shadow: inset 0 0 0 2px var(--line2); }
+.v3 .durum.kismi { background: conic-gradient(var(--acc) calc(var(--p) * 1%), var(--line2) 0); }
+.v3 .durum.kismi::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--s1); }
+.v3 .durum.tamam { background: var(--t2); color: var(--bg); }
+.v3 .durum.tamam .i { width: 16px; height: 16px; stroke-width: 2.4; }
+.v3 .durum.ikon { background: var(--s2); color: var(--t2); }
+.v3 .durum.ikon .i { width: 16px; height: 16px; }
+
+/* Düğmeler — TEK dil: dolgu yükseklikle, seviye tonla ayrışır */
+.v3 .btn { height: 56px; border-radius: var(--r-l); display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: var(--f-md); font-weight: var(--w-bold); letter-spacing: -.005em; width: 100%; transition: transform .12s ease-out, filter .12s ease-out; }
+.v3 .btn:active { transform: scale(.985); }
+.v3 .btn.p { background: var(--btn); color: var(--on-btn); }
+.v3 .btn.p:active { filter: brightness(.9); }
+.v3 .btn.s { background: var(--s2); color: var(--t1); }
+.v3 .btn.s:active { background: var(--s3); }
+.v3 .btn .i { width: 20px; height: 20px; stroke-width: 2; }
+.v3 .cift { display: flex; gap: 10px; }
+.v3 .cift .btn.s { flex: 1; }
+.v3 .cift .btn.p { flex: 2; }
+
+.v3 .cip { height: 44px; padding: 0 16px; border-radius: 999px; background: var(--s1); color: var(--t2);
+  font-size: var(--f-md); font-weight: var(--w-med); display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.v3 .cip .i { width: 18px; height: 18px; }
+.v3 .cip[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+.v3 .cip:active { background: var(--s3); }
+
+/* Alt dolgu */
+.v3 .alt { margin-top: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; flex: none;
+  background: linear-gradient(to bottom, transparent, var(--bg) 22%); position: sticky; bottom: 0; }
+
+/* ── ODAK ── */
+.v3 .fig { flex: 1; min-height: 0; padding: 6px 16px 0; }
+.v3 .fig > div { width: 100%; height: 100%; }
+.v3 .yuvalar { display: flex; gap: 8px; padding: 12px 16px 0; flex: none; }
+.v3 .yuva { flex: 1; height: 54px; border-radius: var(--r-m); background: var(--s1); display: flex; flex-direction: column;
+  justify-content: center; padding: 0 12px; min-width: 0; }
+.v3 .yuva small { font-size: var(--f-xs); color: var(--t3); font-weight: var(--w-med); display: flex; align-items: center; gap: 4px; }
+.v3 .yuva small .i { width: 14px; height: 14px; stroke-width: 2.4; color: var(--t2); }
+.v3 .yuva b { font-size: var(--f-md); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; }
+.v3 .yuva.bos b { color: var(--t3); font-weight: var(--w-reg); }
+.v3 .yuva.simdi { background: transparent; box-shadow: inset 0 0 0 1.5px var(--acc-line); }
+.v3 .yuva.simdi small { color: var(--acc); }
+
+.v3 .giris { display: flex; align-items: center; gap: 16px; padding: 14px 16px 0; flex: none; }
+.v3 .giris .deger { flex: 1; min-width: 0; }
+.v3 .giris .deger .etiket { display: block; }
+.v3 .giris .deger div { display: flex; align-items: baseline; gap: 8px; }
+.v3 .giris .deger b { font-size: var(--f-hero); font-weight: var(--w-bold); font-stretch: 110%; letter-spacing: -.045em; line-height: .95;
+  font-variant-numeric: tabular-nums; }
+.v3 .giris .deger em { font-style: normal; font-size: var(--f-lg); color: var(--t2); font-weight: var(--w-med); }
+.v3 .giris .deger small { display: block; font-size: var(--f-sm); color: var(--t2); margin-top: 4px; }
+.v3 .stp { display: flex; flex-direction: column; gap: 8px; flex: none; }
+.v3 .stp button { width: 64px; height: 56px; border-radius: var(--r-m); background: var(--s2); display: grid; place-items: center; }
+.v3 .stp button:active { background: var(--s3); }
+.v3 .stp .i { width: 22px; height: 22px; stroke-width: 2; }
+
+.v3 .tekrar { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; flex: none; }
+.v3 .tekrar .etiket { width: 52px; }
+.v3 .kucuk-stp { display: flex; align-items: center; gap: 4px; background: var(--s1); border-radius: 999px; padding: 2px; }
+.v3 .kucuk-stp button { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; color: var(--t2); }
+.v3 .kucuk-stp button:active { background: var(--s3); }
+.v3 .kucuk-stp b { min-width: 32px; text-align: center; font-size: var(--f-lg); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; }
+.v3 .tekrar .cip { margin-left: auto; }
+
+.v3 .gecen { padding: 14px 16px 0; font-size: var(--f-sm); color: var(--t2); flex: none; display: flex; gap: 8px; align-items: center; }
+.v3 .gecen .i { width: 16px; height: 16px; color: var(--t3); }
+.v3 .gecen b { color: var(--t1); font-weight: var(--w-med); font-variant-numeric: tabular-nums; }
+
+/* Alt bant: YÜKSEKLİK SABİT (64 + güvenli alan) — sayaç açılınca hiçbir şey yer değiştirmez.
+   Boşta: önceki · dinlenme süresi · sonraki. Çalışırken yan gezinme ÇEKİLİR (yanlış dokunuş
+   hareketi değiştirmesin) ve bant tümüyle sayaca döner: +30 · kalan süre · geç. */
+.v3 .gezinme { display: flex; align-items: center; gap: 8px; height: calc(72px + env(safe-area-inset-bottom, 0px));
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); flex: none; }
+.v3 .gezinme > button { height: 56px; padding: 0 14px; border-radius: var(--r-m); color: var(--t2); font-size: var(--f-md);
+  font-weight: var(--w-med); display: flex; align-items: center; gap: 6px; flex: none; }
+.v3 .gezinme > button:active { background: var(--s1); }
+.v3 .dinlenme { flex: 1; height: 56px; border-radius: var(--r-m); display: flex; align-items: center; justify-content: center;
+  gap: 8px; color: var(--t2); font-size: var(--f-md); font-weight: var(--w-med); }
+.v3 .dinlenme .i { width: 18px; height: 18px; }
+.v3 .gezinme.run > button { background: var(--s2); color: var(--t1); width: 76px; justify-content: center; font-weight: var(--w-bold); }
+.v3 .gezinme.run .dinlenme { flex-direction: column; gap: 4px; color: var(--acc); }
+.v3 .gezinme.run .dinlenme b { font-size: 32px; font-weight: var(--w-bold); font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1; }
+.v3 .gezinme.run .dinlenme .bar { width: 100%; max-width: 150px; height: 4px; border-radius: 2px; background: var(--line2); overflow: hidden; }
+.v3 .gezinme.run .dinlenme .bar i { display: block; height: 100%; width: var(--kalan); background: var(--acc); }
+
+.v3 .oneri { display: flex; align-items: center; gap: 10px; margin: 12px 16px 0; padding: 10px 10px 10px 14px; border-radius: var(--r-m);
+  background: var(--s1); font-size: var(--f-sm); color: var(--t2); flex: none; }
+.v3 .oneri .i { width: 18px; height: 18px; color: var(--t1); }
+.v3 .oneri span { flex: 1; }
+.v3 .oneri b { color: var(--t1); font-weight: var(--w-bold); }
+.v3 .oneri .cip { height: 36px; background: var(--s3); color: var(--t1); }
+
+/* ── ISINMA ── */
+.v3 .mini { width: 84px; height: 68px; flex: none; }
+
+/* ── AYARLAR: tonlu gruplar ── */
+.v3 .grup { margin: 24px 16px 0; }
+.v3 .grup > .etiket { display: block; margin: 0 4px 10px; }
+.v3 .grup .ic { background: var(--s1); border-radius: var(--r-l); padding: 16px; }
+.v3 .grup .ic p { margin: 12px 0 0; font-size: var(--f-sm); color: var(--t2); }
+.v3 .grup .ic p b { color: var(--t1); font-weight: var(--w-med); }
+/* 7 gün tek satır: grubun iç dolgusuna 8 px taşar → 390 px'te hücre 44×44; 360 px'lik telefonda 40×44 (yükseklik hep 44) */
+.v3 .cipler { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 0 -8px; }
+.v3 .cipler .cip { min-width: 0; height: 44px; justify-content: center; padding: 0; background: var(--s2); font-size: 14px; }
+.v3 .cipler .cip[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+.v3 .segment { display: flex; background: var(--s2); border-radius: var(--r-m); padding: 3px; }
+.v3 .segment button { flex: 1; height: 44px; border-radius: 11px; font-size: var(--f-md); font-weight: var(--w-med); color: var(--t2); font-variant-numeric: tabular-nums; }
+.v3 .segment button[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+.v3 .alan { display: flex; align-items: center; gap: 12px; }
+.v3 .alan label { flex: 1; font-size: var(--f-md); }
+.v3 .alan .kutucuk { width: 96px; height: 48px; border-radius: var(--r-m); background: var(--s2); display: flex; align-items: center;
+  justify-content: flex-end; padding: 0 14px; gap: 6px; font-size: var(--f-lg); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; }
+.v3 .alan .kutucuk small { font-size: var(--f-sm); color: var(--t2); font-weight: var(--w-reg); }
+.v3 .kucuk-yazi { margin: 16px 20px 0; font-size: var(--f-sm); color: var(--t3); }
+.v3 .kucuk-yazi a { color: var(--t2); text-decoration: underline; text-decoration-color: var(--line2); text-underline-offset: 3px; }
+
+/* ── GEÇMİŞ ── */
+.v3 .kilo { display: flex; align-items: baseline; gap: 8px; }
+.v3 .kilo b { font-size: var(--f-2xl); font-weight: var(--w-bold); letter-spacing: -.035em; font-variant-numeric: tabular-nums; line-height: 1; }
+.v3 .kilo em { font-style: normal; color: var(--t2); font-size: var(--f-lg); }
+.v3 .kilo .fark { margin-left: auto; font-size: var(--f-sm); color: var(--t2); background: var(--s2); padding: 4px 10px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.v3 .spark { display: block; width: 100%; height: 72px; margin-top: 14px; overflow: visible; }
+.v3 .spark .cizgi { fill: none; stroke: var(--t2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.v3 .spark .alan-dolgu { fill: color-mix(in oklab, var(--t2) 10%, transparent); stroke: none; }
+.v3 .seans { display: flex; align-items: center; gap: 12px; min-height: 52px; font-size: var(--f-sm); font-variant-numeric: tabular-nums; }
+.v3 .seans + .seans { border-top: 1px solid var(--line); }
+.v3 .seans .tarih2 { width: 76px; color: var(--t2); }
+.v3 .seans .g { background: var(--s2); color: var(--t1); padding: 3px 10px; border-radius: 999px; font-size: var(--f-sm); font-weight: var(--w-med); }
+.v3 .seans .sag { margin-left: auto; color: var(--t2); }
+.v3 .seans .sag b { color: var(--t1); font-weight: var(--w-med); }
+.v3 .ilerleme { display: flex; align-items: center; gap: 12px; min-height: 48px; }
+.v3 .ilerleme + .ilerleme { border-top: 1px solid var(--line); }
+.v3 .ilerleme b { flex: 1; min-width: 0; font-size: var(--f-md); font-weight: var(--w-med); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v3 .ilerleme svg { width: 72px; height: 22px; flex: none; overflow: visible; }
+.v3 .ilerleme span { width: 92px; text-align: right; font-size: var(--f-sm); color: var(--t2); font-variant-numeric: tabular-nums; }
+.v3 .ilerleme span em { font-style: normal; color: var(--t1); font-weight: var(--w-med); }
+/* Geçmişte: ad ve değer üst satırda (ad kesilmez), eğri altta tam genişlik. Değer hiçbir zaman kırılmaz. */
+.v3 .ilerleme span { white-space: nowrap; }
+.v3 .ilerleme:has(svg) { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "ad deger" "cizgi cizgi";
+  row-gap: 8px; column-gap: 12px; padding: 12px 0; }
+.v3 .ilerleme:has(svg) b { grid-area: ad; white-space: normal; }
+.v3 .ilerleme:has(svg) span { grid-area: deger; width: auto; }
+.v3 .ilerleme:has(svg) svg { grid-area: cizgi; width: 100%; height: 18px; }
+
+.v3 .bosluk { height: 12px; flex: none; }
+@media (prefers-reduced-motion: reduce) { .v3 * { transition: none !important; } }
+</style>
+</head>
+<body data-vurgu="mercan">
+
+<!-- Çizgisel ikon seti: tek çizgi kalınlığı (1,75), yuvarlak uç — bugün metin karakterleri (← ? ▾ ◆ ✓ →) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-geri" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-ileri" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-soru" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-asagi" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-tik" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-arti" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-eksi" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-kapat" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-geri-al" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-saat" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2h5"/></symbol>
+  <symbol id="i-alev" viewBox="0 0 24 24"><path d="M12 21a6 6 0 0 0 6-6c0-4.5-4-6.5-5-11-2.5 2-3.5 4.5-3.2 7.2C8.6 10.4 8 9.5 7.8 8.3 6.6 9.8 6 11.6 6 15a6 6 0 0 0 6 6z"/></symbol>
+  <symbol id="i-ayar" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-grafik" viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M5 15l4.5-4.5 3.5 3 6-7"/></symbol>
+  <symbol id="i-nabiz" viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 5 12 2.5-6H21"/></symbol>
+  <symbol id="i-takvim" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+  <symbol id="i-yildiz" viewBox="0 0 24 24"><path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5.1-1.9-5.1L5 10.4l5.1-1.9z"/></symbol>
+  <symbol id="i-gecmis" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.6"/><path d="M4 4v4.6h4.6M12 8v4l3 2"/></symbol>
+</svg>
+
+<div class="sayfa">
+<header>
+  <h1>FitSet tasarım dili 3</h1>
+  <p>Solda bugünkü ekran (canlı uygulamadan, gerçekçi verilerle 390×844), sağda öneri. Öneri 2. sürümün üç kararını
+    <b>korur</b>: tek yazı ailesi, tek vurgu rengi, kart yok. Ölçüyle bulunan sorunları giderir: 18 punto yerine 7,
+    en sönük gri yerine okunur ikinci ton, tek düğme dili, her hedef en az 44 px. Uygulama koduna dokunulmadı.</p>
+  <div class="secici" role="group" aria-label="Vurgu rengi">
+    <span>Vurgu rengi:</span>
+    <button data-vurgu="mercan" aria-pressed="true"><i style="background:#F06A5D"></i>Mercan (bugünkü, rafine)</button>
+    <button data-vurgu="turuncu" aria-pressed="false"><i style="background:#FF8B3E"></i>Sinyal turuncusu</button>
+    <button data-vurgu="buz" aria-pressed="false"><i style="background:#7DC3EE"></i>Buz mavisi</button>
+  </div>
+</header>
+
+<section class="bolum">
+  <h2>Ölçülenler</h2>
+  <p class="giris">Canlı uygulamada 9 ekran/durum, 491 metin öğesi ve 204 dokunma hedefi tarandı. Aşağıdaki öneri ekranları <b>aynı araçla</b> ölçüldü: 222 metin öğesinde <b>7 punto, 3 ağırlık</b>, en düşük kontrast <b>4,55:1</b>; 60 dokunma hedefinin 59'u en az 44 px (kalan tek hedef cümle içi bağlantı, WCAG 2.5.8 istisnası); 360 px'lik telefonda taşan ya da kesilen metin yok.</p>
+  <div class="bulgular">
+    <div class="bulgu"><b>18 <small>punto</small></b><span>10,5 ile 76 px arasında; 10,5–15,5 aralığında yarım piksel adımlarla 11 punto. Hiyerarşi puntodan okunmuyor.</span></div>
+    <div class="bulgu"><b>%45</b><span>metin en sönük tonda (#777E88, 4,6:1). Ekranın yarısı "pasif" gibi okunuyor; ikinci ton (#8D939C) ondan zor ayırt ediliyor.</span></div>
+    <div class="bulgu"><b>75 <small>hedef</small></b><span>44 px'in altında: üst ikonlar 36, çipler 34, "geri al" 28, başlık bağlantıları 32. Salonda terli elle.</span></div>
+    <div class="bulgu"><b>7 <small>düğme biçimi</small></b><span>dolu gri, çizgili, hap çip, daire ikon, yığın adımlayıcı, düz metin, altı çizili metin. Aynı iş için farklı biçimler.</span></div>
+  </div>
+</section>
+
+<section class="bolum">
+  <h2>Dil: tipografi, ton, şekil</h2>
+  <p class="giris">Değişiklik bir "yeniden boyama" değil, dağılmış kararların toplanması. Yazı ailesi (Archivo, pakette, çevrimdışı) ve karanlık zemin aynen kalıyor.</p>
+  <div class="ikili">
+    <div class="kutu">
+      <h3>Punto: bugün 18, öneri 7 (açık çubuklar önerilen basamaklar)</h3>
+      <div class="puntolar" aria-hidden="true">
+        <i style="height:14%"></i><i style="height:15%" class="v"></i><i style="height:15%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:17%"></i><i style="height:18%"></i><i style="height:18%" class="v"></i><i style="height:19%"></i><i style="height:20%"></i><i style="height:20%"></i><i style="height:22%" class="v"></i><i style="height:24%" class="v"></i><i style="height:28%" class="v"></i><i style="height:30%"></i><i style="height:36%"></i><i style="height:45%" class="v"></i><i style="height:100%" class="v"></i>
+      </div>
+      <div class="olcek v3" style="margin-top:18px;background:none">
+        <div><code>80 · 650</code><span style="font-size:40px;font-weight:650;font-stretch:110%;letter-spacing:-.04em;line-height:1">45 kg</span></div>
+        <div><code>32 · 650</code><span style="font-size:26px;font-weight:650;letter-spacing:-.03em">1. Gün</span></div>
+        <div><code>22 · 650</code><span style="font-size:22px;font-weight:650;letter-spacing:-.02em">Dumbbell Bench Fly</span></div>
+        <div><code>18 · 560</code><span style="font-size:18px;font-weight:560">Incline Chest Press</span></div>
+        <div><code>16 · 450</code><span style="font-size:16px">Gövde metni ve açıklama</span></div>
+        <div><code>14 · 450</code><span style="font-size:14px;color:var(--t2)">Geçen sefer · 4 gün önce</span></div>
+        <div><code>12 · 560</code><span style="font-size:12px;font-weight:560;color:var(--t3)">Set 1 · tek dambıl</span></div>
+      </div>
+    </div>
+    <div class="kutu">
+      <h3>Metin tonları: bugünkü kullanım payı</h3>
+      <div class="tonlar">
+        <div class="ton"><span class="ornek" style="background:#CDD1D7"></span><span class="ad">Birincil #CDD1D7<small>12,5:1</small></span><span class="pay"><i style="width:26%"></i></span><span class="yuzde">%26</span></div>
+        <div class="ton"><span class="ornek" style="background:#8D939C"></span><span class="ad">İkincil #8D939C<small>6,4:1</small></span><span class="pay"><i style="width:25%"></i></span><span class="yuzde">%25</span></div>
+        <div class="ton"><span class="ornek" style="background:#777E88"></span><span class="ad">Sönük #777E88<small>4,6:1</small></span><span class="pay"><i style="width:45%"></i></span><span class="yuzde">%45</span></div>
+      </div>
+      <h3 style="margin-top:22px">Öneri: üç ton net ayrışır, sönük ton azınlık</h3>
+      <div class="tonlar">
+        <div class="ton"><span class="ornek" style="background:var(--t1)"></span><span class="ad">Birincil #D2D6DC<small>13,4:1 · adlar, sayılar, eylemler</small></span></div>
+        <div class="ton"><span class="ornek" style="background:var(--t2)"></span><span class="ad">İkincil #A2A8B0<small>8,1:1 · açıklama, üstveri (yeni varsayılan)</small></span></div>
+        <div class="ton"><span class="ornek" style="background:var(--t3)"></span><span class="ad">Sönük #7F868F<small>5,3:1 zeminde, 4,55:1 gri yüzeyde · yalnız birim, sıra no, dipnot</small></span></div>
+        <div class="ton"><span class="ornek" style="background:var(--acc)"></span><span class="ad">Vurgu<small>yalnız CANLI ve ŞİMDİ: sayaç, bulunulan set</small></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="kutu" style="margin-top:24px">
+    <h3>Şekil: tek düğme dili. Seviye çizgiyle değil tonla ayrışır; seçili durum ters dolgu.</h3>
+    <div class="v3" style="background:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:center">
+      <button class="btn p">Ana eylem · 56</button>
+      <button class="btn s">İkincil · 56</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="cip" aria-pressed="true">Seçili</button><button class="cip">Çip · 44</button></div>
+      <div style="display:flex;gap:10px;align-items:center"><button class="ib" aria-label="Geri"><svg class="i"><use href="#i-geri"/></svg></button><button class="ib" aria-label="Yardım"><svg class="i"><use href="#i-soru"/></svg></button><span style="color:var(--t2);font-size:14px">İkon · 44</span></div>
+      <div class="kucuk-stp" style="width:max-content"><button aria-label="Azalt"><svg class="i"><use href="#i-eksi"/></svg></button><b>12</b><button aria-label="Artır"><svg class="i"><use href="#i-arti"/></svg></button></div>
+      <div style="display:flex;gap:12px;align-items:center"><span class="durum bos"></span><span class="durum kismi" style="--p:33"></span><span class="durum tamam"><svg class="i"><use href="#i-tik"/></svg></span><span style="color:var(--t2);font-size:14px">Durum: boş · şimdi · bitti</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="bolum">
+  <h2>Ekranlar</h2>
+
+  <!-- ─── LİSTE ─── -->
+  <div class="ekran">
+    <h3>Liste: "bugün ne var, nerede kaldım"</h3>
+    <ul>
+      <li><b>Durum okunur:</b> 5 px'lik noktalar yerine her satırda durum dairesi (boş · vurgu yayı · tik) ve sağda <b>geçen seferki ağırlık</b>; hangi ağırlıkla gireceğin listeden görünür.</li>
+      <li><b>Kaldığın yer tek dokunuş:</b> alttaki sabit "Devam et" doğrudan yarım kalan harekete götürür; "Seansı bitir" hep erişilebilir (bugün en altta, kaydırınca).</li>
+      <li><b>Günün adı kas grupları:</b> bugün başlık "1. Gün", asıl bilgi gri alt satırda. Öneride "1. Gün" seçici çip olur, başlık "Göğüs, Omuz, Triceps".</li>
+      <li><b>Sessizleştirme:</b> büyük harfli etiketler küçük harf, sarı paragraf tek satırlık not; yasal metin ve "Bugünü sıfırla" Ayarlar'a.</li>
+    </ul>
+    <div class="yanyana">
+      <figure><figcaption>Bugün</figcaption><div class="cerceve kaydir"><img src="docs/tasarim-2026-09-27/01-liste.png" alt="Bugünkü liste ekranı"></div></figure>
+      <figure><figcaption>Öneri</figcaption>
+        <div class="cerceve kaydir"><div class="v3">
+          <div class="ust" style="padding-top:18px">
+            <span class="tarih">27 Eylül Pazar</span>
+            <span style="display:flex;gap:8px"><button class="ib" aria-label="Geçmiş"><svg class="i"><use href="#i-grafik"/></svg></button><button class="ib" aria-label="Ayarlar"><svg class="i"><use href="#i-ayar"/></svg></button></span>
+          </div>
+          <div style="padding:10px 16px 0">
+            <button class="cip" style="padding:0 12px 0 16px;background:var(--s2);color:var(--t1)">1. Gün<svg class="i"><use href="#i-asagi"/></svg></button>
+            <h1 class="gunad">Göğüs, Omuz, Triceps</h1>
+          </div>
+          <div style="padding:14px 16px 0"><div class="not"><svg class="i"><use href="#i-takvim"/></svg><span>Program günü değil; yine de kaydedebilirsin. Sıradaki <b>28 Eyl Pzt</b>.</span></div></div>
+          <div class="ozet" style="padding:20px 16px 8px">
+            <div><b class="num">4<small>/27</small></b><span>Set</span></div>
+            <div><b class="num">2.004<small>kg</small></b><span>Hacim</span></div>
+            <div><b class="num">22<small>dk</small></b><span>Süre</span></div>
+          </div>
+          <div class="liste" style="margin-top:8px">
+            <button class="satir bitti"><span class="durum tamam"><svg class="i"><use href="#i-tik"/></svg></span><span class="ad"><b>Isınma</b><span>5 adım · ~7 dk</span></span><span class="sag">yapıldı</span></button>
+            <button class="satir bitti"><span class="durum tamam"><svg class="i"><use href="#i-tik"/></svg></span><span class="ad"><b>Barbell Bench Press</b><span>Bar ile düz bench press</span></span><span class="sag"><b>45 kg</b>3/3</span></button>
+            <button class="satir simdi"><span class="durum kismi" style="--p:33"></span><span class="ad"><b>Dumbbell Bench Fly</b><span>Dambıl ile göğüs açma</span></span><span class="sag"><b>16 kg</b>1/3</span></button>
+            <button class="satir"><span class="durum bos"></span><span class="ad"><b>Incline Chest Press</b><span>Eğik göğüs presi makinesi</span></span><span class="sag"><b>40 kg</b>geçen</span></button>
+            <button class="satir"><span class="durum bos"></span><span class="ad"><b>Dumbbell Shoulder Press</b><span>Dambıl ile omuz presi</span></span><span class="sag"><b>16,5 kg</b>geçen</span></button>
+            <button class="satir"><span class="durum bos"></span><span class="ad"><b>Cable Front Raise</b><span>Kabloyla öne omuz kaldırma</span></span><span class="sag"><b>20 kg</b>geçen</span></button>
+            <button class="satir"><span class="durum bos"></span><span class="ad"><b>Reverse Pec Fly</b><span>Ters kelebek, arka omuz</span></span><span class="sag"><b>35 kg</b>geçen</span></button>
+            <button class="satir"><span class="durum bos"></span><span class="ad"><b>V-Bar Push Down</b><span>V bar ile triceps itme</span></span><span class="sag"><b>30 kg</b>geçen</span></button>
+            <button class="satir"><span class="durum bos"></span><span class="ad"><b>One Arm Overhead Ext.</b><span>Tek kol baş üstü triceps</span></span><span class="sag"><b>14 kg</b>geçen</span></button>
+            <button class="satir"><span class="durum bos"></span><span class="ad"><b>Plank</b><span>Karın duruşu</span></span><span class="sag"><b>40 sn</b>geçen</span></button>
+            <button class="satir"><span class="durum ikon"><svg class="i"><use href="#i-nabiz"/></svg></span><span class="ad"><b>Koşu bandı · 20 dk</b><span>Konuşabildiğin tempo yeter</span></span><span class="sag">bitişte</span></button>
+          </div>
+          <div class="alt">
+            <div class="cift"><button class="btn s">Seansı bitir</button><button class="btn p">Devam et: Bench Fly<svg class="i"><use href="#i-ileri"/></svg></button></div>
+          </div>
+        </div></div>
+      </figure>
+    </div>
+  </div>
+
+  <!-- ─── ODAK: SET GİRİŞİ ─── -->
+  <div class="ekran">
+    <h3>Odak: "şu an ne yapıyorum"</h3>
+    <ul>
+      <li><b>Set yuvaları:</b> "1/3 SET" metni ve rozetler yerine hedef kadar yuva: biten set tikli, sıradaki vurgu çerçeveli, kalan boş. İlerleme bir bakışta.</li>
+      <li><b>Tekrar görünür:</b> bugün "× 12 tekrar" yazısına dokununca açılan gizli düzenleyici; öneride doğrudan <b>− 12 +</b>. Isınma seti aynı satırda çip.</li>
+      <li><b>Adım ekipmandan:</b> bugün "+" her ekipmanda 2,5 kg ekliyor; 16 kg dambılda 18,5 yazıyor, salonda olmayan bir dambıl. Uygulama doğru adımı zaten biliyor (<code>ilerleme.js</code>: makine 5). Düğmeler ayrık 64×56, baş parmağın altında.</li>
+    </ul>
+    <div class="yanyana">
+      <figure><figcaption>Bugün</figcaption><div class="cerceve"><img src="docs/tasarim-2026-09-27/02-odak-fly.png" alt="Bugünkü odak ekranı"></div></figure>
+      <figure><figcaption>Öneri</figcaption>
+        <div class="cerceve"><div class="v3 sabit">
+          <div class="ust">
+            <button class="ib" aria-label="Listeye dön"><svg class="i"><use href="#i-geri"/></svg></button>
+            <div class="orta"><b>2 / 9</b><span class="seritler" aria-hidden="true"><i class="f"></i><i class="c"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+            <button class="ib" aria-label="Nasıl yapılır"><svg class="i"><use href="#i-soru"/></svg></button>
+          </div>
+          <div class="baslik" style="padding:14px 16px 0"><h1>Dumbbell Bench Fly</h1><p>Dambıl ile göğüs açma · 3 × 12</p></div>
+          <div class="fig"><div data-hareket="db_bench_fly" data-t="0.55"></div></div>
+          <div class="yuvalar">
+            <div class="yuva"><small><svg class="i"><use href="#i-tik"/></svg>Set 1</small><b>16 × 12</b></div>
+            <div class="yuva simdi"><small>Set 2 · şimdi</small><b>16 × 12</b></div>
+            <div class="yuva bos"><small>Set 3</small><b>—</b></div>
+          </div>
+          <div class="giris">
+            <div class="deger"><span class="etiket">Ağırlık · tek dambıl</span><div><b>16</b><em>kg</em></div><small>+ / − 2 kg (dambıl adımı)</small></div>
+            <div class="stp"><button aria-label="2 kg artır"><svg class="i"><use href="#i-arti"/></svg></button><button aria-label="2 kg azalt"><svg class="i"><use href="#i-eksi"/></svg></button></div>
+          </div>
+          <div class="tekrar">
+            <span class="etiket">Tekrar</span>
+            <div class="kucuk-stp"><button aria-label="Azalt"><svg class="i"><use href="#i-eksi"/></svg></button><b>12</b><button aria-label="Artır"><svg class="i"><use href="#i-arti"/></svg></button></div>
+            <button class="cip">Isınma seti</button>
+          </div>
+          <div class="gecen"><svg class="i"><use href="#i-gecmis"/></svg><span>Geçen sefer · 4 gün önce · <b>14 × 12</b> ×3</span></div>
+          <div style="padding:14px 16px 12px"><button class="btn p">2. seti kaydet</button></div>
+          <div class="gezinme">
+            <button><svg class="i"><use href="#i-geri"/></svg>Önceki</button>
+            <div class="dinlenme"><svg class="i"><use href="#i-saat"/></svg>Dinlenme 60 sn</div>
+            <button>Sonraki<svg class="i"><use href="#i-ileri"/></svg></button>
+          </div>
+        </div></div>
+      </figure>
+    </div>
+  </div>
+
+  <!-- ─── ODAK: DİNLENME ─── -->
+  <div class="ekran">
+    <h3>Odak: dinlenme sayacı çalışırken</h3>
+    <ul>
+      <li><b>Setler arasında bakılan tek şey kalan süre:</b> bugün 19 px (ağırlık 76 px). Öneride sayaç 32 px ve bant sabit 64 px yüksek; açılınca hiçbir şey yer değiştirmez.</li>
+      <li><b>Yanlış dokunuş yok:</b> sayaç çalışırken "Önceki / Sonraki" bant dışına çekilir, yerine iki büyük düğme gelir: <b>+30</b> ve <b>Geç</b> (76×56). Bugün "+30" ~26 px ve "Sonraki"nin hemen yanında.</li>
+      <li>Kaydedilen set yuvaya düşer; "Geri al" 40 px çip (bugün 28 px, en sönük gri).</li>
+    </ul>
+    <div class="yanyana">
+      <figure><figcaption>Bugün</figcaption><div class="cerceve"><img src="docs/tasarim-2026-09-27/03-odak-dinlenme.png" alt="Bugünkü dinlenme durumu"></div></figure>
+      <figure><figcaption>Öneri</figcaption>
+        <div class="cerceve"><div class="v3 sabit">
+          <div class="ust">
+            <button class="ib" aria-label="Listeye dön"><svg class="i"><use href="#i-geri"/></svg></button>
+            <div class="orta"><b>2 / 9</b><span class="seritler" aria-hidden="true"><i class="f"></i><i class="c"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+            <button class="ib" aria-label="Nasıl yapılır"><svg class="i"><use href="#i-soru"/></svg></button>
+          </div>
+          <div class="baslik" style="padding:14px 16px 0"><h1>Dumbbell Bench Fly</h1><p>Dambıl ile göğüs açma · 3 × 12</p></div>
+          <div class="fig"><div data-hareket="db_bench_fly" data-t="0"></div></div>
+          <div class="yuvalar">
+            <div class="yuva"><small><svg class="i"><use href="#i-tik"/></svg>Set 1</small><b>16 × 12</b></div>
+            <div class="yuva"><small><svg class="i"><use href="#i-tik"/></svg>Set 2</small><b>16 × 12</b></div>
+            <div class="yuva simdi"><small>Set 3 · şimdi</small><b>16 × 12</b></div>
+          </div>
+          <div class="giris">
+            <div class="deger"><span class="etiket">Ağırlık · tek dambıl</span><div><b>16</b><em>kg</em></div></div>
+            <div class="stp"><button aria-label="Artır"><svg class="i"><use href="#i-arti"/></svg></button><button aria-label="Azalt"><svg class="i"><use href="#i-eksi"/></svg></button></div>
+          </div>
+          <div class="tekrar">
+            <span class="etiket">Tekrar</span>
+            <div class="kucuk-stp"><button aria-label="Azalt"><svg class="i"><use href="#i-eksi"/></svg></button><b>12</b><button aria-label="Artır"><svg class="i"><use href="#i-arti"/></svg></button></div>
+            <button class="cip"><svg class="i"><use href="#i-geri-al"/></svg>Geri al</button>
+          </div>
+          <div class="gecen"><svg class="i"><use href="#i-gecmis"/></svg><span>Geçen sefer · 4 gün önce · <b>14 × 12</b> ×3</span></div>
+          <div style="padding:14px 16px 12px"><button class="btn p">3. seti kaydet</button></div>
+          <div class="gezinme run">
+            <button>+30</button>
+            <div class="dinlenme" style="--kalan:93%"><b>0:56</b><span class="bar"><i></i></span></div>
+            <button>Geç</button>
+          </div>
+        </div></div>
+      </figure>
+    </div>
+  </div>
+
+  <!-- ─── ISINMA ─── -->
+  <div class="ekran">
+    <h3>Isınma</h3>
+    <ul>
+      <li>Kardiyo kartı ve hareket satırları <b>aynı satır bileşeni</b>; miktar sağda koyu. Başlık bir kez yazılır (bugün "ISINMA" etiketi + "Isınma" başlığı, çift).</li>
+      <li>⚠️ Bugünkü minik figürlerde zemin diski kadrajdan taşıp kesiliyor (24 Eyl'deki 3B geçişimden kalma); düzeltilmesi gerekiyor.</li>
+    </ul>
+    <div class="yanyana">
+      <figure><figcaption>Bugün</figcaption><div class="cerceve"><img src="docs/tasarim-2026-09-27/06-isinma.png" alt="Bugünkü ısınma ekranı"></div></figure>
+      <figure><figcaption>Öneri</figcaption>
+        <div class="cerceve"><div class="v3 sabit">
+          <div class="ust"><button class="ib" aria-label="Listeye dön"><svg class="i"><use href="#i-geri"/></svg></button><span></span></div>
+          <div class="baslik" style="padding:12px 16px 0"><h1 style="font-size:var(--f-2xl);letter-spacing:-.03em">Isınma</h1><p style="font-size:var(--f-md)">Göğüs · Omuz · Triceps · ~7 dk</p></div>
+          <div class="liste" style="margin-top:14px;flex:1;justify-content:space-around">
+            <div class="satir"><span class="durum ikon"><svg class="i"><use href="#i-nabiz"/></svg></span><span class="ad"><b>Koşu bandı ya da bisiklet</b><span>Konuşabildiğin tempo. Amaç ısı.</span></span><span class="sag"><b>3 dk</b></span></div>
+            <div class="satir yalin"><span class="ad"><b>Kol çevirme</b><span>Öne ve geriye, küçükten büyüğe</span></span><span class="sag"><b>10 + 10</b></span><div class="mini" data-hareket="w_kol_cevirme" data-t="0.3" data-kadraj="sabit"></div></div>
+            <div class="satir yalin"><span class="ad"><b>Omuz dış rotasyon</b><span>Dirsek gövdede, ön kol dışa</span></span><span class="sag"><b>12</b></span><div class="mini" data-hareket="w_dis_rotasyon" data-t="0.6" data-kadraj="sabit"></div></div>
+            <div class="satir yalin"><span class="ad"><b>Göğüs açma (dinamik)</b><span>Geriye aç-kapa, beklemeden</span></span><span class="sag"><b>20 sn</b></span><div class="mini" data-hareket="w_gogus_acma" data-t="0.7" data-kadraj="sabit"></div></div>
+            <div class="satir yalin"><span class="ad"><b>Bench press, boş bar</b><span>Sinir sistemini uyandırır</span></span><span class="sag"><b>1 × 12</b></span><div class="mini" data-hareket="bb_bench_press" data-t="0.5" data-kadraj="sabit"></div></div>
+          </div>
+          <div style="padding:12px 16px 16px"><button class="btn p">Isınma tamam, 1. harekete geç<svg class="i"><use href="#i-ileri"/></svg></button></div>
+        </div></div>
+      </figure>
+    </div>
+  </div>
+
+  <!-- ─── AYARLAR ─── -->
+  <div class="ekran">
+    <h3>Ayarlar</h3>
+    <ul>
+      <li><b>Seçili ters dolgu:</b> bugün seçili gün ile seçilmemiş gün yalnız çerçeve parlaklığıyla ayrışıyor ve "Paz" alt satıra düşüyor. Öneride yedi gün tek satır, seçili = açık dolgu. Dinlenme süresi bölümlü kontrol.</li>
+      <li>Bölümler çizgiyle değil <b>tonlu grupla</b> ayrılır (tek seviye, iç içe kart yok). Yasal not ve lisans atfı en altta, stilli. Bugün lisans bağlantısı <b>tarayıcı mavisi</b> (2,1:1) ve kenar boşluğu yok; 24 Eyl'de benim eklediğim satır.</li>
+    </ul>
+    <div class="yanyana">
+      <figure><figcaption>Bugün</figcaption><div class="cerceve kaydir"><img src="docs/tasarim-2026-09-27/08-ayarlar.png" alt="Bugünkü ayarlar ekranı"></div></figure>
+      <figure><figcaption>Öneri</figcaption>
+        <div class="cerceve kaydir"><div class="v3">
+          <div class="ust"><button class="ib" aria-label="Listeye dön"><svg class="i"><use href="#i-geri"/></svg></button><span></span></div>
+          <div class="baslik" style="padding:12px 20px 0"><h1 style="font-size:var(--f-2xl);letter-spacing:-.03em">Ayarlar</h1></div>
+          <div class="grup"><span class="etiket">Antrenman günleri</span><div class="ic">
+            <div class="cipler"><button class="cip" aria-pressed="true">Pzt</button><button class="cip">Sal</button><button class="cip" aria-pressed="true">Çar</button><button class="cip">Per</button><button class="cip" aria-pressed="true">Cum</button><button class="cip">Cmt</button><button class="cip">Paz</button></div>
+            <p>Sıradaki: <b>28 Eyl Pzt · 30 Eyl Çar · 2 Eki Cum</b></p></div></div>
+          <div class="grup"><span class="etiket">Setler arası dinlenme</span><div class="ic">
+            <div class="segment"><button>30</button><button>45</button><button aria-pressed="true">60</button><button>90</button><button>120</button></div>
+            <p>Saniye. Odak ekranındaki sayaç bu süreyle başlar.</p></div></div>
+          <div class="grup"><span class="etiket">Vücut</span><div class="ic">
+            <div class="alan"><label>Boy</label><span class="kutucuk">178<small>cm</small></span></div>
+            <p>Kilo takibi Geçmiş ekranında.</p></div></div>
+          <div class="grup"><span class="etiket">Yedek</span><div class="ic">
+            <p style="margin:0 0 14px">Veri yalnız bu telefonda. Telefonu değiştirirsen ya da tarayıcı verisini silersen <b>her şey gider</b>; arada bir yedek al.</p>
+            <div class="cift"><button class="btn s">Geri yükle</button><button class="btn s">Yedek al</button></div></div></div>
+          <div class="grup"><span class="etiket">Bugünkü seans</span><div class="ic">
+            <button class="btn s" style="height:48px">Bugünü sıfırla</button></div></div>
+          <p class="kucuk-yazi">Ağrı hissettiğin bir harekette dur; bu uygulama tıbbi tavsiye vermez. Hareket çizimleri <a href="js/vendor/three-LICENSE.txt">three.js</a> ile yapılır (MIT).</p>
+          <div class="bosluk" style="height:32px"></div>
+        </div></div>
+      </figure>
+    </div>
+  </div>
+
+  <!-- ─── SEANS SONU (YENİ) ─── -->
+  <div class="ekran">
+    <h3>Seans sonu: yeni ekran</h3>
+    <ul>
+      <li><b>Bugün antrenmanın son anı bir bildirim şeridi:</b> "Seans kaydedildi. 27 set · 9.972 kg · 58 dk". Her 8. seansta 0,9 sn sonra yedek hatırlatması onu <b>siliyor</b> (<code>app.js</code>: <code>toast()</code> önce eskisini kaldırıyor) ve liste bir sonraki günün boş hâline dönüyor.</li>
+      <li><b>Öneri:</b> bir özet ekranı. Veri zaten var: geçen aynı güne göre hacim farkı ve bu seansta aşılan "en ağır set"ler. Yedek hatırlatması burada ikincil satır. Yeni renk yok; vurgu yalnız artış okunda.</li>
+    </ul>
+    <div class="yanyana">
+      <figure><figcaption>Öneri</figcaption>
+        <div class="cerceve"><div class="v3 sabit">
+          <div class="ust"><span></span><button class="ib" aria-label="Kapat"><svg class="i"><use href="#i-kapat"/></svg></button></div>
+          <div style="padding:8px 20px 0">
+            <span class="durum tamam" style="width:48px;height:48px"><svg class="i" style="width:26px;height:26px"><use href="#i-tik"/></svg></span>
+            <h1 class="gunad" style="margin-top:16px">Seans tamam</h1>
+            <p style="margin:4px 0 0;color:var(--t2)">1. Gün · Göğüs, Omuz, Triceps · 27 Eylül</p>
+          </div>
+          <div class="ozet" style="padding:24px 20px 0">
+            <div><b class="num">58<small>dk</small></b><span>Süre</span></div>
+            <div><b class="num">27<small>set</small></b><span>Set</span></div>
+            <div><b class="num">9.972<small>kg</small></b><span>Hacim</span></div>
+          </div>
+          <div class="grup" style="margin-top:20px"><div class="ic" style="display:flex;align-items:center;gap:12px">
+            <svg class="i" style="color:var(--acc)"><use href="#i-grafik"/></svg><span style="flex:1">Geçen 1. Güne göre hacim</span><b class="num" style="font-size:18px">+%3,1</b></div></div>
+          <div class="grup"><span class="etiket">Bu seansta en ağır setler</span><div class="ic" style="padding:4px 16px">
+            <div class="ilerleme"><b>Barbell Bench Press</b><span style="width:auto">42,5 → <em>45 kg</em></span></div>
+            <div class="ilerleme"><b>Dumbbell Bench Fly</b><span style="width:auto">14 → <em>16 kg</em></span></div>
+            <div class="ilerleme"><b>Incline Chest Press</b><span style="width:auto">35 → <em>40 kg</em></span></div>
+          </div></div>
+          <p class="kucuk-yazi" style="margin-top:18px">Sıradaki antrenman: <b style="color:var(--t1);font-weight:560">2. Gün, 28 Eyl Pzt</b></p>
+          <div class="alt" style="position:static;margin-top:auto">
+            <div class="cift"><button class="btn s">Yedek al</button><button class="btn p">Tamam</button></div>
+          </div>
+        </div></div>
+      </figure>
+    </div>
+  </div>
+
+  <!-- ─── GEÇMİŞ ─── -->
+  <div class="ekran">
+    <h3>Geçmiş</h3>
+    <ul>
+      <li>Kilo bir "kahraman sayı" değil başlıklı grup: sayı, değişim hapı, alan dolgulu çizgi. Seans satırları gün çipiyle taranır; hacim sağda.</li>
+      <li>Büyük harfli, geniş aralıklı bölüm etiketleri (KİLO · SON SEANSLAR) küçük harfli başlığa dönüşür; "her bölümün üstünde minik büyük harf" kalıbı tüm ekranlarda kalkar.</li>
+    </ul>
+    <div class="yanyana">
+      <figure><figcaption>Bugün</figcaption><div class="cerceve kaydir"><img src="docs/tasarim-2026-09-27/09-gecmis.png" alt="Bugünkü geçmiş ekranı"></div></figure>
+      <figure><figcaption>Öneri</figcaption>
+        <div class="cerceve kaydir"><div class="v3">
+          <div class="ust"><button class="ib" aria-label="Listeye dön"><svg class="i"><use href="#i-geri"/></svg></button><span></span></div>
+          <div class="baslik" style="padding:12px 20px 0"><h1 style="font-size:var(--f-2xl);letter-spacing:-.03em">Geçmiş</h1></div>
+          <div class="grup"><span class="etiket">Kilo</span><div class="ic">
+            <div class="kilo"><b>82,2</b><em>kg</em><span class="fark">−2,2 kg · 6 hafta</span></div>
+            <svg class="spark" viewBox="0 0 110 40" preserveAspectRatio="none" aria-hidden="true">
+              <path class="alan-dolgu" d="M0 8 L10 7 L20 11 L30 12 L40 11 L50 14 L60 15 L70 14 L80 17 L90 17 L100 19 L110 22 L110 40 L0 40 Z"/>
+              <path class="cizgi" d="M0 8 L10 7 L20 11 L30 12 L40 11 L50 14 L60 15 L70 14 L80 17 L90 17 L100 19 L110 22"/>
+            </svg>
+            <p>12 ölçüm · son giriş 2 gün önce</p>
+            <div class="alan" style="margin-top:14px"><label>Bugün</label><span class="kutucuk" style="color:var(--t3);font-weight:450">—<small>kg</small></span><button class="cip" style="background:var(--s2);color:var(--t1)">Kaydet</button></div>
+          </div></div>
+          <div class="grup"><span class="etiket">Son seanslar</span><div class="ic" style="padding:4px 16px">
+            <div class="seans"><span class="tarih2">26 Eyl Cmt</span><span class="g">2. Gün</span><span class="sag">9/9 · <b>9.972 kg</b></span></div>
+            <div class="seans"><span class="tarih2">23 Eyl Çar</span><span class="g">1. Gün</span><span class="sag">9/9 · <b>9.234 kg</b></span></div>
+            <div class="seans"><span class="tarih2">21 Eyl Pzt</span><span class="g">2. Gün</span><span class="sag">9/9 · <b>9.418 kg</b></span></div>
+            <div class="seans"><span class="tarih2">19 Eyl Cmt</span><span class="g">1. Gün</span><span class="sag">9/9 · <b>9.234 kg</b></span></div>
+            <div class="seans"><span class="tarih2">16 Eyl Çar</span><span class="g">2. Gün</span><span class="sag">9/9 · <b>9.972 kg</b></span></div>
+          </div></div>
+          <div class="grup"><span class="etiket">Hareket ilerlemesi · en ağır set</span><div class="ic" style="padding:4px 16px">
+            <div class="ilerleme"><b>Barbell Bench Press</b><svg viewBox="0 0 72 22" preserveAspectRatio="none"><path d="M2 18 H24 L28 12 H48 L52 5 H70" fill="none" vector-effect="non-scaling-stroke" stroke="var(--t2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M70 5 h0" stroke="var(--t1)" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><span>37,5 → <em>42,5 kg</em></span></div>
+            <div class="ilerleme"><b>Dumbbell Bench Fly</b><svg viewBox="0 0 72 22" preserveAspectRatio="none"><path d="M2 18 H24 L28 12 H48 L52 5 H70" fill="none" vector-effect="non-scaling-stroke" stroke="var(--t2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M70 5 h0" stroke="var(--t1)" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><span>10 → <em>14 kg</em></span></div>
+            <div class="ilerleme"><b>Incline Chest Press</b><svg viewBox="0 0 72 22" preserveAspectRatio="none"><path d="M2 18 H24 L28 12 H48 L52 5 H70" fill="none" vector-effect="non-scaling-stroke" stroke="var(--t2)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M70 5 h0" stroke="var(--t1)" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><span>30 → <em>40 kg</em></span></div>
+            <div class="ilerleme"><b>Lunge</b><svg viewBox="0 0 72 22" preserveAspectRatio="none"><path d="M2 11 H70" fill="none" vector-effect="non-scaling-stroke" stroke="var(--t3)" stroke-width="1.75" stroke-linecap="round"/><path d="M70 11 h0" stroke="var(--t2)" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><span>8 → <em>8 kg</em></span></div>
+          </div></div>
+          <div class="bosluk" style="height:32px"></div>
+        </div></div>
+      </figure>
+    </div>
+  </div>
+</section>
+</div>
+
+<script type="module">
+// Vurgu rengi seçici
+for (const b of document.querySelectorAll('.secici button')) b.addEventListener('click', () => {
+  document.body.dataset.vurgu = b.dataset.vurgu;
+  for (const x of document.querySelectorAll('.secici button')) x.setAttribute('aria-pressed', String(x === b));
+});
+
+// Öneri ekranlarındaki figürler: uygulamanın GERÇEK 3B motoru (WebGL, yoksa SVG yedek)
+import * as A3 from './js/anim3d/sahne.js';
+import * as M from './js/anim3d/manken3d.js';
+
+/* ÖNERİLEN MOTOR DÜZELTMESİ (uygulamada manken3d.cerceve'ye taşınır): 'sabit' kadraj yalnız gövdeyi
+   sığdırıyordu, 78 birimlik zemin diskinin ön kenarı dışarıda kalıyor ve mini figürlerde disk alttan
+   düz bir çizgiyle kesiliyordu. Burada çerçevenin alt sınırı diskin izdüşümünün en alt noktasına iner. */
+function diskDahilCerceve(h, [teta, fi]) {
+  const c = M.cerceve(h, teta, fi, 'sabit');
+  const pr = M.kamera(teta, fi);
+  let enAlt = Infinity;
+  for (let i = 0; i < 48; i++) {
+    const a = i / 48 * 2 * Math.PI;
+    enAlt = Math.min(enAlt, -pr([h.merkez[0] + 78 * Math.cos(a), 0, h.merkez[2] + 78 * Math.sin(a)])[1]);
+  }
+  const pay = (c.ust - c.alt) * 0.04;
+  return { ...c, alt: Math.min(c.alt, enAlt - pay) };
+}
+const ciz = () => {
+  for (const el of document.querySelectorAll('[data-hareket]')) {
+    const h = A3.hareketBul({ id: el.dataset.hareket });
+    if (!h) continue;
+    if (el.dataset.kadraj === 'sabit') A3.ciz(el, h, +el.dataset.t, { cerceve: diskDahilCerceve(h, h.kamera) });
+    else A3.ciz(el, h, +el.dataset.t, { bicim: el.dataset.kadraj ?? 'donen' });
+  }
+};
+ciz();
+A3.webglHazirla(ciz);
+</script>
+</body>
+</html>
