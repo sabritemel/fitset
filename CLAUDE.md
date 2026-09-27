@@ -20,20 +20,23 @@ FinLens ve SmartCRM gibi ayrı bir üründür. Bunun somut karşılıkları:
 ⚠️ Suite'in kök `CLAUDE.md`'sindeki uygulama/port/altın-kural tablosu **bu
 projeyi kapsamaz**. Buradaki tek üst kural şudur: *kök depoya sızma.*
 
-## Yapı (ölçüldü, 27 Eyl 2026 — tasarım dili 3'ten sonra)
+## Yapı (ölçüldü, 27 Eyl 2026 — telefon turundan sonra, `d1b8e1b`)
 
 ```
-js/        15 dosya · 5 163 satır (vendor hariç)   app · store · session · schedule · timer
+js/        15 dosya · 5 464 satır (vendor hariç)   app · store · session · schedule · timer
                                                    ui · ilerleme · data/ · anim/ · anim3d/
-js/anim3d/ 4 dosya · 1 435 satır   manken3d (iskelet+IK, SVG çizim, çerçeve) · hareketler3d
+js/anim3d/ 4 dosya · 1 585 satır   manken3d (iskelet+IK, SVG çizim, çerçeve) · hareketler3d
                                    (22 hareket, kısıtlarıyla) · webgl (three.js çizici) · sahne (giriş)
 js/vendor/ three.min.js (530 KB · 135 KB gzip, MIT) + three-LICENSE.txt
-tools/     20 betik · 3 418 satır  doğrulayıcılar + üreticiler (+ three-giris.js: paketi yeniden üretir)
-css/       style.css (511 satır) — tasarım dili 3 "Grafit"
-sw.js      119 satır — service worker · CACHE sürümü İÇERİKTEN türetilir
+tools/     22 betik · 3 743 satır  doğrulayıcılar + üreticiler (+ three-giris.js: paketi yeniden üretir)
+css/       style.css (530 satır) — tasarım dili 3 "Grafit"
+sw.js      120 satır — service worker · CACHE sürümü İÇERİKTEN türetilir
+icons/     Grafit + mercan (`make-icons.js`) · ayrı maskable 512 (Android kırpar)
+screenshots/ 3 WebP — yalnız Chrome'un kurulum penceresi için (SENTETİK veri; SW önbelleğine girmez)
 8 HTML     index.html (+ çizgisel ikon sprite'ı) + 7 mokap (cizimler · isinma · izometrik · genel ·
            3b · 3b-figur · tasarim-v3)
 docs/      2026-09-24-bas-tasarimci-raporu.md · 2026-09-27-tasarim-dili-analizi.md (+ ekran görüntüleri)
+           · 2026-09-27-akilli-saat-onerisi.md (bekliyor: yeni saat gelince test sayfası)
 ```
 
 ### Tasarım dili 3 "Grafit" (27 Eyl 2026 — Sabri: *"premium, sade ama şık, sezgisel"*)
@@ -116,10 +119,10 @@ npm run icons    # ikon üretimi
 npm run fonts    # font indirme
 ```
 
-**Ölçüldü (27 Eyl 2026, tasarım dili 3 sonrası): `npm test` exit 0** — `check-contrast` 23 kontrol
-(her metin tonu × her yüzey, ton ayrışması, parlaklık tavanı) · `check-tasarim` 14 · `test-store` 68 ·
-`test-session` 268 · `test-timer` 14 · `check-docs` 17 · `fizik-denetimi` tümü temiz (22 hareket,
-6 olumsuz fikstür, 25 kaydın 3B kapsamı, plank varyantları) · `bump-sw` çevrimdışı kapısı: `app.js`'ten
+**Ölçüldü (27 Eyl 2026, telefon turu sonrası): `npm test` exit 0** — `check-contrast` 23 kontrol
+(her metin tonu × her yüzey, ton ayrışması, parlaklık tavanı) · `check-tasarim` 14 · `test-store` 71 ·
+`test-session` 282 · `test-timer` 14 · `check-docs` 17 · `fizik-denetimi` tümü temiz (22 hareket,
+6 olumsuz fikstür, 25 kaydın 3B kapsamı, plank varyantları, aletler, animasyon, KADRAJ 504 açı) · `bump-sw` çevrimdışı kapısı: `app.js`'ten
 erişilen 15 modülün hepsi ASSETS'te (dinamik `import()` dahil).
 ⚠️ 7 Eyl'de burada yazan "187 geçti" `npm test`'in SON satırıydı, yani yalnız
 `test-session`'ın sayısı — toplam değil. Sayı betik başına okunur.
@@ -264,6 +267,9 @@ ve **10 doğrulama kazandı**. Kural, olayın değil **alanın** yanında durur.
 - `concepts/kaydetmeye-deger-ile-tamamlanmis-ayri-kapi.md`
 - `concepts/oznel-istek-olcute-cevrilir.md`
 - `concepts/pwa-bekleyen-surum-sessizce-atlanir.md`
+- `concepts/beklenmeyen-promise-kosulda-hep-dogrudur.md` (27 Eyl — `persisted()`; SV-UI-061 ile aynı sınıf)
+- `concepts/kapinin-olcutu-urunden-bagimsiz-olmali.md` (27 Eyl — kadraj kapısı, mutant K3)
+- `decisions/fitset-tasarim-dili-3-grafit-27eyl.md` · `decisions/fitset-telefona-kurulum-magazasiz-27eyl.md`
 - `issues/fitset-uretici-kendi-stil-sayfasini-atladi.md`
 
 ⭐ **Kod ayrı, ders ortak.** Bir dersin nerede *öğrenildiği* ile nerede
