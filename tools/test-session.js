@@ -865,5 +865,55 @@ console.log('31) ⭐ TASARIM DİLİ 3 — ağırlık adımı · devam hedefi · 
     'seans sonu: geri al, hacim farkı, aşılan set ve yedek hatırlatması aynı ekranda');
 }
 
+console.log('');
+console.log('32) SADE ODAK EKRANI — Sabri (27 Eyl): "ana ekran olabildiğince sade olsun"');
+{
+  const UI = await import('../js/ui.js');
+  const ayar = { ...S.DEFAULT_SETTINGS };
+  const idxOf = id => N.exercisesFor(0).findIndex(x => x.id === id);
+  const baglam = (ek = {}) => ({ session: S.newSession(0), dayIndex: 0, idx: idxOf('bb_bench_press'), settings: ayar, lastPerf: {},
+    oneri: { bb_bench_press: { tur: 'agirlik', setler: 3, tekrar: 12, agirlik: 42.5 } },
+    draft: { weight: 40, reps: 12, warmup: false }, status: { label: '27 Eylül Pazar', isTrainingDay: true }, ...ek });
+  const html = UI.focusHTML(baglam());
+  // Paneller ekranın parçası ama gizli; "ana ekran" = panellerden ÖNCEKİ kısım
+  const ana = html.slice(0, html.indexOf('<div class="sheet-bg"'));
+  const panel = id => { const i = html.indexOf(`id="${id}"`); return i < 0 ? '' : html.slice(i, html.indexOf('</section>', i)); };
+
+  ok(!ana.includes('class="oneri"') && panel('sheet').includes('class="oneri"') && panel('sheet').includes('42,5 kg'),
+    'ağırlık önerisi ana ekranda DEĞİL, "?" panelinde');
+  ok(!ana.includes('id="f-reps"') && !ana.includes('id="warm"'), 'tekrar ve ısınma seti ana ekranda DEĞİL');
+  ok(panel('set-sheet').includes('id="f-reps"') && panel('set-sheet').includes('id="warm"') && panel('set-sheet').includes('inert'),
+    'ikisi de "Bu set" panelinde (kapalıyken inert — değer yine DOM\'da, kayıt kodu okur)');
+  ok(/<button class="yuva simdi ayarli" id="yuva-simdi" data-act="set-ayar"/.test(ana), '"Şimdi" yuvası paneli açan bir DÜĞME');
+  ok((html.match(/class="sheet-bg"/g) ?? []).length === 1, 'iki panel tek perdeyi paylaşır');
+
+  const isinma = UI.focusHTML(baglam({ draft: { weight: 40, reps: 10, warmup: true } }));
+  ok(/<small id="yuva-etiket">Isınma<\/small>/.test(isinma) && isinma.includes('>Isınma setini kaydet<') && isinma.includes('aria-checked="true"'),
+    'ısınma seçiliyse ANA EKRAN bunu söyler: yuva "Isınma", düğme "Isınma setini kaydet"');
+  ok(UI.focusHTML(baglam({ draft: { weight: 40, reps: 12, warmup: false } })).includes('>1. seti kaydet<'), 'ısınma kapalıyken "1. seti kaydet"');
+
+  const plank = UI.focusHTML(baglam({ idx: idxOf('plank'), draft: { seconds: 40, warmup: false } }));
+  ok(!plank.includes('id="set-sheet"') && /<div class="yuva simdi" id="yuva-simdi">/.test(plank), 'süre hareketinde "Bu set" paneli yok, yuva düğme değil');
+
+  // Ağırlık yokken "—" bir değer gibi okunuyordu (dev gri çizgi, "—×12")
+  const bos = baglam({ draft: { weight: null, reps: 12, warmup: false } });
+  ok(UI.onizleme(N.exercisesFor(0)[idxOf('bb_bench_press')], bos) === '12 tekrar', `ağırlıksız "Şimdi": ${UI.onizleme(N.exercisesFor(0)[idxOf('bb_bench_press')], bos)} (eskiden —×12)`);
+  ok(UI.setLabel({ type: 'weight_reps', weight: null, reps: 12 }) === '12 tekrar', 'ağırlıksız set etiketi "12 tekrar" (eskiden — × 12)');
+  ok(/id="f-weight" value="" placeholder="0"/.test(UI.focusHTML(bos)), 'boş ağırlık kutusunun yer tutucusu sönük "0" (eskiden 80 px "—")');
+}
+
+console.log('');
+console.log('33) TELEFONA YÜKLE — Ayarlar (Sabri, 27 Eyl: "ayarlarda yeterli")');
+{
+  const UI = await import('../js/ui.js');
+  const ayar = { ...S.DEFAULT_SETTINGS };
+  const ay = kurulum => UI.settingsHTML({ settings: ayar, kurulum });
+  ok(ay({ istem: true, kurulu: false }).includes('data-act="kur"'), 'Chrome istem verdiyse "Telefona yükle" düğmesi');
+  ok(!ay({ istem: false, kurulu: false }).includes('data-act="kur"') && ay({ istem: false, kurulu: false }).includes('Uygulamayı yükle'),
+    'istem yoksa düğme YOK, menü yolu anlatılır (işlemeyen düğme gösterilmez)');
+  ok(!ay({ istem: true, kurulu: true }).includes('data-act="kur"') && ay({ istem: false, kurulu: true }).includes('Telefona yüklü'),
+    'yüklüyken yalnız bilgi');
+}
+
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);

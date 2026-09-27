@@ -22,7 +22,7 @@ const PORT = +process.argv[2] || 5099;
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
-  '.woff2': 'font/woff2', '.png': 'image/png', '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml',
 };
 
 http.createServer((req, res) => {

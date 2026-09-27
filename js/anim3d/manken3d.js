@@ -529,23 +529,43 @@ export function sahne(h, t, teta, fi) {
  *              figür zıplamaz ve hiçbir açıda kırpılmaz.
  * Dönen değer ekran koordinatıdır (y YUKARI): { sol, sag, ust, alt }. */
 const hacimOnbellek = new WeakMap();
+/**
+ * Noktalar [konum, yarıçap, üstü belirler mi]. ÜST sınırı yalnız BEDEN ve HAREKET EDEN aletler
+ * belirler; sabit makine gövdesi (lat kulesi, makara tepesi, kafes dikmeleri) belirlemez — tepesi
+ * kadrajın üstünden taşar. Alt ve yan sınırı her şey belirler: taban ve zemin hep kadrajdadır.
+ * Sabri (27 Eyl, telefonda): "animasyon çok küçük" — ölçüldü, kişi figür alanının %54'üydü, lat
+ * kulesi (2,1 m) oturan kişinin (1,3 m) boyunu belirliyordu. Fotoğrafta da kule üstten kırpılır.
+ * Hareket eden = 13 anın herhangi ikisinde yeri 0,5 cm'den fazla değişen nokta. Kablo: makara ucu
+ * sabit, tutulan ucu hareketli → yalnız tutulan uç sayılır.
+ */
 function hacimNoktalari(h) {
   if (hacimOnbellek.has(h)) return hacimOnbellek.get(h);
   const n = [], D = birim([0.31, 0.53, 0.79]);
   const EKLEM = ['P', 'boyun', 'gogusAlt', 'omA', 'omB', 'dA', 'dB', 'eA', 'eB', 'kaA', 'kaB', 'zA', 'zB', 'aA', 'aB', 'uA', 'uB'];
+  const kareler = [];                                             // kare → öğe → [[q, r], …]
   for (let i = 0; i <= 12; i++) {
     const t = i / 12, s = an(h, t);
-    for (const k of EKLEM) n.push([s[k], 8]);
-    n.push([s.kafa, R.kafa + 2]);
+    for (const k of EKLEM) n.push([s[k], 8, true]);
+    n.push([s.kafa, R.kafa + 2, true]);
+    const kare = [];
     for (const y of [D, D.map(v => -v)]) {                       // kutular yalnız bakan yüzlerini verir → iki zıt yön
       const pr = q => [q[0], q[1], nokta(q, y)];
       for (const e of h.ekipman(pr, s, t)) {
-        const g = e.geo; if (!g) continue;
-        if (g.tur === 'p' || g.tur === 'c') for (const q of g.P3) n.push([q, 0]);
-        else if (g.tur === 'k') n.push([g.a3, g.r], [g.b3, g.r]);
-        else n.push([g.c3, g.r]);
+        const g = e.geo; if (!g) { kare.push([]); continue; }
+        if (g.tur === 'p' || g.tur === 'c') kare.push(g.P3.map(q => [q, 0]));
+        else if (g.tur === 'k') kare.push([[g.a3, g.r], [g.b3, g.r]]);
+        else kare.push([[g.c3, g.r]]);
       }
     }
+    kareler.push(kare);
+  }
+  // Öğe sayısı anlar arasında değişirse eşleme yapılamaz → hepsi hareketli sayılır (kırpmamak güvenli taraf)
+  const eslesir = kareler.every(k => k.length === kareler[0].length && k.every((o, j) => o.length === kareler[0][j].length));
+  if (!eslesir) for (const k of kareler) for (const o of k) for (const [q, r] of o) n.push([q, r, true]);
+  else for (let j = 0; j < kareler[0].length; j++) for (let p = 0; p < kareler[0][j].length; p++) {
+    const iz = kareler.map(k => k[j][p]);
+    const oynar = iz.some(x => mesafe(x[0], iz[0][0]) > 0.5);
+    for (const [q, r] of iz) n.push([q, r, oynar]);
   }
   hacimOnbellek.set(h, n);
   return n;
@@ -570,14 +590,24 @@ export function cerceve(h, teta, fi, bicim = 'donen', pay = 0.06) {
       c.alt = Math.min(c.alt, -pr([m[0] + ZEMIN_R * Math.cos(a), 0, m[2] + ZEMIN_R * Math.sin(a)])[1]);
     }
   } else {
-    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, y0 = 0, y1 = -Infinity;
-    for (const [q, r] of n) { x0 = Math.min(x0, q[0] - r); x1 = Math.max(x1, q[0] + r); z0 = Math.min(z0, q[2] - r); z1 = Math.max(z1, q[2] + r); y0 = Math.min(y0, q[1] - r); y1 = Math.max(y1, q[1] + r); }
+    /* Açıdan bağımsız sınır NOKTA BAŞINA: eksenden ρ uzaktaki nokta θ dönerken ekranda en çok
+       ±ρ·sinφ oynar. Eskiden en yüksek noktanın boyu ile en uzak noktanın ρ'su TOPLANIYORDU
+       (farklı noktalardan gelseler bile) — hiçbir açıda dolmayan boşluk. Zemin diski altta sayılır. */
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const [q, r] of n) { x0 = Math.min(x0, q[0] - r); x1 = Math.max(x1, q[0] + r); z0 = Math.min(z0, q[2] - r); z1 = Math.max(z1, q[2] + r); }
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
-    let rr = 0;
-    for (const [q, r] of n) rr = Math.max(rr, Math.hypot(q[0] - cx, q[2] - cz) + r);
-    const cT = Math.cos(rd(teta)), sT = Math.sin(rd(teta)), cF = Math.cos(rd(fi)), sF = Math.sin(rd(fi));
-    const ox = cx * cT - cz * sT, oz = (cx * sT + cz * cT) * sF;
-    c = { sol: ox - rr, sag: ox + rr, ust: y1 * cF - oz + rr * Math.abs(sF), alt: y0 * cF - oz - rr * Math.abs(sF) };
+    const cT = Math.cos(rd(teta)), sT = Math.sin(rd(teta)), cF = Math.cos(rd(fi)), sF = Math.abs(Math.sin(rd(fi)));
+    let rr = 0, ust = -Infinity, alt = Infinity;
+    for (const [q, r, ustu] of n) {
+      const rho = Math.hypot(q[0] - cx, q[2] - cz);
+      rr = Math.max(rr, rho + r);
+      if (ustu) ust = Math.max(ust, q[1] * cF + rho * sF + r);
+      alt = Math.min(alt, q[1] * cF - rho * sF - r);
+    }
+    const m = h.merkez ?? [0, 0, 0];
+    alt = Math.min(alt, -(Math.hypot(m[0] - cx, m[2] - cz) + ZEMIN_R) * sF);
+    const ox = cx * cT - cz * sT, oz = (cx * sT + cz * cT) * Math.sin(rd(fi));
+    c = { sol: ox - rr, sag: ox + rr, ust: ust - oz, alt: alt - oz };
   }
   const px = (c.sag - c.sol) * pay, py = (c.ust - c.alt) * pay;
   return { sol: c.sol - px, sag: c.sag + px, ust: c.ust + py, alt: c.alt - py };

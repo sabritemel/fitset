@@ -1,4 +1,5 @@
 {
+  "id": "/fitset/",
   "name": "FitSet — Antrenman Defteri",
   "short_name": "FitSet",
   "description": "Salon antrenman defteri. Ağırlık ve tekrar kaydı, hareket anlatımları, çevrimdışı çalışır. Veri cihazda kalır.",
@@ -10,10 +11,52 @@
   "orientation": "portrait",
   "background_color": "#0B0C0E",
   "theme_color": "#0B0C0E",
-  "categories": ["health", "fitness", "lifestyle"],
+  "categories": [
+    "health",
+    "fitness",
+    "lifestyle"
+  ],
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/odak.webp",
+      "sizes": "1082x2258",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Hareket ekranı: 3B anlatım, ağırlık ve set kaydı, dinlenme sayacı"
+    },
+    {
+      "src": "screenshots/liste.webp",
+      "sizes": "1082x2258",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Günün programı ve ilerleme"
+    },
+    {
+      "src": "screenshots/gecmis.webp",
+      "sizes": "1082x2258",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Geçmiş: kilo ve seanslar"
+    }
   ]
 }

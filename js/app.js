@@ -29,6 +29,7 @@ const ctx = {
   duzenlenen: null,          // geçmiş ekranından açılan seans
   ozet: null,                // az önce biten seansın özeti (seans sonu ekranı)
   onerilen: 0,               // programın önerdiği gün (kullanıcı ezebilir)
+  kurulum: { istem: false, kurulu: false },   // telefona yükleme (Ayarlar) — bkz. KURULUM
   view: 'list',
 };
 let bootDay = C.dayNumber(new Date());
@@ -37,6 +38,26 @@ let bootDay = C.dayNumber(new Date());
 let bekleyenSW = null, sorulanSW = null;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const curEx = () => N.exercisesFor(ctx.dayIndex)[ctx.idx];
+
+/* ── KURULUM (telefona yükleme) ────────────────────────────────────────────
+   Chrome siteyi gerçek bir Android uygulaması olarak kurabiliyor (WebAPK: çekmecede simge,
+   adres çubuğu yok, internetsiz, siteden kendiliğinden güncellenir; veri aynı kalır).
+   Chrome'un kendi alt bandı bastırılır, istem saklanır ve YALNIZ Ayarlar'daki düğme açar
+   (Sabri, 27 Eyl: "ayarlarda yeterli"). İstem tek kullanımlık; reddedilirse Chrome yenisini
+   verene kadar Ayarlar menü yolunu anlatır. */
+let kurulumIstemi = null;
+ctx.kurulum.kurulu = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  kurulumIstemi = e; ctx.kurulum.istem = true;
+  if (ctx.view === 'settings') render();
+});
+addEventListener('appinstalled', () => {
+  kurulumIstemi = null; ctx.kurulum.istem = false;
+  S.requestPersistence().catch(() => {});      // kurulu uygulamaya kalıcılık çoğunlukla verilir — yeniden iste
+  toast('FitSet telefona yüklendi. Ana ekrandaki simgesinden aç.');
+  if (ctx.view === 'settings') render();
+});
 
 /* ── Bildirim ──────────────────────────────────────────────────────────── */
 let toastTimer;
@@ -96,6 +117,19 @@ function onizlemeTazele() {
 }
 
 /**
+ * Isınma seçimi ekranda GÖRÜNMELİ: çip artık "Bu set" panelinde, panel kapanınca gizli bir durum
+ * kalırdı. Yuva etiketi ("Şimdi" ↔ "Isınma") ve kaydet düğmesi onu söyler.
+ */
+function isinmaTazele() {
+  if (ctx.view !== 'focus') return;
+  const ex = curEx(), q = N.exerciseProgress(ctx.session, ex, ctx.settings);
+  const et = $('yuva-etiket'), kb = $('kaydet-btn'), w = $('warm');
+  if (et) et.textContent = UI.simdiEtiketi(ctx);
+  if (kb) kb.textContent = UI.kaydetEtiketi(ex, q, ctx);
+  if (w) { w.setAttribute('aria-checked', String(!!ctx.draft.warmup)); w.textContent = ctx.draft.warmup ? 'Açık' : 'Kapalı'; }
+}
+
+/**
  * Saat görünümünü tek yerden tazeler: rakam, "canlı" durumu ve düğme etiketi.
  * Üç yerde ayrı ayrı güncellenirken biri unutuluyordu (durdurunca rakam eski
  * kalıyordu) — tek fonksiyon olunca o hata sınıfı ortadan kalkıyor.
@@ -121,9 +155,13 @@ const hold = new Countdown({
 });
 
 
-/* ── Kayan panel ───────────────────────────────────────────────────────── */
-function sheet(aç) {
-  const s = $('sheet'), bg = document.querySelector('.sheet-bg');
+/* ── Kayan paneller ────────────────────────────────────────────────────────
+   İki panel, tek perde: "?" (#sheet — hedef, öneri, anlatım) ve "Bu set" (#set-sheet — tekrar,
+   ısınma; "Şimdi" yuvasından açılır). Kapatma her zaman AÇIK olanı kapatır. */
+const açıkPanel = () => document.querySelector('.sheet.on');
+function sheet(aç, id = 'sheet') {
+  const bg = document.querySelector('.sheet-bg');
+  const s = aç ? $(id) : açıkPanel();
   if (!s || !bg) return;
   // ⚠️ Kapalıyken `inert`: ekran dışında dursa da 11 kontrolü odak sırasına giriyordu
   s.inert = !aç;
@@ -135,32 +173,32 @@ function sheet(aç) {
     s.classList.remove('on'); bg.classList.remove('on');
     s.setAttribute('aria-hidden', 'true');
     s.style.transform = '';
-    setTimeout(() => { bg.hidden = true; }, 300);
+    setTimeout(() => { if (!açıkPanel()) bg.hidden = true; }, 300);
   }
 }
-const sheetAçık = () => $('sheet')?.classList.contains('on');
+const sheetAçık = () => !!açıkPanel();
 
 /** Aşağı sürükleyerek kapatma — parmakla en doğal kapanış */
-let sy = 0, sürükle = false;
+let sy = 0, sürükle = null;
 document.addEventListener('touchstart', e => {
-  if (!sheetAçık()) return;
-  const s = $('sheet');
+  const s = açıkPanel();
+  if (!s) return;
   // Panel içeriği yukarı kaydırılmışsa sürükleme değil kaydırma istiyordur
-  if (e.target.closest('.sheet-in') && $('sheet').querySelector('.sheet-in').scrollTop > 0) return;
+  if (e.target.closest('.sheet-in') && s.querySelector('.sheet-in').scrollTop > 0) return;
   if (!e.target.closest('.sheet')) return;
-  sy = e.touches[0].clientY; sürükle = true; s.style.transition = 'none';
+  sy = e.touches[0].clientY; sürükle = s; s.style.transition = 'none';
 }, { passive: true });
 
 document.addEventListener('touchmove', e => {
   if (!sürükle) return;
   const d = e.touches[0].clientY - sy;
-  if (d > 0) $('sheet').style.transform = `translateY(${d}px)`;
+  if (d > 0) sürükle.style.transform = `translateY(${d}px)`;
 }, { passive: true });
 
 document.addEventListener('touchend', e => {
   if (!sürükle) return;
-  sürükle = false;
-  const s = $('sheet');
+  const s = sürükle;
+  sürükle = null;
   s.style.transition = '';
   const d = e.changedTouches[0].clientY - sy;
   if (d > 90) sheet(false); else s.style.transform = '';   // eşiği geçmediyse geri yerine
@@ -375,7 +413,8 @@ async function kaydet(ex, veri) {
 
 async function kaydetTıklandı() {
   const ex = curEx();
-  const ısınma = $('warm')?.getAttribute('aria-pressed') === 'true';
+  // Tek gerçek taslak: çip panelde, DOM özniteliği değil ctx.draft okunur (süre hareketi de onu okur)
+  const ısınma = !!ctx.draft.warmup;
   if (ex.setType === 'time') {
     const sn = ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds;
     hold.stop(); saatDurumu(ex);
@@ -509,10 +548,15 @@ document.addEventListener('click', async e => {
   const ex = ctx.view === 'focus' ? curEx() : null;
 
   switch (a) {
-    case 'warm': {
-      const b = $('warm');
-      ctx.draft.warmup = b.getAttribute('aria-pressed') !== 'true';
-      b.setAttribute('aria-pressed', String(ctx.draft.warmup));
+    case 'warm': ctx.draft.warmup = !ctx.draft.warmup; isinmaTazele(); break;
+    case 'set-ayar': sheet(true, 'set-sheet'); break;
+    case 'kur': {
+      if (!kurulumIstemi) break;
+      const istem = kurulumIstemi;
+      kurulumIstemi = null; ctx.kurulum.istem = false;           // istem tek kullanımlık
+      await istem.prompt();
+      await istem.userChoice.catch(() => null);
+      render();                                                  // kabul → appinstalled bildirir; ret → menü yolu yazılır
       break;
     }
     case 'warmup': stopAnim(); ctx.view = 'warmup'; render(); scrollTo(0, 0); break;
@@ -644,8 +688,9 @@ document.addEventListener('click', async e => {
 
     case 'oneri-uygula': {
       // ÖNER, DAYATMA: yalnız kutuya yazar; seti kaydetmek kullanıcının kararı
+      // Öneri "?" panelinde: yeniden çizim paneli kapatır, kutu yeni ağırlıkla görünür
       const o = ctx.oneri[ex.id];
-      if (o?.tur === 'agirlik') { ctx.draft.weight = o.agirlik; render(); }
+      if (o?.tur === 'agirlik') { ctx.draft.weight = o.agirlik; render(); toast(`Ağırlık ${UI.fmt(o.agirlik)} ${ctx.settings.unit} yapıldı.`); }
       break;
     }
     case 'ozet-tamam': ctx.ozet = null; ctx.view = 'list'; render(); scrollTo(0, 0); break;

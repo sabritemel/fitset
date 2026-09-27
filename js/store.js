@@ -382,8 +382,14 @@ function migrate(session) {
   return session;
 }
 
-/** Tarayıcıdan verinin otomatik temizlenmemesini ister (garanti değil) */
+/**
+ * Tarayıcıdan verinin otomatik temizlenmemesini ister (garanti değil).
+ * ⚠️ 27 Eyl'e kadar `persisted() ? true : persist()` yazıyordu: persisted() bir PROMISE döndürür,
+ * Promise her zaman doğrudur → persist() HİÇ çağrılmadı ve veri "en iyi çaba" deposunda kaldı
+ * (canlıda ölçüldü: persisted false). Android depolama sıkışınca böyle veriyi silebilir.
+ */
 export async function requestPersistence() {
   if (!navigator.storage?.persist) return null;
-  return navigator.storage.persisted() ? true : navigator.storage.persist();
+  if (await navigator.storage.persisted()) return true;
+  return navigator.storage.persist();
 }

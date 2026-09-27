@@ -53,6 +53,23 @@ Analiz, ölçümler, mokap ve kararlar: `docs/2026-09-27-tasarim-dili-analizi.md
 - **İkonlar** `index.html`'deki SVG sprite'ta (`<use href="#i-…">`); `ui.js`'in çağırdığı her ikonun
   sprite'ta olduğunu kapı sınar.
 - **Kadraj:** `manken3d.cerceve('sabit')` zemin diskinin (`ZEMIN_R`) ön kenarını da sığdırır.
+  **Odak ekranının `'donen'` kadrajı (27 Eyl, Sabri: telefonda "animasyon çok küçük"):** üst sınırı yalnız
+  BEDEN ve HAREKET EDEN aletler belirler; sabit makine gövdesi (lat kulesi, makara tepesi) üstten taşar.
+  Alt ve yan sınıra her şey + zemin diski girer. Sınır nokta başına (`y·cosφ + ρ·sinφ`) — eskiden en
+  yüksek noktanın boyu ile en uzak noktanın ρ'su toplanıyordu. Hareketli = 13 anda >0,5 cm yer değiştiren.
+  Ölçüldü: lat çekişinde kişi/kadraj %62 → %78. `fizik-denetimi` KADRAJ: 504 açıda beden ve tutulan alet
+  kırpılmaz, sabit gövde yalnız üstten taşar, disk kesilmez (mutasyon 4/4; hareket tespiti denetimde
+  ürün kodundan BAĞIMSIZ yazıldı — aynısını kullansaydı K3 mutantıyla birlikte körleşiyordu).
+- **Sade odak ekranı (27 Eyl, Sabri: "ana ekran olabildiğince sade olsun"):** ağırlık önerisi **? paneline**
+  (hedefin üstü), tekrar ve ısınma seti **"Bu set" paneline** (`#set-sheet`) taşındı — "Şimdi" yuvası
+  onu açan bir DÜĞME (yalnız ağırlık × tekrar). İşlev kalktı değil taşındı: hedef 12 iken 10 yapılan set.
+  `#f-reps` / `#warm` kimlikleri aynı, kapalı panelde DOM'da (inert) → kayıt kodu değişmedi. Isınma
+  seçimi gizli durum olmasın diye ana ekran söyler: yuva "Isınma", düğme "Isınma setini kaydet".
+  Isınma `role="switch"` + `aria-checked` (etiketi değişen `aria-pressed` çelişik okunur). Taslağın tek
+  gerçeği `ctx.draft.warmup` (DOM özniteliği okunmaz). Figür alanı Sabri'nin telefonunda (393×724 CSS) 166 → 313 px.
+  `test-session` 32-33 tutar (mutasyon 4/4: öneri ana ekrana dönmez, ısınma söylenir, —×12, yükle düğmesi).
+- **Ağırlıksız değer "—" yazılmaz:** boş kutu sönük `0` (80 px "—" gri çubuk gibiydi), yuva/set etiketi
+  `12 tekrar` ("—×12" değil).
 - **Animasyon zamanı TEK kaynak: `sahne.animT`** (Sabri, 27 Eyl): 6 tekrar (`TEKRAR`, 3 sn/tekrar),
   başlangıç pozundan (`DURAGAN_T = 0`) başlar ve TAM orada biter; duran figür de o pozdadır. Dururken
   dokunmak/döndürmek 6 tekrar daha oynatır; ekran yeniden kurulunca (set kaydı) süren oynatma kaldığı
@@ -207,6 +224,22 @@ ve **10 doğrulama kazandı**. Kural, olayın değil **alanın** yanında durur.
   denetimi +1 px toleransla 0,24 px'lik taşmayı yuttu (tarayıcı bu kadarında da üç nokta koyar) ·
   otomasyonda rAF durunca "+30 çalışmıyor" sandım (500 ms'de 1 kare). Her araç önce bilinen bir
   örnekle doğrulandı.
+
+### 8. Telefona kurulum ve verinin kalıcılığı (27 Eyl)
+
+- **Kurulum mağazasız:** manifest + SW zaten Chrome'un şartlarını karşılıyordu (CDP
+  `getInstallabilityErrors` → 0). Chrome bunu gerçek bir Android uygulamasına (WebAPK) çevirir: çekmece,
+  adres çubuğu yok, siteden güncellenir, **veri tarayıcıyla ORTAK**. APK dosyası (TWA) reddedildi:
+  "bilinmeyen kaynak" izni + Play Protect uyarısı, üstelik doğrulama dosyası (`/.well-known/assetlinks.json`)
+  alan kökü ister — `github.io/fitset/` alt yolunda konamaz → uygulamada adres çubuğu görünürdü.
+- `beforeinstallprompt` bastırılır, istem saklanır, **yalnız Ayarlar → Uygulama → Telefona yükle** açar
+  (Sabri: "ayarlarda yeterli"). İstem yoksa düğme GÖSTERİLMEZ, menü yolu yazılır.
+- Manifest: `id: "/fitset/"` (Chrome'un önerisi = yayındaki mevcut kimlik; adres değişse de uygulama aynı
+  kalır) · ayrı **maskable** ikon (köşesiz, içerik ≤ 0,354·S) · `screenshots/` (Chrome'un zengin kurulum
+  penceresi; **sentetik veri** — depo herkese açık; SW önbelleğine girmez).
+- ⚠️ **`navigator.storage.persisted()` bir PROMISE döndürür.** `persisted() ? true : persist()` her zaman
+  `true` döndü, `persist()` HİÇ çağrılmadı — canlıda ölçüldü: veri "en iyi çaba" deposundaydı, Android
+  sıkışınca silebilirdi. `test-store` sahte `navigator.storage` ile tutar (eski satır mutantı ÖLDÜ).
 
 ## Çalışma biçimi
 

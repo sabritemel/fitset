@@ -337,5 +337,90 @@ console.log('\nANİMASYON — başlangıç noktasından başlar, TAM orada biter
     `ısınma figürleri (${isinmalar.length}) bir tekrarın sonunda başlangıç pozunda`);
 }
 
+/* ── KADRAJ — Sabri (27 Eyl, telefonda): "animasyon çok küçük". Kişi figür alanının %54'üydü: lat kulesi
+   gibi sabit makine gövdesi kadrajın boyunu belirliyordu. Artık üst sınırı yalnız beden ve hareket eden
+   aletler belirler (kule üstten taşar), alt sınıra zemin diski girer. Dönen kadrajın sözü aynen durur:
+   HİÇBİR açıda beden kırpılmaz. ── */
+console.log('\nKADRAJ — beden hiçbir açıda kırpılmaz, zemin diski kesilmez, makine kulesi üst sınırı belirlemez');
+{
+  const yaz = (gecti, ad, olcum = '') => { console.log(`  ${gecti ? '✓' : '✗'} ${ad}${olcum ? ` — ${olcum}` : ''}`); if (!gecti) kalan++; };
+  const EKLEM = ['P', 'boyun', 'gogusAlt', 'omA', 'omB', 'dA', 'dB', 'eA', 'eB', 'kaA', 'kaB', 'zA', 'zB', 'aA', 'aB', 'uA', 'uB'];
+  const TOL = 0.01;
+  let tasan = [], disk = [], aci = 0;
+  for (const [id, h] of Object.entries(KUTUPHANE)) {
+    if (h.varyantlar) continue;                            // plank: yan yana varyantlar, sabit ortak kadraj
+    const fi = h.kamera[1], m = h.merkez ?? [0, 0, 0];
+    for (let te = 0; te < 360; te += 15) {
+      aci++;
+      const c = M.cerceve(h, te, fi, 'donen'), pr = M.kamera(te, fi);
+      for (let i = 0; i <= 12; i++) {
+        const s = M.an(h, i / 12);
+        for (const [q, r] of [...EKLEM.map(k => [s[k], 8]), [s.kafa, M.R.kafa + 2]]) {
+          const P = pr(q), x = P[0], y = -P[1];
+          if (x - r < c.sol - TOL || x + r > c.sag + TOL || y + r > c.ust + TOL || y - r < c.alt - TOL) tasan.push(`${id}@${te}°`);
+        }
+      }
+      for (let k = 0; k < 24; k++) {                       // zemin diskinin kenarı
+        const a = k / 24 * 2 * Math.PI;
+        if (-pr([m[0] + M.ZEMIN_R * Math.cos(a), 0, m[2] + M.ZEMIN_R * Math.sin(a)])[1] < c.alt - TOL) { disk.push(`${id}@${te}°`); break; }
+      }
+    }
+  }
+  yaz(!tasan.length, 'beden hiçbir açıda kadraj dışına taşmıyor', tasan.length ? [...new Set(tasan)].slice(0, 6).join(', ') : `${aci} açı × 13 an`);
+  yaz(!disk.length, 'zemin diski alttan kesilmiyor', disk.length ? [...new Set(disk)].slice(0, 6).join(', ') : `${aci} açı`);
+
+  /* ALETLER — tutulan (hareket eden) alet hiçbir açıda kırpılmaz; sabit gövde yalnız ÜSTTEN taşabilir.
+     Hareket tespiti ürün kodundan BAĞIMSIZ yazıldı: kadrajın kendi sınıflamasını yeniden kullansaydı,
+     o sınıflama bozulduğunda (mutasyon K3: her şey "sabit") bu kapı da onunla birlikte körleşirdi. */
+  const D = M.birim([0.31, 0.53, 0.79]);
+  const aletNoktalari = h => {
+    const kareler = [];
+    for (let i = 0; i <= 12; i++) {
+      const s = M.an(h, i / 12), kare = [];
+      for (const y of [D, D.map(v => -v)]) {
+        const pr = q => [q[0], q[1], q[0] * y[0] + q[1] * y[1] + q[2] * y[2]];
+        for (const e of h.ekipman(pr, s, i / 12)) {
+          const g = e.geo; if (!g) continue;
+          if (g.tur === 'p' || g.tur === 'c') for (const q of g.P3) kare.push([q, 0]);
+          else if (g.tur === 'k') kare.push([g.a3, g.r], [g.b3, g.r]);
+          else kare.push([g.c3, g.r]);
+        }
+      }
+      kareler.push(kare);
+    }
+    const n = kareler[0].length, hareketli = [], sabit = [];
+    if (!kareler.every(k => k.length === n)) return { hareketli: kareler.flat(), sabit };
+    for (let j = 0; j < n; j++) {
+      const iz = kareler.map(k => k[j]);
+      (iz.some(x => M.mesafe(x[0], iz[0][0]) > 0.5) ? hareketli : sabit).push(...iz);
+    }
+    return { hareketli, sabit };
+  };
+  let aletTasan = [], altTasan = [];
+  for (const [id, h] of Object.entries(KUTUPHANE)) {
+    if (h.varyantlar) continue;
+    const { hareketli, sabit } = aletNoktalari(h), fi = h.kamera[1];
+    for (let te = 0; te < 360; te += 15) {
+      const c = M.cerceve(h, te, fi, 'donen'), pr = M.kamera(te, fi);
+      for (const [q, r] of hareketli) {
+        const P = pr(q), x = P[0], y = -P[1];
+        if (x - r < c.sol - TOL || x + r > c.sag + TOL || y + r > c.ust + TOL || y - r < c.alt - TOL) { aletTasan.push(`${id}@${te}°`); break; }
+      }
+      for (const [q, r] of sabit) {
+        const P = pr(q), x = P[0], y = -P[1];
+        if (x - r < c.sol - TOL || x + r > c.sag + TOL || y - r < c.alt - TOL) { altTasan.push(`${id}@${te}°`); break; }
+      }
+    }
+  }
+  yaz(!aletTasan.length, 'tutulan / hareket eden alet hiçbir açıda kırpılmıyor', aletTasan.length ? [...new Set(aletTasan)].slice(0, 6).join(', ') : `${aci} açı`);
+  yaz(!altTasan.length, 'sabit makine gövdesi yalnız ÜSTTEN taşar (yanlar ve taban kadrajda)', altTasan.length ? [...new Set(altTasan)].slice(0, 6).join(', ') : `${aci} açı`);
+  // Lat çekişi: kule 2,1 m, oturan kişi ~1,3 m. Kule kadrajı belirleseydi kişi boyun ~%62'si olurdu.
+  const h = KUTUPHANE.cable_close_pulldown, [te, fi] = h.kamera, pr = M.kamera(te, fi), c = M.cerceve(h, te, fi, 'donen');
+  let u = -Infinity, a = Infinity;
+  for (let i = 0; i <= 12; i++) { const s = M.an(h, i / 12); for (const k of [...EKLEM, 'kafa']) { const y = -pr(s[k])[1]; u = Math.max(u, y); a = Math.min(a, y); } }
+  const oran = (u - a) / (c.ust - c.alt);
+  yaz(oran > 0.72, 'lat çekişinde kişi kadraj boyunun büyük kısmını dolduruyor (kule üstten taşar)', `kişi / kadraj = ${f(oran * 100)}%`);
+}
+
 console.log(`\n${kalan ? `✗ ${kalan} sorun` : '✓ tümü temiz'}`);
 process.exit(kalan ? 1 : 0);

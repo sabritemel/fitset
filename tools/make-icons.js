@@ -7,14 +7,21 @@
  * kurmak bu ilkeyi bozardı. İkon birkaç geometrik şekilden ibaret olduğu için
  * doğrudan piksel doldurup zlib ile PNG'ye yazmak daha ucuz ve tekrar üretilebilir.
  *
- * TASARIM — marka kimliğinin en indirgenmiş hali:
- *   lacivert zemin (#2A32B8)  = mürekkep
- *   pembe onay işareti        = tamamlanan set (uygulamanın çekirdek etkileşimi)
- *   kırmızı alt çizgi         = defter çizgisi / vurgu
+ * TASARIM — marka kimliğinin en indirgenmiş hali (Tasarım Dili 3 "Grafit", 27 Eyl):
+ *   grafit zemin (--s2 #1B1E22) = defter; --bg'den bir ton açık ki koyu duvar kâğıdında kaybolmasın
+ *   açık onay işareti (--t1)    = tamamlanan set (uygulamanın çekirdek etkileşimi)
+ *   mercan alt çizgi (--acc)    = defter çizgisi / vurgu
+ * Kompozisyon 28 Tem ikonuyla AYNI — yalnız renkler dile geçti (eskisi lacivert + pembe).
  * 48px launcher boyutunda okunması için detay bilinçli olarak az tutuldu.
  *
- * Maskable güvenli alan: tüm içerik 0.28-0.76 aralığında, yani %80 iç dairenin
- * içinde — Android ikonu daire/squircle'a kırptığında hiçbir şey kesilmez.
+ * İki biçim:
+ *   icon-*.png            köşeleri yuvarlatılmış kare, köşeler saydam (tarayıcı, masaüstü)
+ *   icon-maskable-512.png TAM DOLU kare (Android maskeyi kendisi uygular). ⚠️ Eskiden maskable
+ *                         olarak da köşeleri saydam ikon veriliyordu: kare maskeli başlatıcıda
+ *                         köşeler boşlukta kalırdı.
+ * Güvenli alan: içeriğin merkeze en uzak pikseli 0,354·S (27 Eyl, PNG'den ölçüldü; çizgi kalınlığı
+ * dahil) — Android'in garanti ettiği %80 iç daire (yarıçap 0,40·S) içinde; daire/damla kırpmada
+ * hiçbir şey kesilmez.
  */
 import fs from 'node:fs';
 import zlib from 'node:zlib';
@@ -23,9 +30,10 @@ import { fileURLToPath } from 'node:url';
 
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'icons');
 
-const INK = [0x2a, 0x32, 0xb8];
-const PAPER = [0xf7, 0xde, 0xe6];
-const RED = [0xc8, 0x1e, 0x4e];
+// css/style.css :root jetonlarıyla AYNI değerler (renk yalnız orada tanımlı; burası PNG'ye basar)
+const INK = [0x1b, 0x1e, 0x22];     // --s2
+const PAPER = [0xd2, 0xd6, 0xdc];   // --t1
+const RED = [0xf0, 0x6a, 0x5d];     // --acc (mercan)
 
 /* ── geometri yardımcıları (hepsi işaretli mesafe döndürür: <0 = içeride) ── */
 const rrect = (x, y, w, h, r) => (px, py) => {
@@ -40,8 +48,8 @@ const seg = (ax, ay, bx, by, hw) => (px, py) => {
 };
 
 /** S×S ikonu 4×4 süper-örnekleme ile çizer, RGBA byte dizisi döndürür */
-function render(S) {
-  const bg = rrect(0, 0, S, S, S * 0.22);
+function render(S, tamDolu = false) {
+  const bg = tamDolu ? () => -1 : rrect(0, 0, S, S, S * 0.22);
   const rule = rrect(S * 0.28, S * 0.735, S * 0.44, S * 0.055, S * 0.028);
   const c1 = seg(S * 0.29, S * 0.505, S * 0.435, S * 0.635, S * 0.058);
   const c2 = seg(S * 0.435, S * 0.635, S * 0.735, S * 0.325, S * 0.058);
@@ -99,8 +107,9 @@ function png(S, px) {
 }
 
 fs.mkdirSync(OUT, { recursive: true });
-for (const S of [180, 192, 512]) {
-  const buf = png(S, render(S));
-  fs.writeFileSync(path.join(OUT, `icon-${S}.png`), buf);
-  console.log(`  ✓ icons/icon-${S}.png  ${S}×${S}  ${(buf.length / 1024).toFixed(1)} KB`);
+for (const [S, ad, tamDolu] of [[180, 'icon-180', false], [192, 'icon-192', false], [512, 'icon-512', false],
+                                  [512, 'icon-maskable-512', true]]) {
+  const buf = png(S, render(S, tamDolu));
+  fs.writeFileSync(path.join(OUT, `${ad}.png`), buf);
+  console.log(`  ✓ icons/${ad}.png  ${S}×${S}  ${(buf.length / 1024).toFixed(1)} KB`);
 }

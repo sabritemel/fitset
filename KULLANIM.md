@@ -13,8 +13,14 @@ Salon antrenman defteri. Çevrimdışı çalışır, veri telefonda kalır.
 **Android · Chrome**
 
 1. Uygulamanın adresini Chrome'da aç: `https://sabritemel.github.io/fitset/`
-2. Sağ üstteki **⋮** menüsünden **"Ana ekrana ekle"** (bazı sürümlerde *"Uygulamayı yükle"*).
-3. Ana ekranda **FitSet** ikonu belirir. Oradan açtığında tarayıcı çubuğu görünmez, tam ekran açılır.
+2. **Ayarlar → Uygulama → Telefona yükle**'ye bas. (Düğme yoksa sağ üstteki **⋮** menüsünden
+   **"Uygulamayı yükle"**.) Chrome bir kurulum penceresi açar: açıklama ve ekran görüntüleriyle.
+3. **FitSet** uygulama çekmecesine ve ana ekrana kendi simgesiyle eklenir. **Mağaza gerekmez.**
+   Oradan açtığında adres çubuğu görünmez, tam ekran açılır. Siteyi güncelledikçe uygulama da
+   kendiliğinden güncellenir.
+4. **Kayıtların aynen kalır:** uygulama tarayıcıyla aynı depoyu kullanır. Tersi de geçerli — Chrome'un
+   site verisini silersen uygulamanın kayıtları da gider; arada bir **yedek al**. Uygulama açılışta
+   tarayıcıdan verinin **kalıcı** saklanmasını ister (kurulu uygulamalara çoğunlukla verilir).
 
 **İlk açılışta internete bağlı ol.** Uygulama kendini bir kez indirir; sonrasında uçak modunda bile açılır.
 
@@ -69,17 +75,23 @@ Bir harekete dokununca açılır. Tek hareket, tam ekran, **kaymaz** — her şe
   yerde kaymaz, diz doğru yöne bükülür. **Aletler gerçek ölçülerinde** çizilir: altıgen kauçuk başlı
   dambıl (25 cm), kovanlı, yakalı ve kalın plakalı halter, tekerlekli makaralar; makinelerin
   gövdeleri, rayları ve minder destekleri yere oturur. Bench press kollar düzken başlar.
-- **Set yuvaları**: hedef set sayısı kadar yuva. Biten set tikli ve değeriyle, sıradaki **şimdi**
+- **Set yuvaları**: hedef set sayısı kadar yuva. Biten set tikli ve değeriyle, sıradaki **Şimdi**
   çerçeveli (kutudaki değeri ön izler), kalanlar boş. Isınma setleri ayrı yuvada, sayılmaz.
-  Yuvaların yanındaki **↶** son seti geri alır.
+  Üst çubuktaki **↶** son seti geri alır.
+- **Şimdi yuvasına dokun → "Bu set" paneli** (ekran sade kalsın diye tekrar ve ısınma burada):
+  - **Tekrar** hedeften gelir; hedeften farklı yaptıysan `− / +` ile ya da yazarak **yalnız bu set**
+    için değiştir (hedefin kendisi ? panelinden değişir). 12 yerine 10 yaptığın seti 12 diye
+    kaydetmek veriyi yanlışlar.
+  - **Isınma seti** anahtarı: açıkken set hacme ve "geçen sefer"e karışmaz. Açıkken ana ekran bunu
+    söyler: yuva **Isınma** yazar, düğme **Isınma setini kaydet** olur.
 - **Ağırlık** kutusu geçen seferki değerle dolu gelir. Yanındaki düğmeler **adımı üstünde yazar**
   (ör. **+5 / −5**); adım **ekipmandan** gelir: bar 2,5 kg, makine ve kablo 5 kg, dambıl Ayarlar'daki
   **dambıl adımı** (2 ya da 2,5). Üstünde ne girmen gerektiği yazar: *bar dahil* · *tek dambıl ·
-  hacimde ×2* · *makinede seçili*. Hemen altında **geçen sefer** yaptığın setler.
-- **Tekrar** hedeften gelir; `− / +` ile ya da sayıya dokunup yazarak bu set için değiştirirsin.
-- **Isınma seti** çipi: basılıyken (açık dolgu) set hacme ve "geçen sefer"e karışmaz.
-- **Ağırlık önerisi:** bir hareketi **iki seans üst üste** aynı ağırlıkla, hedef set sayısında ve her sette
-  hedef tekrara ulaşarak yaptıysan altında *"İki seanstır 3 × 12 tamam: 42,5 kg dene"* yazar.
+  hacimde ×2* · *makinede seçili*. Hemen altında **geçen sefer** yaptığın setler. Hiç kaydı olmayan
+  harekette kutu boştur ve sönük **0** gösterir; ağırlık girilmeden set kaydedilmez.
+- **Ağırlık önerisi** ana ekranda değil, **? panelinde** (hedefin üstünde): bir hareketi **iki seans
+  üst üste** aynı ağırlıkla, hedef set sayısında ve her sette hedef tekrara ulaşarak yaptıysan
+  *"İki seanstır 3 × 12 tamam: 42,5 kg dene"* yazar.
   **Uygula** yalnız kutuya yazar; seti kaydetmek senin kararın. Artış bileşik harekette ~%5, izole
   harekette ~%2,5; `+ / −` ile **aynı adıma** yuvarlanır (bar 2,5 · dambıl ayardaki · makine ve
   kablo 5 kg). Adım çok büyükse
@@ -91,7 +103,7 @@ Bir harekete dokununca açılır. Tek hareket, tam ekran, **kaymaz** — her şe
   **+30** · kalan süre (büyük, çubukla) · **Geç**. Önceki/Sonraki o sırada bantta yoktur; dinlenme
   ortasında yanlış dokunuşla hareket değişmez. Bandın yüksekliği hiç değişmez.
 
-**? paneli** (aşağı kaydırarak ya da boşluğa dokunarak kapanır): hareketin **hedefi**
+**? paneli** (aşağı kaydırarak ya da boşluğa dokunarak kapanır): varsa **ağırlık önerisi**, hareketin **hedefi**
 (set · tekrar · ağırlık; hoca programı değiştirdiğinde buradan güncelle, **Programa dön** ile
 geri al), çalışan kaslar, adım adım anlatım, süreli harekette doğru duruş ve yaygın hatalar,
 ve **dikkat** notu.
@@ -141,6 +153,8 @@ kaldırır ve sırayı yeniden hesaplar (o da geri getirilebilir). Son set silin
 - **Dambıl adımı:** 2 kg ya da 2,5 kg (varsayılan 2,5). Salonundaki dambıl setine göre seç; odak
   ekranındaki `+ / −` ve ağırlık önerisi bu adımı kullanır.
 - **Boy** (bir kez girilir; kilo takibi Geçmiş'te).
+- **Uygulama:** Chrome kuruluma hazırsa **Telefona yükle** düğmesi (bkz. 1. Telefona kurulum).
+  Düğme yoksa menü yolu yazar; yüklüyse "Telefona yüklü" der.
 - **Yedek al / Geri yükle** (aşağıda).
 - **Bugünü sıfırla:** bugün girilen setleri siler; hemen ardından **Geri getir** ile geri alınır.
 - En altta sağlık notu ve three.js lisans bağlantısı.

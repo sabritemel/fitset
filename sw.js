@@ -19,7 +19,7 @@
  * gelir → devralır → sayfa yenilenir. Kullanıcı antrenman ortasında sürüm
  * değiştirmez; kararı o verir.
  */
-const CACHE = 'fitset-9d1cdd3a51';
+const CACHE = 'fitset-b79d072c59';
 
 const ASSETS = [
   './',
@@ -46,6 +46,7 @@ const ASSETS = [
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
 ];
 
 /** ASSETS'in mutlak yolları — yayında kök '/fitset/', yerelde '/' (scope'tan çözülür) */

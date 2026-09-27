@@ -435,6 +435,31 @@ piksellik çizgi · bütün hareketleri kontrol et · en azından şekil olarak 
 - **Kapılar:** fizik denetimi kalınlıksız daireyi, dambıl ölçüsünü, kablonun yataylığını ve bench'in başlangıcını
   tutar — mutasyon 5/5; SVG yedek 198 çizimde hatasız.
 
+### 11.3d Dördüncü tur: telefonda gerçek görüntü, sade odak ekranı, kurulum (27 Eyl)
+
+Sabri, kendi telefonunun ekran görüntüsüyle (1080×2340, Chrome): *"animasyon filan çok küçük"*;
+ardından *"öneriyi, tekrar sayısını ve ısınma seti düğmesini kaldır — ana ekran olabildiğince sade
+olsun"* ve *"bunu android telefonuma kurulabilecek bir app haline getirebilir miyiz? — app store gibi
+servislere gerek olmadan"*.
+
+- **Ölçüm (ekran görüntüsünden):** figür alanı ~166 CSS px, kişi onun yalnız **%54**'ü. Üç kayıp:
+  Chrome'un adres çubuğu (~58 px), iki satırlık öneri kutusu ve tekrar satırı, makine kulesinin
+  kadrajı belirlemesi (lat kulesi 2,1 m ↔ oturan kişi 1,3 m).
+- **Kararlar (Sabri):** kadraj üstten kırpsın (makine tepesi taşar, taban kalır) · tekrar ve ısınma
+  "Şimdi" yuvasından açılan **Bu set** paneline · öneri **? paneline** · ağırlık boşken "—" yerine
+  sönük 0 ve "12 tekrar" · Grafit + mercan yeni ikon · **Telefona yükle** yalnız Ayarlar'da ·
+  manifest'e ekran görüntüleri.
+- **Sonuç (Sabri'nin telefonu, 393×724 CSS — alt başlığın gizli olmasından çıkarıldı; ölçüldü):** figür
+  alanı 166 → **313** px (+%89); lat çekişinde kişi/kadraj %62 → %78. Uygulama olarak kurulunca (~393×780)
+  yalnız **324** px: ekran 740'ı geçtiği için alt başlık ve 80 px'lik ağırlık geri gelir, kazancı onlar
+  alır. ⚠️ İlk tahminim ("kurulunca +%33") bu eşiği saymıyordu — ölçüm düzeltti. Kadraj karşılaştırması 6 hareketle çizildi
+  (ilk öneri tabanı alttan kesiyordu → yalnız üstten kırpan biçime çevrildi).
+- **Kurulum:** mağaza ya da APK gerekmiyor — site zaten Chrome'un kurulum şartlarını karşılıyordu
+  (kurulabilirlik hatası 0). Yol boyunca bulunan kusur: verinin kalıcı saklanması **hiç istenmiyordu**
+  (`persisted()` Promise'i her zaman doğru sayılıyordu).
+- **Kapılar:** `fizik-denetimi` KADRAJ (504 açı), `test-session` 32-33, `test-store` kalıcılık —
+  mutasyon 9/9 (ilk tur 8/9: "tutulan alet kırpılmaz" hiç ölçülmüyordu → kapı eklendi).
+
 ### 11.4 Sınırlar
 
 - Gerçek telefonda değil, tarayıcıda 390 ve 360 px genişlikte ölçüldü. **Sabri'nin gözle testi gerekiyor**

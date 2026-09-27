@@ -38,10 +38,11 @@ export const esc = v => String(v).replace(/[&<>"']/g, c =>
 /** Çizgisel ikon — sembolleri index.html taşır (pakette, çevrimdışı) */
 const ik = ad => `<svg class="i" aria-hidden="true"><use href="#i-${ad}"/></svg>`;
 
+/* Ağırlıksız set (vücut ağırlığı) "— × 12" değil "12 tekrar" yazılır — "—" bir değer gibi okunuyordu (27 Eyl) */
 export const setLabel = s =>
   s.type === 'time' ? `${fmt(s.seconds)} sn`
     : s.type === 'cardio' ? `${fmt(s.minutes)} dk`
-      : `${fmt(s.weight)} × ${fmt(s.reps)}`;
+      : s.weight == null ? `${fmt(s.reps)} tekrar` : `${fmt(s.weight)} × ${fmt(s.reps)}`;
 
 /** Bir setin tek değeri — liste satırının sağı ("45 kg", "40 sn", "12 tekrar") */
 const degerEtiketi = (s, birim) => s.type === 'time' ? `${fmt(s.seconds)} sn`
@@ -223,7 +224,8 @@ function vizHTML(ex, q) {
  * Kayan panel — hedef ayarları + anlatım. Kapalıyken `inert`: ekran dışında dursa da
  * içindeki kontroller odak sırasına girmesin (eskiden aria-hidden ama 11 kontrol odaklanabiliyordu).
  */
-function sheetHTML(ex, settings) {
+function sheetHTML(ex, ctx) {
+  const { settings } = ctx;
   const t = N.effective(ex, settings);
   const adim = I.agirlikAdimi(ex, settings) ?? I.GIRIS_ADIMI_YEDEK;
   const alanlar = [
@@ -233,12 +235,14 @@ function sheetHTML(ex, settings) {
         : [['reps', t.reps, 1, 'Tekrar'], ['weight', t.weight, adim, `Ağırlık (${settings.unit})`]]),
   ];
 
-  return `<div class="sheet-bg" data-act="sheet-close" hidden></div>
-    <section class="sheet" id="sheet" aria-hidden="true" inert aria-label="Hedef ve anlatım">
+  /* Ağırlık önerisi burada (Sabri, 27 Eyl: ana ekranda görünmesin) — hedefin hemen üstünde,
+     çünkü ikisi aynı soruya bakar: bu harekette hangi yüke çıkmalıyım? */
+  return `<section class="sheet" id="sheet" aria-hidden="true" inert aria-label="Hedef ve anlatım">
       <button class="grab" data-act="sheet-close" aria-label="Kapat"></button>
       <div class="sheet-in">
         <h2 lang="en">${ex.en}</h2>
         <p class="alt-baslik">${ex.tr}</p>
+        ${oneriHTML(ex, ctx)}
         <div class="goal">
           <div class="goal-hd">
             <span class="etiket">Hedef</span>
@@ -298,7 +302,7 @@ export function gezinmeHTML(ctx, kalan = null, toplam = 0) {
 }
 
 /** Yuvadaki sıkı biçim ("42,5×12") — dar yuvada değer kırpılmasın (360 px'te yuvaya ~60 px kalır) */
-const yuvaDegeri = s => s.type === 'weight_reps' ? `${fmt(s.weight)}×${fmt(s.reps)}` : setLabel(s);
+const yuvaDegeri = s => s.type === 'weight_reps' && s.weight != null ? `${fmt(s.weight)}×${fmt(s.reps)}` : setLabel(s);
 
 /**
  * SET YUVALARI — "1/3 SET" metni ve rozetler yerine hedef kadar yuva: biten tikli,
@@ -315,19 +319,42 @@ function yuvalarHTML(q, ctx, ex) {
   if (isinma.length) yuvalar.push(`<div class="yuva isinma"><small>Isınma</small><b>×${isinma.length}</b></div>`);
   for (let i = bas; i < n; i++) {
     if (i < calisma.length) yuvalar.push(`<div class="yuva"><small>${ik('tik')}Set ${i + 1}</small><b>${yuvaDegeri(calisma[i])}</b></div>`);
-    else if (i === calisma.length) yuvalar.push(`<div class="yuva simdi" id="yuva-simdi"><small>Şimdi</small>
-      <b id="yuva-onizleme">${onizleme(ex, ctx)}</b></div>`);
+    else if (i === calisma.length) yuvalar.push(simdiYuvasi(ex, ctx));
     else yuvalar.push(`<div class="yuva bos"><small>Set ${i + 1}</small><b>—</b></div>`);
   }
   return `<div class="yuvalar${yuvalar.length > 3 ? ' sik' : ''}">${yuvalar.join('')}</div>`;
 }
 
-/** "Şimdi" yuvasının ön izlemesi — o an kutuda duran değer (app.js adımlayıcıyla tazeler) */
+/**
+ * "ŞİMDİ" YUVASI — ağırlık × tekrar hareketinde bir DÜĞME: dokununca "Bu set" paneli açılır
+ * (tekrar ve ısınma seti). Sabri (27 Eyl): ana ekran olabildiğince sade — ikisi ekrandan kalktı
+ * ama işlev kalmalı: hedef 12 iken 10 çıkan seti 12 diye kaydetmek veriyi yanlışlar.
+ * Isınma seçiliyse yuva bunu SÖYLER (etiket "Isınma") — gizli bir durum ekranda görünmeli.
+ */
+function simdiYuvasi(ex, ctx) {
+  const ic = `<small id="yuva-etiket">${simdiEtiketi(ctx)}</small><b id="yuva-onizleme">${onizleme(ex, ctx)}</b>`;
+  if (ex.setType !== 'weight_reps') return `<div class="yuva simdi" id="yuva-simdi">${ic}</div>`;
+  return `<button class="yuva simdi ayarli" id="yuva-simdi" data-act="set-ayar" aria-haspopup="dialog"
+    aria-describedby="yuva-ipucu">${ic}${ik('asagi')}<span class="gizli" id="yuva-ipucu">Tekrar ve ısınma seti</span></button>`;
+}
+export const simdiEtiketi = ctx => ctx.draft.warmup ? 'Isınma' : 'Şimdi';
+
+/**
+ * "Şimdi" yuvasının ön izlemesi — o an kutuda duran değer (app.js adımlayıcıyla tazeler).
+ * Ağırlık henüz yoksa yalnız tekrar: "—×12" okunmuyordu (27 Eyl, Sabri).
+ */
 export function onizleme(ex, ctx) {
   const t = N.effective(ex, ctx.settings);
   if (ex.setType === 'time') return `${fmt(ctx.draft.seconds ?? t.seconds)} sn`;
   if (ex.setType === 'cardio') return `${fmt(ctx.draft.minutes ?? t.minutes)} dk`;
-  return `${fmt(ctx.draft.weight)}×${fmt(ctx.draft.reps ?? t.reps)}`;
+  const tekrar = fmt(ctx.draft.reps ?? t.reps);
+  return ctx.draft.weight == null ? `${tekrar} tekrar` : `${fmt(ctx.draft.weight)}×${tekrar}`;
+}
+
+/** Kaydet düğmesinin etiketi — ısınma seçiliyse onu söyler (çip artık ekranda değil) */
+export function kaydetEtiketi(ex, q, ctx) {
+  if (ex.setType === 'time') return 'Süreyi kaydet';
+  return ctx.draft.warmup ? 'Isınma setini kaydet' : `${q.calisma + 1}. seti kaydet`;
 }
 
 /** "Geçen sefer" — ağırlığın ALTINDA, adımlayıcının yanındaki boşlukta (eskiden ayrı bir bant, 30 px) */
@@ -337,13 +364,15 @@ const gecenHTML = (ex, ctx) => `<p class="gecen">${ik('gecmis')}<span>${lastTime
 /**
  * Sayı girişi: rakam kahraman, adımlayıcı başparmağın altında. Düğmeler ADIMI üstünde yazar
  * ("+5 / −5"): ne yaptıklarını kendileri söyler, ayrı adım satırına gerek kalmaz (figüre yer açıldı).
+ * Boş kutunun yer tutucusu sönük "0": 80 px'lik "—" gri bir çubuk gibi okunuyordu (27 Eyl, Sabri).
+ * Değer yine BOŞTUR — kaydederken "Ağırlığı gir." uyarısı aynen çalışır.
  */
 const entry = (field, val, delta, etiket, birim, alt = '') => `
   <div class="giris">
     <div class="deger">
       <span class="etiket">${etiket}</span>
       <div><input type="number" inputmode="decimal" step="${delta}" min="0"
-             id="f-${field}" value="${val ?? ''}" placeholder="—" aria-label="${etiket} (${birim})"><em>${birim}</em></div>
+             id="f-${field}" value="${val ?? ''}" placeholder="0" aria-label="${etiket} (${birim})"><em>${birim}</em></div>
       ${alt}
     </div>
     <div class="stp">
@@ -376,20 +405,41 @@ function girisHTML(ex, ctx) {
   const adim = I.agirlikAdimi(ex, ctx.settings) ?? I.GIRIS_ADIMI_YEDEK;
   const birim = ctx.settings.unit;
   const etiket = `Ağırlık${IPUCU[ex.equipment] ? ' · ' + IPUCU[ex.equipment] : ''}${ex.equipment === 'dumbbell' ? ' · hacimde ×2' : ''}`;
-  const tekrar = ctx.draft.reps ?? t.reps;
+  return entry('weight', ctx.draft.weight, adim, etiket, birim, gecenHTML(ex, ctx));
+}
 
-  /* Tekrar hedeften gelir ama görünür ve doğrudan değiştirilebilir: hedef 12 iken 10 çıkarsa
-     o seti 12 diye kaydetmek veriyi yanlışlar. Kalıcı değişiklik panelden. */
-  return entry('weight', ctx.draft.weight, adim, etiket, birim, gecenHTML(ex, ctx)) + `
-    <div class="tekrar">
-      <span class="etiket">Tekrar</span>
-      <div class="kucuk-stp">
-        <button data-step="reps:-1" aria-label="Tekrar azalt">${ik('eksi')}</button>
-        <input type="number" inputmode="numeric" step="1" min="1" id="f-reps" value="${tekrar ?? ''}" aria-label="Bu setin tekrarı">
-        <button data-step="reps:1" aria-label="Tekrar artır">${ik('arti')}</button>
+/**
+ * "BU SET" PANELİ — "Şimdi" yuvasına dokununca açılır (yalnız ağırlık × tekrar hareketi).
+ * Tekrar hedeften gelir ama bu set için değiştirilebilir: hedef 12 iken 10 çıkarsa o seti 12 diye
+ * kaydetmek veriyi yanlışlar. Kalıcı değişiklik "?" panelinden (Hedef).
+ * Kimlikler (#f-reps, #warm) ana ekrandaki eski yerleriyle AYNI: kayıt ve adımlayıcı kodu onları
+ * kimlikle bulur; panel kapalıyken de DOM'dadır (inert), yani değer her zaman okunur.
+ */
+function setAyarHTML(ex, ctx) {
+  if (ex.setType !== 'weight_reps') return '';
+  const t = N.effective(ex, ctx.settings);
+  const tekrar = ctx.draft.reps ?? t.reps;
+  return `<section class="sheet" id="set-sheet" aria-hidden="true" inert aria-label="Bu set">
+      <button class="grab" data-act="sheet-close" aria-label="Kapat"></button>
+      <div class="sheet-in">
+        <h2>Bu set</h2>
+        <p class="alt-baslik">Hedef ${fmt(t.reps)} tekrar. Farklı yaptıysan yalnız bu set için değiştir.</p>
+        <div class="set-satir">
+          <span class="etiket">Tekrar</span>
+          <div class="kucuk-stp">
+            <button data-step="reps:-1" aria-label="Tekrar azalt">${ik('eksi')}</button>
+            <input type="number" inputmode="numeric" step="1" min="1" id="f-reps" value="${tekrar ?? ''}" aria-label="Bu setin tekrarı">
+            <button data-step="reps:1" aria-label="Tekrar artır">${ik('arti')}</button>
+          </div>
+        </div>
+        <div class="set-satir">
+          <span class="etiket"><span id="warm-ad">Isınma seti</span><small id="warm-not">Hacme ve "geçen sefer"e karışmaz</small></span>
+          <button class="cip" id="warm" data-act="warm" role="switch" aria-checked="${!!ctx.draft.warmup}"
+                  aria-labelledby="warm-ad" aria-describedby="warm-not">${ctx.draft.warmup ? 'Açık' : 'Kapalı'}</button>
+        </div>
+        <button class="btn p" data-act="sheet-close">Tamam</button>
       </div>
-      <button class="cip" id="warm" data-act="warm" aria-pressed="${!!ctx.draft.warmup}">Isınma seti</button>
-    </div>`;
+    </section>`;
 }
 
 /* ══ ISINMA EKRANI ════════════════════════════════════════════════════════
@@ -442,7 +492,7 @@ export function focusHTML(ctx) {
   const exs = N.exercisesFor(dayIndex);
   const ex = exs[idx];
   const q = N.exerciseProgress(session, ex, settings);
-  const kaydet = ex.setType === 'time' ? 'Süreyi kaydet' : `${q.calisma + 1}. seti kaydet`;
+  const kaydet = kaydetEtiketi(ex, q, ctx);
 
   const seritler = exs.map((e, i) => {
     const p = N.exerciseProgress(session, e, settings);
@@ -468,7 +518,6 @@ export function focusHTML(ctx) {
     ${yuvalarHTML(q, ctx, ex)}
     ${girisHTML(ex, ctx)}
     ${ex.setType === 'time' ? `<div class="gecen-bant">${gecenHTML(ex, ctx)}</div>` : ''}
-    ${oneriHTML(ex, ctx)}
     <div class="foot">
       ${q.tamam
         ? `<div class="cift">
@@ -483,10 +532,12 @@ export function focusHTML(ctx) {
                <button class="btn s" data-act="save">Kaydet</button>
                <button class="btn p" data-act="clock-start" id="clock-btn">Başlat</button>
              </div>`
-          : `<button class="btn p" data-act="save">${kaydet}</button>`}
+          : `<button class="btn p" data-act="save" id="kaydet-btn">${kaydet}</button>`}
     </div>
     ${gezinmeHTML(ctx)}
-    ${sheetHTML(ex, settings)}`;
+    <div class="sheet-bg" data-act="sheet-close" hidden></div>
+    ${sheetHTML(ex, ctx)}
+    ${setAyarHTML(ex, ctx)}`;
 }
 
 /* ══ SEANS SONU ═══════════════════════════════════════════════════════════
@@ -678,6 +729,23 @@ export function sessionEditHTML(ctx) {
 const GUN_SEC = [1, 2, 3, 4, 5, 6, 0];        // Pzt…Paz — hafta Pazartesi başlar
 const DINLENME = [30, 45, 60, 90, 120];
 
+/**
+ * TELEFONA YÜKLE — üç hâl: yüklü (bilgi) · Chrome istem verdi (düğme) · istem yok (menü yolu).
+ * "İstem yok" iki şey olabilir: zaten yüklü ama tarayıcı sekmesinde açılmış, ya da Chrome henüz
+ * sunmadı / reddedildi. Tarayıcı ikisini ayırt ettirmez → metin ikisini de karşılar.
+ */
+function kurulumHTML(k = {}) {
+  const ic = k.kurulu
+    ? '<p>Telefona yüklü: ana ekrandaki simgesiyle, adres çubuğu olmadan açılıyor.</p>'
+    : k.istem
+      ? `<button class="btn p" data-act="kur">Telefona yükle</button>
+         <p>Ana ekrana kendi simgesiyle eklenir; adres çubuğu olmadan açılır, internetsiz çalışır.
+           Kayıtların aynen kalır. Mağaza gerekmez.</p>`
+      : `<p>Chrome menüsünden (⋮) <b>Uygulamayı yükle</b>'yi seç. Zaten yüklüyse ana ekrandaki
+           FitSet simgesinden aç.</p>`;
+  return `<div class="grup"><h2 class="etiket">Uygulama</h2><div class="ic">${ic}</div></div>`;
+}
+
 export function settingsHTML(ctx) {
   const { settings } = ctx;
   const seciliGunler = settings.trainingDays ?? [];
@@ -721,6 +789,8 @@ export function settingsHTML(ctx) {
       </div>
       <p>Kilo takibi Geçmiş ekranında.</p>
     </div></div>
+
+    ${kurulumHTML(ctx.kurulum)}
 
     <div class="grup"><h2 class="etiket">Yedek</h2><div class="ic">
       <p>Veri yalnız bu telefonda; sunucuya hiçbir şey gönderilmez. Telefonu değiştirirsen ya da tarayıcı

@@ -156,7 +156,7 @@ h1, h2, h3, p { margin: 0; }
   font-size: var(--f-md); font-weight: var(--w-med); display: inline-flex; align-items: center; justify-content: center;
   gap: 8px; flex: none; }
 .cip .i { width: 18px; height: 18px; }
-.cip[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+.cip[aria-pressed="true"], .cip[aria-checked="true"] { background: var(--t1); color: var(--bg); }
 .cip:not(:disabled):active { background: var(--s3); }
 .cip:disabled { opacity: .35; }
 
@@ -284,6 +284,10 @@ button.satir:active { background: var(--s1); }
 .yuva.simdi { background: transparent; box-shadow: inset 0 0 0 1.5px var(--acc-line); }
 .yuva.simdi small { color: var(--acc); }
 .yuva.isinma { flex: none; background: transparent; box-shadow: inset 0 0 0 1.5px var(--line2); }
+/* "Şimdi" bir düğme (ağırlık × tekrar): dokununca "Bu set" paneli. Ok, açılan bir şey olduğunu söyler. */
+.yuva.ayarli { position: relative; text-align: left; padding-right: 24px; }
+.yuva.ayarli > .i { position: absolute; top: 50%; right: 6px; width: 16px; height: 16px; margin-top: -8px; color: var(--t2); }
+.yuva.ayarli:active { background: var(--s1); }
 /* Dört yuva (ısınma + 3): değer bir basamak küçük — 360 px'te "142,5×12" yuvaya ancak böyle sığar */
 .yuvalar.sik .yuva b { font-size: var(--f-sm); }
 
@@ -297,7 +301,8 @@ button.satir:active { background: var(--s1); }
   font-size: var(--f-hero); font-weight: var(--w-bold); font-stretch: 110%; letter-spacing: -.045em; line-height: .95;
   font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
 /* ⚠️ AÇIK width, field-sizing'i EZER — destek varsa width serbest bırakılmalı (birim rakama bitişik kalsın) */
-@supports (field-sizing: content) { .giris .deger input { width: auto; field-sizing: content; } }
+/* min-width 1ch: tek haneli değer ya da boş kutunun sönük "0"ı ile birim arasında boşluk kalmasın (2ch'de kalıyordu) */
+@supports (field-sizing: content) { .giris .deger input { width: auto; min-width: 1ch; field-sizing: content; } }
 .giris .deger input::placeholder { color: var(--t3); }
 .giris .deger input:focus { outline: none; }
 .giris .deger em { font-style: normal; font-size: var(--f-lg); color: var(--t2); font-weight: var(--w-med); }
@@ -308,15 +313,12 @@ input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner
   font-weight: var(--w-bold); font-variant-numeric: tabular-nums; }
 .stp button:active { background: var(--s3); }
 
-.tekrar { display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter) 0; flex: none; }
-.tekrar .etiket { width: 52px; }
 .kucuk-stp { display: flex; align-items: center; gap: 2px; background: var(--s1); border-radius: 999px; padding: 2px; }
 .kucuk-stp button { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; color: var(--t2); }
 .kucuk-stp button:active { background: var(--s3); }
 .kucuk-stp input { width: 48px; height: 44px; border: 0; background: none; padding: 0; text-align: center;
   font-size: var(--f-lg); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
 .kucuk-stp input:focus { outline: none; }
-.tekrar .cip { margin-left: auto; }
 
 /* Geçen sefer: ağırlık girişinin altında (süre hareketinde kendi bandında) */
 .gecen { margin-top: 6px; font-size: var(--f-sm); color: var(--t2); display: flex; gap: 6px; align-items: flex-start; }
@@ -324,8 +326,9 @@ input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner
 .gecen-bant { padding: 8px var(--gutter) 0; flex: none; }
 .gecen b { color: var(--t1); font-weight: var(--w-med); font-variant-numeric: tabular-nums; }
 
-.oneri { display: flex; align-items: center; gap: 10px; margin: 10px var(--gutter) 0; padding: 6px 6px 6px 14px;
-  border-radius: var(--r-m); background: var(--s1); font-size: var(--f-sm); color: var(--t2); flex: none; min-height: 48px; }
+/* Ağırlık önerisi — "?" panelinde, hedefin üstünde (27 Eyl: ana ekrandan kalktı) */
+.oneri { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 6px 6px 6px 14px;
+  border-radius: var(--r-m); background: var(--s2); font-size: var(--f-sm); color: var(--t2); min-height: 48px; }
 .oneri .i { width: 18px; height: 18px; color: var(--t1); }
 .oneri span { flex: 1; }
 .oneri b { color: var(--t1); }
@@ -367,7 +370,7 @@ button.dinlenme:active { background: var(--s1); }
 @media (max-height: 740px) {
   .baslik p { display: none; }
   .yuva { height: 46px; }
-  .yuvalar, .giris, .tekrar, .clock { padding-top: 8px; }
+  .yuvalar, .giris, .clock { padding-top: 8px; }
   .foot { padding-top: 8px; padding-bottom: 10px; }
 }
 
@@ -391,6 +394,19 @@ button.dinlenme:active { background: var(--s1); }
 .sheet-in h3 { font-size: var(--f-sm); font-weight: var(--w-med); color: var(--t2); margin: 20px 0 8px; }
 
 .goal { background: var(--s2); border-radius: var(--r-l); padding: 16px; }
+
+/* "Bu set" paneli: tekrar ve ısınma — satırlar, altta Tamam */
+.set-satir { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0;
+  border-top: 1px solid var(--line); }
+.set-satir:first-of-type { border-top: 0; padding-top: 0; }
+.set-satir .etiket small { display: block; font-size: var(--f-xs); font-weight: var(--w-reg); color: var(--t2); margin-top: 2px; }
+.set-satir .kucuk-stp, .set-satir .cip { background: var(--s2); }
+.set-satir .cip { min-width: 88px; }
+.set-satir .cip[aria-checked="true"] { background: var(--t1); }
+#set-sheet .btn { margin-top: 16px; width: 100%; }
+
+/* Yalnız ekran okuyucu için metin */
+.gizli { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .goal-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .goal-hd .cip { background: var(--s3); color: var(--t1); }
 .goal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 12px; }

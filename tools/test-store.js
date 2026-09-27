@@ -253,6 +253,25 @@ console.log('12) ⭐ İÇE AKTARIM ŞEMA DOĞRULAMASI (24 Eyl: bozuk yedek ekran
   await S.driver.clear('settings');
 }
 
+console.log('\nKALICILIK İSTEĞİ (27 Eyl: persisted() Promise döndürür — eskiden persist() hiç çağrılmıyordu)');
+{
+  // Tarayıcının navigator.storage'ı taklit edilir: persisted() gerçekteki gibi PROMISE döndürür
+  const kur = kalici => {
+    const c = { persist: 0 };
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { storage: {
+      persisted: async () => kalici,
+      persist: async () => { c.persist++; return true; },
+    } } });
+    return c;
+  };
+  let c = kur(false);
+  ok(await S.requestPersistence() === true && c.persist === 1, 'kalıcı değilse persist() İSTENİYOR');
+  c = kur(true);
+  ok(await S.requestPersistence() === true && c.persist === 0, 'zaten kalıcıysa yeniden istenmiyor');
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {} });
+  ok(await S.requestPersistence() === null, 'destek yoksa sessizce null');
+}
+
 
 console.log(`\n${'─'.repeat(64)}\n${pass} geçti · ${fail} kaldı`);
 process.exit(fail ? 1 : 0);
