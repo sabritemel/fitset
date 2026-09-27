@@ -20,19 +20,45 @@ FinLens ve SmartCRM gibi ayrı bir üründür. Bunun somut karşılıkları:
 ⚠️ Suite'in kök `CLAUDE.md`'sindeki uygulama/port/altın-kural tablosu **bu
 projeyi kapsamaz**. Buradaki tek üst kural şudur: *kök depoya sızma.*
 
-## Yapı (ölçüldü, 24 Eyl 2026 — 3B geçişinden sonra)
+## Yapı (ölçüldü, 27 Eyl 2026 — tasarım dili 3'ten sonra)
 
 ```
-js/        15 dosya · 4 990 satır (vendor hariç)   app · store · session · schedule · timer
+js/        15 dosya · 5 163 satır (vendor hariç)   app · store · session · schedule · timer
                                                    ui · ilerleme · data/ · anim/ · anim3d/
-js/anim3d/ 4 dosya · 1 424 satır   manken3d (iskelet+IK, SVG çizim, çerçeve) · hareketler3d
+js/anim3d/ 4 dosya · 1 435 satır   manken3d (iskelet+IK, SVG çizim, çerçeve) · hareketler3d
                                    (22 hareket, kısıtlarıyla) · webgl (three.js çizici) · sahne (giriş)
 js/vendor/ three.min.js (530 KB · 135 KB gzip, MIT) + three-LICENSE.txt
-tools/     21 betik · 3 293 satır  doğrulayıcılar + üreticiler (+ three-giris.js: paketi yeniden üretir)
-css/       style.css (529 satır)
+tools/     20 betik · 3 418 satır  doğrulayıcılar + üreticiler (+ three-giris.js: paketi yeniden üretir)
+css/       style.css (511 satır) — tasarım dili 3 "Grafit"
 sw.js      119 satır — service worker · CACHE sürümü İÇERİKTEN türetilir
-7 HTML     index.html + 6 mokap (cizimler · isinma · izometrik · genel · 3b · 3b-figur)
+8 HTML     index.html (+ çizgisel ikon sprite'ı) + 7 mokap (cizimler · isinma · izometrik · genel ·
+           3b · 3b-figur · tasarim-v3)
+docs/      2026-09-24-bas-tasarimci-raporu.md · 2026-09-27-tasarim-dili-analizi.md (+ ekran görüntüleri)
 ```
+
+### Tasarım dili 3 "Grafit" (27 Eyl 2026 — Sabri: *"premium, sade ama şık, sezgisel"*)
+
+Analiz, ölçümler, mokap ve kararlar: `docs/2026-09-27-tasarim-dili-analizi.md` · `mockup-tasarim-v3.html`.
+
+- **Değerler yalnız `:root`'ta** (`css/style.css`): tip ölçeği **7 basamak** (`--f-xs … --f-hero`:
+  12 · 14 · 16 · 18 · 22 · 32 · 80), ağırlık **3** (`--w-reg/med/bold`: 450 · 560 · 650), metin tonları
+  `--t1/t2/t3`, yüzeyler `--bg/s1/s2/s3`, tek vurgu `--acc` (mercan, Sabri seçti). Kurallar sayı ya da
+  renk YAZAMAZ — `tools/check-tasarim.js` kırmızı yakar (mutasyon 12/12).
+- **Vurgu yalnız CANLI ve ŞİMDİ olan:** çalışan sayaç, "şimdi" yuvası, kaldığın satırın yayı. Odak
+  halkası ve yıkıcı eylem vurgu rengini kullanmaz. İki yarım hareket iki mercan yay OLMAZ.
+- **Tek düğme dili:** `.btn.p` (açık dolgu) · `.btn.s` (koyu dolgu) · `.cip` · `.ib` (44 daire) ·
+  adımlayıcı. Seçili = **ters dolgu** (`aria-pressed`). Altı çizili yazı/çerçeveli düğme yok.
+  Her dokunma yüzeyi ≥ 44 px (ölçüldü: 390 px'te 197/197; 360 px'te gün çipleri 40×44 — ilan edildi).
+- **Satır içi `style=` yalnız VERİ** (`--p` yüzdesi, sayaç çubuğu); kapı bunu da denetler.
+- **İkonlar** `index.html`'deki SVG sprite'ta (`<use href="#i-…">`); `ui.js`'in çağırdığı her ikonun
+  sprite'ta olduğunu kapı sınar.
+- **Kadraj:** `manken3d.cerceve('sabit')` zemin diskinin (`ZEMIN_R`) ön kenarını da sığdırır.
+- **Animasyon zamanı TEK kaynak: `sahne.animT`** (Sabri, 27 Eyl): 6 tekrar (`TEKRAR`, 3 sn/tekrar),
+  başlangıç pozundan (`DURAGAN_T = 0`) başlar ve TAM orada biter; duran figür de o pozdadır. Dururken
+  dokunmak/döndürmek 6 tekrar daha oynatır; ekran yeniden kurulunca (set kaydı) süren oynatma kaldığı
+  yerden sürer. `fizik-denetimi` her hareket için ilk/son/bir kare geç son kareyi ve dönen hareketlerin
+  tur sonunu başlangıç pozuyla karşılaştırır (mutasyon 5/5). ⚠️ Son kareyi TAM süre anında ölçmek
+  sıfırlamanın yokluğunu gizler (o anda dalga zaten 0) — gerçek son kare bir kare geç gelir.
 
 ### 3B çizim (24 Eyl 2026)
 
@@ -48,6 +74,13 @@ sw.js      119 satır — service worker · CACHE sürümü İÇERİKTEN türeti
   paketleme komutunu taşır. MIT bildirimi paketin başında ve `three-LICENSE.txt`'te — esbuild'in
   `--legal-comments=none`'ı bildirimi SİLER, başlık `--banner` ile eklenir.
 - ⚠️ `CylinderGeometry` MERKEZLİDİR, bu motorun lathe'leri 0…1 → `translate(0, 0.5, 0)` şart.
+- **Aletler gerçek ölçüde (27 Eyl, Sabri: "dambıl ve halterlerin hiç kalınlığı yok"):** plaka, dambıl başı ve
+  makara `manken3d.silindirParca` — geo türü `'c'` (kapsülle uyumlu alanlar: a2/b2/a3/b3/r), WebGL kapaklı
+  silindir, SVG iki yüzün dışbükey zarfı. `M.DAMBIL` (altıgen, 25 cm), `M.halter` (olimpik tip, 1,6 m),
+  `M.dambilCismi` çarpışma kapsülü. Eski `disk()` düz 24-gendi: kenardan 0 px. `fizik-denetimi` kalınlıksız
+  daireyi, dambıl ölçüsünü, seated row kablosunun yataylığını ve bench press'in yukarıda başlamasını tutar
+  (mutasyon 5/5). ⚠️ Görsel denetimde önce `bump-sw` + SKIP_WAITING: service worker ESKİ 3B modüllerini
+  sunarken yarım denetim eski aletlere bakıldı (27 Eyl).
 - **2B çizim emekli:** `js/anim/engine.js` uygulamada kullanılmıyor, yalnız eski mokaplar ve
   araçları (`verify-poses`, `verify-port`, `make-mockup*`, `audit-*`) için duruyor; `npm test`'te
   değiller. `exercises.js`'teki `a/b/eq` poz alanları ölü veri. Temizliği ayrı iş.
@@ -58,7 +91,7 @@ Derleme **yok** — saf statik dosyalar. `package.json` yalnız betikleri taşı
 ## Komutlar
 
 ```bash
-npm test      # bump-sw (+ çevrimdışı kapısı) + check-contrast + fizik-denetimi
+npm test      # bump-sw (+ çevrimdışı kapısı) + check-contrast + check-tasarim + fizik-denetimi
               # + test-store + test-session + test-timer + check-docs   ← tam kapı
 npm run verify   # yalnız 3B fizik denetimi
 npm run bump     # sw.js CACHE sürümünü artır
@@ -66,8 +99,9 @@ npm run icons    # ikon üretimi
 npm run fonts    # font indirme
 ```
 
-**Ölçüldü (24 Eyl 2026, 3B geçişi sonrası): `npm test` exit 0** — `test-store` 68 ·
-`test-session` 235 · `test-timer` 14 · `check-docs` 15 · `fizik-denetimi` tümü temiz (22 hareket,
+**Ölçüldü (27 Eyl 2026, tasarım dili 3 sonrası): `npm test` exit 0** — `check-contrast` 23 kontrol
+(her metin tonu × her yüzey, ton ayrışması, parlaklık tavanı) · `check-tasarim` 14 · `test-store` 68 ·
+`test-session` 268 · `test-timer` 14 · `check-docs` 17 · `fizik-denetimi` tümü temiz (22 hareket,
 6 olumsuz fikstür, 25 kaydın 3B kapsamı, plank varyantları) · `bump-sw` çevrimdışı kapısı: `app.js`'ten
 erişilen 15 modülün hepsi ASSETS'te (dinamik `import()` dahil).
 ⚠️ 7 Eyl'de burada yazan "187 geçti" `npm test`'in SON satırıydı, yani yalnız
@@ -159,6 +193,20 @@ kötüdür.*
 
 *"Son antrenman günü kapatılamaz"* kuralı `app.js`'ten `schedule.js`'e taşındı
 ve **10 doğrulama kazandı**. Kural, olayın değil **alanın** yanında durur.
+
+### 7. Mokap da ürün gibi ölçülür; kapı ölçtüğü yüzeyi söylemeli (27 Eyl)
+
+- **Mokabın ilk hâli kendi iddiasını çiğniyordu:** "7 punto" diyordu, aynı araçla ölçülünce 12 punto,
+  6 ağırlık, gri yüzeyde 4,36:1 kontrast ve 9 küçük hedef çıktı. Önerilen dil, önerildiği sayfada bile
+  tutulmuyordu — yalnız ölçüm yakaladı.
+- **Kontrast kapısı tonları yalnız ZEMİNE karşı ölçüyordu;** yüzey üstündeki metin görünmezdi. Artık
+  her ton her yüzeye karşı. *Kapının iddiası, ölçtüğü yüzeyden geniş olamaz.*
+- **Eski kararın kapısı yeni öneriyi durdurdu (iyi ki):** mokabın parlak tonları 2. sürümün
+  *"gözü yormasın"* parlaklık tavanını (0,70) aşıyordu; tavan korunup tonlar indirildi.
+- **Ölçüm aracı üç kez yanıldı:** `color-mix()` rengini (`oklab(...)`) okuyamayıp çöktü · kesilme
+  denetimi +1 px toleransla 0,24 px'lik taşmayı yuttu (tarayıcı bu kadarında da üç nokta koyar) ·
+  otomasyonda rAF durunca "+30 çalışmıyor" sandım (500 ms'de 1 kare). Her araç önce bilinen bir
+  örnekle doğrulandı.
 
 ## Çalışma biçimi
 

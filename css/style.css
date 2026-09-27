@@ -1,529 +1,514 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   FitSet — tasarım dili 2. sürüm
+   FitSet — tasarım dili 3. sürüm "Grafit" (27 Eyl 2026)
    ══════════════════════════════════════════════════════════════════════════
 
-   Bu dil, birincisinin parça parça yamanmasıyla dağılmasının ardından
-   AZALTARAK kuruldu. Üç karar taşıyor:
+   2. sürümün üç kararı KORUNDU:
+     1. TEK YAZI AİLESİ — Archivo değişken (wght 400-700, wdth 75-125), pakette.
+     2. TEK VURGU RENGİ — yalnız CANLI ve ŞİMDİ olan için: çalışan sayaç, bulunulan
+        set, süren hareket. Birincil eylem renk değil, açık dolgu. Odak halkası ve
+        yıkıcı eylem vurgu rengini KULLANMAZ.
+     3. KART YOK — bölümler tek seviyeli TONLU GRUPLA ayrılır; iç içe kart yok.
 
-   1. TEK YAZI AİLESİ — Archivo değişken (wght 400-700, wdth 75-125).
-      Hiyerarşi ayrı ailelerle değil, aynı ailenin EKSENLERİYLE kuruluyor.
-      3 aile / 14 dosya / 380 KB  →  1 aile / 2 dosya / 172 KB.
+   Değişen (ölçüldü, docs/2026-09-27-tasarim-dili-analizi.md):
+     · PUNTO   18 değer → 7 basamak (12 · 14 · 16 · 18 · 22 · 32 · 80)
+     · AĞIRLIK 5 değer → 3 (450 gövde · 560 vurgu · 650 başlık/sayı)
+     · TON     metnin %45'i en sönük gridi → sönük ton yalnız birim, sıra no, dipnot
+     · ŞEKİL   7 düğme biçimi → tek dil: seviye ÇİZGİYLE değil DOLGU TONUYLA ayrışır;
+               seçili durum TERS DOLGU; altı çizili yazı ve çerçeveli düğme yok
+     · DOKUNMA 75 hedef < 44 px → her hedef en az 44 px, ana eylem 56
+     · Büyük harfli, harf aralıklı etiketler → küçük harfli etiket
 
-   2. TEK VURGU RENGİ (#FF3B4E) ve yalnız CANLI olan şey için: çalışan sayaç,
-      bulunulan hareket. Birincil eylem renk DEĞİL, beyaz dolgu. Üç rengi
-      (kırmızı+yeşil+amber) yarıştırmak yerine kontrastla hiyerarşi kurmak
-      premium hissin yarısıdır.
-
-   3. KART YOK. Yüzeyler neredeyse görünmez; ayrım kıl payı çizgiyle yapılıyor.
-      Yumuşak köşeli dolu kartlar tüketici uygulaması okunuyordu, sporcu aracı
-      değil. Yarıçaplar 6/10/14 — küçük öğe küçük yarıçap.
-
+   ⚠️ KURAL KAPIDA: tools/check-tasarim.js bu dosyada punto, ağırlık ve rengin YALNIZ
+      aşağıdaki değişkenlerden geldiğini denetler; tools/check-contrast.js her metin
+      tonunu üzerine konduğu HER YÜZEYE karşı ölçer (yalnız zemine değil).
    ⚠️ ODAK EKRANI KAYMAZ. Sabit bantlar + esneyen tek bölge (görsel).
-      Yükseklik içerikten değil EKRANDAN gelir.
    ══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Zemin siyaha yakın, hafif SOĞUK eğimli — nötr seçildi, devralınmadı */
-  --bg: #0A0B0D;
-  --s1: #111316;
-  --s2: #181B1F;
-  /* ── TON: kırık, kamaştırmayan ──────────────────────────────────────────
-     Saf beyaza yakın mürekkep karanlık salonda göze vuruyordu. Ama çözüm
-     her şeyi karartmak DEĞİL: fazla sönük yazı da göz yorar, çünkü okumak
-     için gözü zorlarsın. İki uçtan birden yaklaşıldı —
-       parlak uç indi   : #F4F5F6 → #CDD1D7   (18.4:1 → 12.5:1)
-       sönük uç yükseldi: #5C626A → #777E88   ( 2.9:1 →  4.6:1)
-     Hiçbir metin WCAG AA'nın (4.5:1) belirgin altına düşmüyor; azalan şey
-     kontrast değil PARLAKLIK. */
-  --line:  rgba(255, 255, 255, .07);
+  /* Yüzeyler: siyaha yakın, hafif soğuk. s1 grup · s2 kontrol · s3 basılı */
+  --bg: #0B0C0E;
+  --s1: #141619;
+  --s2: #1B1E22;
+  --s3: #24282D;
+  --line: rgba(255, 255, 255, .07);
   --line2: rgba(255, 255, 255, .12);
-  --ink:  #CDD1D7;
-  --ink2: #8D939C;
-  --ink3: #777E88;
 
-  /* Birincil dolgu ekranın EN BÜYÜK parlak alanı — o yüzden metinden bir
-     tık daha kırık. Yine de baskın; hiyerarşi bozulmuyor. */
-  --btn: #C8CCD3;
-  /* Figür geniş bir çizgi kümesi; aynı tonda olsa göz oraya çakılıyor. */
+  /* Metin: üç ton NET ayrışır (ikincil ile sönük arası eskiden 1,32:1'di) */
+  --t1: #D2D6DC;           /* adlar, sayılar, eylemler — parlaklık tavanının (0,70) altında */
+  --t2: #A2A8B0;           /* açıklama, üstveri — varsayılan "sönük" budur */
+  --t3: #7F868F;           /* yalnız birim, sıra no, dipnot — en koyu yüzeyde bile ≥4,5:1 */
+
+  --btn: #D4D8DE;          /* ana eylem dolgusu — ekranın en parlak yüzeyi, yine de tavanın altında */
+  --on-btn: #0B0C0E;
+  --acc: #F06A5D;          /* mercan: yalnız CANLI ve ŞİMDİ */
+  --acc-line: #9A4A43;     /* vurgu çerçevesi (bulunulan set) */
+  --warn: #D9AE63;         /* yalnız "dikkat" işareti — paragraf rengi değil */
+
+  /* 3B yedek çizim (SVG) tonları */
   --fig-stroke: #BFC4CC;
-
-  --live: #EE5568;          /* yalnız canlı olan şey — kırmızı da yumuşatıldı */
-  --warn: #D8AA5E;          /* yalnız "dikkat" notu — eylem rengi değil */
-
   --fig: var(--fig-stroke);
-  --fig-head: var(--bg);    /* kafa dairesi zemini maskeler; kart yok, zemin bu */
+  --fig-head: var(--bg);
+  --fig-far: #3E444C;
+  --fig-eq: #4A5058;
+  --fig-gr: #242A30;
+  --fig-ghost: #2E343B;
+  --fig-trail: #6E4148;
 
-  --r1: 6px; --r2: 10px; --r3: 14px;
-  --touch: 48px;
+  --scrim: rgba(4, 5, 7, .7);
+  --golge: rgba(0, 0, 0, .6);
+
+  /* Tip ölçeği — 7 basamak, 3 ağırlık */
+  --f-xs: 12px; --f-sm: 14px; --f-md: 16px; --f-lg: 18px;
+  --f-xl: 22px; --f-2xl: 32px; --f-hero: 80px;
+  --w-reg: 450; --w-med: 560; --w-bold: 650;
+
+  --r-s: 10px; --r-m: 14px; --r-l: 18px;
+  --gutter: 16px;
   --wrap: 520px;
 }
+/* Kısa ekran: odak ekranı kaymaz — kahraman sayı küçülür, figür yer kazanır */
+@media (max-height: 740px) { :root { --f-hero: 64px; } }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
 body {
-  margin: 0; background: var(--bg); color: var(--ink);
+  margin: 0; background: var(--bg); color: var(--t1);
   font-family: 'Archivo', system-ui, -apple-system, sans-serif;
-  font-size: 15px; line-height: 1.5;
+  font-size: var(--f-md); font-weight: var(--w-reg); line-height: 1.45;
   overscroll-behavior-y: contain;
 }
-/* ⚠️ Sıfırlama ELEMENT seçicisiyle (0,0,1) — .b1/.b2/.b3 bileşenlerini (0,1,0)
-   ezmesin. Mockup'ta ".ph button" (0,1,1) yazılmış ve birincil düğmelerin beyaz
-   dolgusu hiç görünmemişti. Sıfırlama daima bileşenden DÜŞÜK özgüllükte olmalı. */
-button { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-input { font: inherit; }
-*:focus-visible { outline: 2px solid var(--live); outline-offset: 3px; }
+/* ⚠️ Sıfırlama ELEMENT seçicisiyle (0,0,1) — bileşenleri (0,1,0) ezmesin. */
+button { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+button:disabled { cursor: default; }
+input { font: inherit; color: inherit; }
+b, strong { font-weight: var(--w-bold); }
+h1, h2, h3, p { margin: 0; }
+/* Odak halkası vurgu rengi DEĞİL (vurgu yalnız canlıya ayrılı) */
+*:focus-visible { outline: 2px solid var(--t1); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round; }
+.num { font-variant-numeric: tabular-nums; }
 
 .screen { display: none; flex-direction: column; min-height: 100%; max-width: var(--wrap); margin: 0 auto; }
 .screen.on { display: flex; }
-.pad { padding-left: 20px; padding-right: 20px; }
+.grow { flex: 1; min-height: 12px; }
 
-/* ── Tipografi: tek aile, hiyerarşi ağırlık + genişlik ekseniyle ────────── */
-.t-num { font-size: 76px; font-weight: 600; font-stretch: 112%; letter-spacing: -.045em;
-  font-variant-numeric: tabular-nums; line-height: .92; }
-.t-h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.12; margin: 0; }
-.t-h2 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
-.t-b  { font-size: 14.5px; font-weight: 400; line-height: 1.5; color: var(--ink2); }
-.t-m  { font-size: 12.5px; font-weight: 450; color: var(--ink2); font-variant-numeric: tabular-nums; }
-.t-l  { font-size: 10.5px; font-weight: 550; letter-spacing: .055em; text-transform: uppercase;
-  color: var(--ink3); font-stretch: 92%; }
+/* ── Üst çubuk ──────────────────────────────────────────────────────────── */
+.ust { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px var(--gutter) 0; flex: none; }
+.ust .tarih { color: var(--t2); font-size: var(--f-sm); font-weight: var(--w-med); }
+.ust.liste-ust { padding-top: 18px; }
+.ust .sag-grup { display: flex; gap: 8px; }
+.ib { width: 44px; height: 44px; border-radius: 50%; background: var(--s1); color: var(--t1);
+  display: grid; place-items: center; flex: none; }
+.ib:active { background: var(--s3); }
+.ib-yer { width: 44px; height: 44px; flex: none; }          /* simetri için boş yer */
+/* Üç sütunlu üst çubuk (odak): sağda iki düğme olsa da sayaç TAM ortada kalır */
+.ust.uclu { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.ust.uclu > .ib { justify-self: start; }
+.ust.uclu > .sag-grup { justify-self: end; }
+.ust .orta { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.ust .orta b { font-size: var(--f-sm); font-weight: var(--w-med); color: var(--t2); font-variant-numeric: tabular-nums; }
+.seritler { display: flex; gap: 3px; width: min(132px, 34vw); }
+.seritler i { flex: 1; height: 4px; border-radius: 2px; background: var(--line2); }
+.seritler i.f { background: var(--t2); }
+.seritler i.c { background: var(--acc); }
 
-/* ── Düğmeler: üç seviye, HİÇBİRİ altı çizili yazı değil ────────────────── */
-.b1 { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-  height: 54px; border-radius: var(--r2); background: var(--btn); color: #0A0B0D;
-  font-size: 15.5px; font-weight: 600; letter-spacing: -.01em;
-  transition: transform .12s ease, filter .12s ease; }
-.b1:active { transform: scale(.99); filter: brightness(.9); }
-.b1:disabled { opacity: .32; }
-.b2 { display: flex; align-items: center; justify-content: center; gap: 7px; height: 54px;
-  border-radius: var(--r2); border: 1px solid var(--line2); color: var(--ink);
-  font-size: 14.5px; font-weight: 500; }
-.b2:active { background: var(--s2); }
-.b3 { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px;
-  border-radius: 999px; border: 1px solid var(--line); color: var(--ink2);
-  font-size: 12.5px; font-weight: 500; }
-.b3[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
-.b3:active { background: var(--s1); }
+/* ── Başlıklar ──────────────────────────────────────────────────────────── */
+.sayfa-baslik { padding: 12px var(--gutter) 0; }
+.sayfa-baslik h1 { font-size: var(--f-2xl); font-weight: var(--w-bold); letter-spacing: -.03em; line-height: 1.12; text-wrap: balance; }
+.sayfa-baslik p { color: var(--t2); margin-top: 4px; }
+.baslik { padding: 14px var(--gutter) 0; flex: none; }
+.baslik h1 { font-size: var(--f-xl); font-weight: var(--w-bold); letter-spacing: -.02em; line-height: 1.15; }
+.baslik p { margin-top: 2px; color: var(--t2); font-size: var(--f-sm); }
+.etiket { font-size: var(--f-sm); font-weight: var(--w-med); color: var(--t2); }
 
-/* ── İlerleme rayı: dolu/boş, renk yok (canlı olan hariç) ───────────────── */
-.rail { display: flex; gap: 3px; padding: 16px 20px 0; flex: none; }
-.rail i { flex: 1; height: 2px; background: var(--line2); border-radius: 1px; }
-.rail i.f { background: var(--ink2); }
-.rail i.c { background: var(--live); }
+/* ── Düğmeler: TEK dil — seviye çizgiyle değil dolgu tonuyla ayrışır ─────── */
+.btn { height: 56px; border-radius: var(--r-l); display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 0 18px; font-size: var(--f-md); font-weight: var(--w-bold); letter-spacing: -.005em; width: 100%;
+  transition: transform .12s cubic-bezier(.22, 1, .36, 1), filter .12s ease-out; }
+.btn:not(:disabled):active { transform: scale(.985); }
+.btn:disabled { opacity: .35; }
+.btn.p { background: var(--btn); color: var(--on-btn); }
+.btn.p:not(:disabled):active { filter: brightness(.9); }
+.btn.s { background: var(--s2); color: var(--t1); }
+.btn.s:not(:disabled):active { background: var(--s3); }
+.btn .i { stroke-width: 2; }
+/* İki satırlı ana düğme: "Devam et" + hareketin tam adı (ad kesilmesin diye alt satırda) */
+.btn.iki { justify-content: flex-start; text-align: left; height: auto; min-height: 56px; padding: 8px 16px; }
+.btn.iki > span { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.btn.iki small { font-size: var(--f-sm); font-weight: var(--w-med); color: color-mix(in oklab, var(--on-btn) 72%, var(--btn)); }
+.btn.iki b { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.cift { display: flex; gap: 10px; }
+/* İkincil düğme içeriği kadar yer alır ve BÜYÜMEZ; kalan genişlik ana eylemin. İki ikincil: eşit.
+   Etiket kırılmaz (iki satıra düşen düğme etiketi, 56 px'lik yüzeyde sıkışık okunuyordu). */
+.cift .btn { white-space: nowrap; }
+.cift .btn.s { flex: 0 0 auto; width: auto; }
+.cift .btn.p { flex: 1 1 0; min-width: 0; }
+.cift:not(:has(.btn.p)) .btn { flex: 1 1 0; }
+/* Uzun iki etiket dar telefonda yan yana sığmaz (360 px'te ölçüldü) → alt alta, ana eylem altta */
+.cift.dikey { flex-direction: column; }
+.cift.dikey .btn { flex: none; width: 100%; }
 
-/* ══ LİSTE EKRANI ═════════════════════════════════════════════════════════ */
-.hd { padding: 22px 20px 0; }
-.hd .day { font-size: 27px; font-weight: 600; letter-spacing: -.025em; margin: 7px 0 3px; }
-.hd .resting { color: var(--warn); font-size: 13px; margin: 9px 0 0; line-height: 1.45; }
+.cip { height: 44px; padding: 0 16px; border-radius: 999px; background: var(--s1); color: var(--t2);
+  font-size: var(--f-md); font-weight: var(--w-med); display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px; flex: none; }
+.cip .i { width: 18px; height: 18px; }
+.cip[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+.cip:not(:disabled):active { background: var(--s3); }
+.cip:disabled { opacity: .35; }
 
-.stat { display: flex; gap: 26px; padding: 18px 20px 0; }
-.stat b { display: block; font-size: 23px; font-weight: 600; letter-spacing: -.025em;
-  font-variant-numeric: tabular-nums; margin-top: 3px; }
-.stat b i { font-style: normal; font-size: 12px; font-weight: 450; color: var(--ink3); margin-left: 2px; }
+/* ── Alt dolgu: ana eylem her zaman başparmağın altında ──────────────────── */
+.alt { margin-top: auto; padding: 16px var(--gutter) calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 10px; flex: none;
+  background: linear-gradient(to bottom, transparent, var(--bg) 22%); position: sticky; bottom: 0; z-index: 5; }
 
-.lst { margin-top: 20px; border-top: 1px solid var(--line); }
-.li { display: flex; align-items: center; gap: 14px; padding: 15px 20px;
-  border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
-.li:active { background: var(--s1); }
-.li .ix { width: 16px; flex: none; font-size: 11.5px; color: var(--ink3); font-variant-numeric: tabular-nums; }
-.li .nm { flex: 1; min-width: 0; }
-.li .nm .t-m { margin-top: 1px; display: block; }
-.li .pips { display: flex; gap: 3px; flex: none; }
-.li .pips i { width: 5px; height: 5px; border-radius: 999px; border: 1px solid var(--line2); }
-.li .pips i.f { background: var(--ink2); border-color: var(--ink2); }
-.li.done .t-h2 { color: var(--ink2); }
-.li.now { background: var(--s1); }
-.li.now .ix { color: var(--live); }
+/* ── Bilgi notu: paragraf değil, ikonlu tek blok ─────────────────────────── */
+.not { display: flex; gap: 10px; align-items: flex-start; font-size: var(--f-sm); color: var(--t2);
+  background: var(--s1); border-radius: var(--r-m); padding: 11px 14px; margin: 14px var(--gutter) 0; }
+.not .i { width: 18px; height: 18px; margin-top: 1px; color: var(--warn); }
+.not b { color: var(--t1); font-weight: var(--w-med); }
 
-/* ISINMA SATIRI — numarasız, listenin başında. Elmas işareti ve hafif vurgu,
-   üstte olduğunu numara vermeden söylüyor. */
-.li.warm { background: linear-gradient(90deg, rgb(238 85 104 / .07), transparent 60%); }
-.li.warm .ix { color: var(--live); font-size: 13px; }
-.li.warm .chip { flex: none; font-size: 11px; color: var(--ink3);
-  border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
-.li.warm.done { background: none; }
-.li.warm.done .ix { color: var(--ink3); }
-.li.warm.done .chip { border-color: var(--ink2); color: var(--ink2); }
+/* ── Özet sayılar ───────────────────────────────────────────────────────── */
+.ozet { display: flex; gap: 28px; padding: 20px var(--gutter) 4px; }
+.ozet b { display: block; font-size: var(--f-xl); font-weight: var(--w-bold); letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; line-height: 1.2; }
+.ozet b small { font-size: var(--f-sm); color: var(--t2); font-weight: var(--w-reg); letter-spacing: 0; margin-left: 2px; }
+.ozet span { font-size: var(--f-sm); color: var(--t2); font-weight: var(--w-med); }
 
-/* ══ ISINMA EKRANI ═════════════════════════════════════════════════════════
-   Odak ekranıyla aynı kural: KAYMAZ. Satırlar liste satırının aynı bileşeni,
-   flex:1 ile eşit dağılıp ekranı dolduruyor. Sayaç ve işaret yok. */
-#warmup-screen { height: 100vh; height: 100dvh; overflow: hidden; }
-.cardio { display: flex; align-items: center; gap: 13px; margin: 14px 20px 0;
-  padding: 12px 15px; border: 1px solid var(--line2); border-radius: var(--r2); flex: none; }
-.cardio .nm { flex: 1; min-width: 0; }
-.cardio .nm b { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
-.cardio .nm span { display: block; font-size: 11.5px; color: var(--ink3); margin-top: 1px; }
-.cardio .amt { flex: none; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.wlist { flex: 1; min-height: 0; display: flex; flex-direction: column;
-  border-top: 1px solid var(--line); margin-top: 14px; }
-.wlist .li { flex: 1; }
-.amt { flex: none; font-size: 13px; font-weight: 600; color: var(--ink2);
-  font-variant-numeric: tabular-nums; }
-.mini { flex: none; width: 92px; height: 80px; color: var(--ink); stroke: currentColor; opacity: .92; }   /* 3B figür: 80×62'de yüzsüz manken fazla küçüktü */
-.mini .eq, .mini .cbl { stroke: #4A5058; }
-.mini .gr { stroke: #242A30; }
-@media (max-height: 720px) { .mini { width: 72px; height: 60px; } }
+/* ══ LİSTE ════════════════════════════════════════════════════════════════ */
+.gun-cip { margin: 12px var(--gutter) 0; padding: 0 12px 0 16px; background: var(--s2); color: var(--t1); align-self: flex-start; }
+.gun-baslik { padding: 10px var(--gutter) 0; }
+.gun-baslik h1 { font-size: var(--f-2xl); font-weight: var(--w-bold); letter-spacing: -.03em; line-height: 1.12; text-wrap: balance; }
 
-.finisher { margin: 18px 20px 0; padding: 14px 16px; border: 1px dashed var(--line2); border-radius: var(--r2); }
-.finisher h3 { font-size: 14px; font-weight: 600; margin: 0 0 3px; }
-.finisher p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink2); }
+.liste { display: flex; flex-direction: column; padding: 8px 8px 0; }
+.satir { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 10px 12px;
+  border-radius: var(--r-l); text-align: left; width: 100%; position: relative; }
+button.satir:active { background: var(--s1); }
+.satir + .satir::before { content: ''; position: absolute; left: 54px; right: 12px; top: 0; height: 1px; background: var(--line); }
+.satir.simdi { background: var(--s1); }
+.satir.simdi + .satir::before, .satir.simdi::before { display: none; }
+.satir .ad { flex: 1; min-width: 0; }
+/* Hareket adı KESİLMEZ: dar telefonda iki satıra sarar */
+.satir .ad b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  font-size: var(--f-lg); font-weight: var(--w-med); letter-spacing: -.01em; line-height: 1.25; text-wrap: pretty; }
+.satir .ad span { display: block; font-size: var(--f-sm); color: var(--t2); margin-top: 1px; }   /* açıklama da kesilmez */
+.satir.bitti .ad b, .satir.onceki .ad b { color: var(--t2); }
+.satir.yalin::before { left: 12px; }
+[data-warm] { cursor: pointer; }
+/* Isınma: satırlar ekranı eşit doldurur (kaymaz) */
+.liste.dagit { flex: 1; min-height: 0; justify-content: space-around; }
+.mini { width: 84px; height: 68px; flex: none; }
+@media (max-height: 720px) { .mini { width: 72px; height: 58px; } }
+.satir .sag { flex: none; text-align: right; font-size: var(--f-sm); color: var(--t2); font-variant-numeric: tabular-nums; }
+.satir .sag b { display: block; color: var(--t1); font-weight: var(--w-med); font-size: var(--f-md); }
 
-.hd-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.hd-link { color: var(--ink3); font-size: 12.5px; padding: 6px 0 6px 12px; min-height: 32px; }
-.hd-link:active { color: var(--ink); }
+/* Durum dairesi: boş halka · kısmi yay (vurgu = şimdi) · dolu tik */
+.durum { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; position: relative; }
+.durum.bos { box-shadow: inset 0 0 0 2px var(--line2); }
+/* Yay NÖTR; yalnız kaldığın (şimdi) satırda vurgu — iki yarım hareket iki mercan yay olmasın */
+.durum.kismi { background: conic-gradient(var(--yay, var(--t2)) calc(var(--p) * 1%), var(--line2) 0); }
+.satir.simdi .durum.kismi { --yay: var(--acc); }
+.durum.kismi::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--bg); }
+.satir.simdi .durum.kismi::after { background: var(--s1); }
+.durum.tamam { background: var(--t2); color: var(--bg); }
+.durum.tamam .i { width: 16px; height: 16px; stroke-width: 2.4; }
+.durum.ikon { background: var(--s2); color: var(--t2); }
+.durum.ikon .i { width: 16px; height: 16px; }
 
-.note { padding: 18px 20px 0; font-size: 12px; line-height: 1.55; color: var(--ink3); }
-.note button { color: var(--ink2); font-size: 12.5px; padding: 8px 0; min-height: 36px;
-  border-bottom: 1px solid var(--line2); }
-.grow { flex: 1; min-height: 14px; }
+/* Gün seçici ve yarım gün bandı — tonlu grup, modal değil */
+.grup { margin: 24px var(--gutter) 0; }
+.grup > .etiket { display: block; margin: 0 4px 10px; }
+.grup .ic { background: var(--s1); border-radius: var(--r-l); padding: 16px; }
+.grup .ic > p { margin-top: 12px; font-size: var(--f-sm); color: var(--t2); }
+.grup .ic > p:first-child { margin-top: 0; }
+.grup .ic p b { color: var(--t1); font-weight: var(--w-med); }
+.grup .ic > .cift, .grup .ic > .btn { margin-top: 14px; }
+.grup .ic > .cift:first-child, .grup .ic > .btn:first-child { margin-top: 0; }
+.picker { margin-top: 12px; }
+.picks { display: flex; flex-direction: column; gap: 6px; }
+.pick { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-radius: var(--r-m);
+  background: var(--s2); text-align: left; width: 100%; }
+.pick[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+.pick[aria-pressed="true"] .pick-kas { color: color-mix(in oklab, var(--bg) 70%, var(--t1)); }
+.pick:disabled { opacity: .4; }
+.pick-ad { font-weight: var(--w-bold); }
+.pick-kas { flex: 1; font-size: var(--f-sm); color: var(--t2); }
+.pick-not { flex: none; font-size: var(--f-xs); font-weight: var(--w-med); color: var(--t2);
+  background: var(--s3); border-radius: 999px; padding: 3px 9px; }
+.pick[aria-pressed="true"] .pick-not { background: color-mix(in oklab, var(--bg) 14%, var(--t1)); color: var(--bg); }
+.carry .baslik-satir { font-weight: var(--w-bold); }
+.carry .ic > .alt-satir { font-size: var(--f-sm); color: var(--t2); margin-top: 2px; font-variant-numeric: tabular-nums; }
 
-/* ══ ODAK EKRANI ══════════════════════════════════════════════════════════ */
-#focus-screen { height: 100vh; height: 100dvh; overflow: hidden; }
+/* ══ ODAK ═════════════════════════════════════════════════════════════════ */
+#focus-screen, #warmup-screen { height: 100vh; height: 100dvh; overflow: hidden; }
 
-.top { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 16px 20px 0; flex: none; }
-.top .mid { flex: 1; text-align: center; }
-.icb { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--line);
-  display: flex; align-items: center; justify-content: center; color: var(--ink2);
-  font-size: 15px; flex: none; }
-.icb:active { background: var(--s1); }
-
-.title { padding: 14px 20px 0; flex: none; }
-.title .t-m { margin: 3px 0 0; }
-
-/* Esneyen tek bölge — kalan boşluğun tamamını alır, kart YOK */
-.viz { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
-  color: var(--ink); padding: 10px 20px 0; }
-.viz .sahne3d { width: 100%; height: 100%; touch-action: none; cursor: grab; }   /* sürükleyerek döndürülür */
-.viz .sahne3d:active { cursor: grabbing; }
+.fig { flex: 1; min-height: 0; padding: 6px var(--gutter) 0; display: flex; flex-direction: column; }
+.fig .sahne3d { flex: 1; min-height: 0; width: 100%; touch-action: none; cursor: grab; }
+.fig .sahne3d:active { cursor: grabbing; }
+.fig-not { flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--f-sm); color: var(--t2); padding-top: 4px; }
+.fig-not .i { width: 16px; height: 16px; stroke-width: 2.4; }
+.fig .sahne3d[data-varyant] { cursor: default; touch-action: auto; }
 /* 3B sahne kabı — anim3d/sahne.js içine WebGL tuvali ya da SVG yedeği koyar */
 .sahne3d > canvas, .sahne3d > svg { display: block; width: 100%; height: 100%; }
 .art { stroke: var(--fig); }
-.far { stroke: #3E444C; }
-.eq, .cbl { stroke: #4A5058; stroke-width: 3; }
+.far { stroke: var(--fig-far); }
+.eq, .cbl { stroke: var(--fig-eq); stroke-width: 3; }
 .cbl { stroke-width: 2; stroke-dasharray: 5 4; }
-.gr { stroke: #2A2F35; stroke-width: 3; }
-.ghost { stroke: #2E343B; stroke-width: 3; stroke-dasharray: 5 5; }
-.trail { stroke: #6E4148; stroke-width: 2.5; fill: none; }
+.gr { stroke: var(--fig-gr); stroke-width: 3; }
+.ghost { stroke: var(--fig-ghost); stroke-width: 3; stroke-dasharray: 5 5; }
+.trail { stroke: var(--fig-trail); stroke-width: 2.5; fill: none; }
 
-/* İzometrik hareketler: doğru duruş + yaygın hatalar ALT ALTA.
-   ⚠️ Eskiden yan yanaydı: plank YATAY bir figür, 3 dar sütunda (110 px) kalçanın düşüp kalktığı
-   seçilmiyordu (24 Eyl, 3B geçişinde ölçüldü) — oysa ekranın tek işi o farkı göstermek. */
-.variants { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 20px 0; }
+/* İzometrik hareket (plank): doğru duruş + yaygın hatalar ALT ALTA, aynı ölçekte.
+   İlk set kaydedilince yalnız doğru duruş kalır (öğrenirken lazım, her sette değil). */
+.variants { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px var(--gutter) 0; }
 .variants figure { flex: 1; min-height: 0; margin: 0; display: flex; align-items: center; gap: 12px; }
 .variants .sahne3d { flex: 1.6; min-width: 0; height: 100%; }
-.variants figcaption { flex: 1; min-width: 0; padding-left: 10px; border-left: 1px solid var(--line); }
-.variants b { display: block; font-size: 12px; font-weight: 600; margin-bottom: 2px; }
-.variants figure.ok b { color: var(--ink); }
-.variants figure:not(.ok) b { color: var(--ink3); }
-.variants figure.ok figcaption { border-left-color: var(--ink2); }
-.variants figcaption span { display: block; font-size: 11px; line-height: 1.35; color: var(--ink3); }
+.variants figcaption { flex: 1; min-width: 0; }
+.variants figcaption b { display: flex; align-items: center; gap: 6px; font-size: var(--f-sm); font-weight: var(--w-bold); color: var(--t2); }
+.variants figure.ok figcaption b { color: var(--t1); }
+.variants figcaption b .i { width: 16px; height: 16px; stroke-width: 2.4; }
+.variants figcaption span { display: block; font-size: var(--f-xs); line-height: 1.35; color: var(--t2); margin-top: 2px; }
 
-/* Rozetler: dolgu yok, kıl payı çerçeve — kayıt izi sessizdir */
-.tags { display: flex; gap: 6px; padding: 14px 20px 0; overflow-x: auto; scrollbar-width: none; flex: none; }
-.tags::-webkit-scrollbar { display: none; }
-.tag { flex: none; display: inline-flex; align-items: baseline; gap: 6px; height: 28px;
-  padding: 0 10px; border-radius: var(--r1); border: 1px solid var(--line);
-  color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; line-height: 26px; }
-.tag b { color: var(--ink); font-weight: 550; }
-.tag.w { border-style: dashed; color: var(--ink3); }
-/* Katlanmış rozetler: "+2" / "az". Sayı DEĞİL kontrol olduğu için sönük ve
-   dolgusuz — göz önce gerçek setlere, sonra buna gitsin. */
-.tag.more { color: var(--ink3); border-color: var(--line); padding: 0 9px; }
-.tags .undo { flex: none; height: 28px; padding: 0 4px; color: var(--ink3); font-size: 12px; }
+/* Set yuvaları: hedef kadar yuva — biten tikli, sıradaki vurgu çerçeveli, kalan boş */
+.yuvalar { display: flex; gap: 8px; padding: 10px var(--gutter) 0; flex: none; }
+.yuva { flex: 1; min-width: 0; height: 50px; border-radius: var(--r-m); background: var(--s1);
+  display: flex; flex-direction: column; justify-content: center; padding: 0 8px; }
+.yuva small { font-size: var(--f-xs); color: var(--t2); font-weight: var(--w-med); display: flex; align-items: center; gap: 4px;
+  white-space: nowrap; overflow: hidden; }
+.yuva small .i { width: 14px; height: 14px; stroke-width: 2.4; }
+.yuva b { font-size: var(--f-md); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yuva.bos b { color: var(--t3); font-weight: var(--w-reg); }
+.yuva.simdi { background: transparent; box-shadow: inset 0 0 0 1.5px var(--acc-line); }
+.yuva.simdi small { color: var(--acc); }
+.yuva.isinma { flex: none; background: transparent; box-shadow: inset 0 0 0 1.5px var(--line2); }
+/* Dört yuva (ısınma + 3): değer bir basamak küçük — 360 px'te "142,5×12" yuvaya ancak böyle sığar */
+.yuvalar.sik .yuva b { font-size: var(--f-sm); }
 
-/* Sayı girişi: rakam kahraman, adımlayıcı dikey ve sessiz */
-.entry { display: flex; align-items: center; gap: 16px; padding: 18px 20px 0; flex: none; }
-.entry .val { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
-.entry .unit { margin-right: auto; }
-/* Birim rakamın HEMEN yanında durmalı. Alan tüm genişliği alırsa "kg" ekranın
-   sağ ucuna savruluyor ve rakamla ilişkisi kopuyor.
-   field-sizing içeriğe göre daraltır; desteklemeyen tarayıcıda 5ch tabanı
-   "137,5"e kadar yetiyor — ikisinde de birim rakama bitişik kalıyor. */
-.entry .val input { width: 4.5ch; min-width: 2ch; max-width: 100%;
-  border: 0; background: none; color: var(--ink); padding: 0; -moz-appearance: textfield; }
-/* ⚠️ AÇIK width, field-sizing'i EZER — ikisi birlikte yazılınca alan içeriğe
-   göre daralmaz (76px puntoda 5ch ≈ 200px, birim ekranın sağına savruluyordu).
-   Destek varsa width'i serbest bırakmak ŞART. */
-@supports (field-sizing: content) {
-  .entry .val input { width: auto; field-sizing: content; }
-}
-.entry .val input::-webkit-outer-spin-button,
-.entry .val input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.entry .val input::placeholder { color: var(--ink3); }
-.entry .unit { font-size: 15px; font-weight: 500; color: var(--ink3); flex: none; }
-.stp { flex: none; width: 56px; border-radius: var(--r2); border: 1px solid var(--line2); overflow: hidden; }
-.stp button { display: block; width: 100%; height: 48px; font-size: 21px; font-weight: 400; color: var(--ink); }
-.stp button:first-child { border-bottom: 1px solid var(--line); }
-.stp button:active { background: var(--s2); }
+/* Ağırlık girişi: rakam kahraman, adımlayıcı başparmağın altında */
+.giris { display: flex; align-items: center; gap: 16px; padding: 10px var(--gutter) 0; flex: none; }
+.giris .deger { flex: 1; min-width: 0; }
+.giris .deger .etiket { display: block; }
+.giris .deger > div { display: flex; align-items: baseline; gap: 8px; }
+/* height açık: tarayıcı sayı kutusuna fontun DOĞAL satır yüksekliğini veriyordu (80 px puntoda 87 px, line-height 76 olsa da) */
+.giris .deger input { width: 4ch; min-width: 2ch; max-width: 100%; height: .95em; border: 0; background: none; padding: 0;
+  font-size: var(--f-hero); font-weight: var(--w-bold); font-stretch: 110%; letter-spacing: -.045em; line-height: .95;
+  font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+/* ⚠️ AÇIK width, field-sizing'i EZER — destek varsa width serbest bırakılmalı (birim rakama bitişik kalsın) */
+@supports (field-sizing: content) { .giris .deger input { width: auto; field-sizing: content; } }
+.giris .deger input::placeholder { color: var(--t3); }
+.giris .deger input:focus { outline: none; }
+.giris .deger em { font-style: normal; font-size: var(--f-lg); color: var(--t2); font-weight: var(--w-med); }
+input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stp { display: flex; flex-direction: column; gap: 8px; flex: none; }
+/* Adımlayıcı düğmesi adımı YAZAR ("+5") — ne yaptığını söyler */
+.stp button { width: 64px; height: 52px; border-radius: var(--r-m); background: var(--s2); display: grid; place-items: center;
+  font-weight: var(--w-bold); font-variant-numeric: tabular-nums; }
+.stp button:active { background: var(--s3); }
 
-.meta { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 20px 0; flex: none; }
-.meta .reps b { color: var(--ink); font-weight: 600; }
-.meta .hint { display: block; font-size: 11px; color: var(--ink3); margin-top: 1px; }
-.repsedit { padding: 10px 20px 0; }
-.repsedit .entry { padding-top: 0; }
-.repsedit .t-num { font-size: 44px; }
+.tekrar { display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter) 0; flex: none; }
+.tekrar .etiket { width: 52px; }
+.kucuk-stp { display: flex; align-items: center; gap: 2px; background: var(--s1); border-radius: 999px; padding: 2px; }
+.kucuk-stp button { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; color: var(--t2); }
+.kucuk-stp button:active { background: var(--s3); }
+.kucuk-stp input { width: 48px; height: 44px; border: 0; background: none; padding: 0; text-align: center;
+  font-size: var(--f-lg); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.kucuk-stp input:focus { outline: none; }
+.tekrar .cip { margin-left: auto; }
 
-.foot { padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 10px; flex: none; }
-.foot .t-m { margin: 0; }
-.foot .t-m b { color: var(--ink); font-weight: 550; }
-/* Ağırlık önerisi: bilgi satırı, vurgu rengi yok (kırmızı yalnız canlıya ayrılı) */
-.oneri { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  font-size: 12.5px; line-height: 1.4; color: var(--ink2); }
-.oneri b { color: var(--ink); font-weight: 600; }
-.oneri .b3 { flex: none; }
-.split { display: flex; gap: 10px; }
-.split .b2 { flex: 1; }
-.split .b1 { flex: 2; }
+/* Geçen sefer: ağırlık girişinin altında (süre hareketinde kendi bandında) */
+.gecen { margin-top: 6px; font-size: var(--f-sm); color: var(--t2); display: flex; gap: 6px; align-items: flex-start; }
+.gecen .i { width: 16px; height: 16px; color: var(--t3); margin-top: 1px; }
+.gecen-bant { padding: 8px var(--gutter) 0; flex: none; }
+.gecen b { color: var(--t1); font-weight: var(--w-med); font-variant-numeric: tabular-nums; }
 
-/* Alt gezinme: segment — düğme yığını değil. Dinlenme sayacı AYRI BANT AÇMAZ,
-   ortadaki yazı yerinde canlı sayaca döner; ekranda hiçbir şey yer değiştirmez. */
-.seg { display: flex; align-items: center; border-top: 1px solid var(--line); flex: none;
-  padding-bottom: env(safe-area-inset-bottom, 0px); }
-.seg button.side { flex: none; padding: 15px 18px; color: var(--ink3); font-size: 13px; font-weight: 500; }
-.seg button.side:disabled { opacity: .3; }
-.seg button.side:active { color: var(--ink2); }
-.seg .rest { flex: 1; display: flex; align-items: center; justify-content: center; gap: 9px;
-  padding: 15px 8px; color: var(--ink2); font-size: 13px; font-weight: 500; min-width: 0; }
-.seg .rest.run { color: var(--live); }
-.seg .rest .n { font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.seg .rest .add { flex: none; padding: 4px 8px; border-radius: var(--r1);
-  border: 1px solid var(--line); color: var(--ink2); font-size: 11.5px; }
-.restline { height: 2px; background: transparent; flex: none; }
-.restline i { display: block; height: 100%; width: 100%; background: var(--live);
-  transform: scaleX(0); transform-origin: left; transition: transform .25s linear; }
+.oneri { display: flex; align-items: center; gap: 10px; margin: 10px var(--gutter) 0; padding: 6px 6px 6px 14px;
+  border-radius: var(--r-m); background: var(--s1); font-size: var(--f-sm); color: var(--t2); flex: none; min-height: 48px; }
+.oneri .i { width: 18px; height: 18px; color: var(--t1); }
+.oneri span { flex: 1; }
+.oneri b { color: var(--t1); }
+.oneri .cip { background: var(--s3); color: var(--t1); }
 
-/* Süre hareketleri (Plank): geri sayım */
-.clock { padding: 16px 20px 0; text-align: center; flex: none; }
-.clock .crow { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 6px; }
-.clock .cadj { flex: none; min-width: 58px; height: 48px; border-radius: var(--r2);
-  border: 1px solid var(--line2); color: var(--ink); font-size: 15px; font-weight: 500; }
-.clock .cadj:active { background: var(--s2); }
-.clock .time { flex: 1; font-size: 56px; font-weight: 600; font-stretch: 112%;
-  letter-spacing: -.04em; font-variant-numeric: tabular-nums; line-height: 1; }
-.clock.run .time { color: var(--live); }
+.foot { padding: 10px var(--gutter) 12px; display: flex; flex-direction: column; gap: 10px; flex: none; }
+
+/* Süre hareketi (plank): geri sayım */
+.clock { padding: 12px var(--gutter) 0; flex: none; }
+.clock .crow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.clock .cadj { width: 64px; height: 56px; border-radius: var(--r-m); background: var(--s2); font-weight: var(--w-med); flex: none; }
+.clock .cadj:active { background: var(--s3); }
+.clock .time { flex: 1; text-align: center; font-size: var(--f-hero); font-weight: var(--w-bold); font-stretch: 110%;
+  letter-spacing: -.045em; font-variant-numeric: tabular-nums; line-height: 1; }
+.clock.run .time { color: var(--acc); }
+
+/* Alt bant: YÜKSEKLİK SABİT — sayaç açılınca hiçbir şey yer değiştirmez.
+   Boşta: önceki · dinlenme · sonraki. Çalışırken yan gezinme ÇEKİLİR (dinlenme ortasında yanlış
+   dokunuş hareketi değiştirmesin) ve bant tümüyle sayaca döner: +30 · kalan süre · geç. */
+.gezinme { display: flex; align-items: center; gap: 8px; height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); flex: none; }
+.gezinme > button { height: 48px; padding: 0 12px; border-radius: var(--r-m); color: var(--t2);
+  font-weight: var(--w-med); display: flex; align-items: center; gap: 4px; flex: none; }
+.gezinme > button:not(:disabled):active { background: var(--s1); }
+.gezinme > button:disabled { opacity: .3; }
+.dinlenme { flex: 1; min-width: 0; height: 48px; border-radius: var(--r-m); display: flex; align-items: center; justify-content: center;
+  gap: 8px; color: var(--t2); font-weight: var(--w-med); white-space: nowrap; }
+button.dinlenme:active { background: var(--s1); }
+.dinlenme .i { width: 18px; height: 18px; }
+.gezinme.run > button { background: var(--s2); color: var(--t1); width: 76px; justify-content: center; font-weight: var(--w-bold); }
+.gezinme.run > button:active { background: var(--s3); }
+.gezinme.run .dinlenme { flex-direction: column; gap: 5px; color: var(--acc); }
+.gezinme.run .dinlenme b { font-size: var(--f-2xl); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1; }
+.gezinme.run .bar { width: 100%; max-width: 150px; height: 4px; border-radius: 2px; background: var(--line2); overflow: hidden; }
+.gezinme.run .bar i { display: block; height: 100%; width: 100%; background: var(--acc);
+  transform-origin: left; transition: transform .25s linear; }
 
 /* KISA EKRAN: sabit bantlar sıkışır, figür yer kazanır. Kırpma değil küçültme. */
-@media (max-height: 720px) {
-  .t-num { font-size: 60px; }
-  .title { padding-top: 10px; }
-  .title .t-m { display: none; }
-  .entry { padding-top: 12px; }
-  .stp button { height: 42px; }
-  .meta { padding-top: 10px; }
-  .foot { padding: 12px 20px 12px; gap: 8px; }
-  .b1, .b2 { height: 50px; }
-  .clock .time { font-size: 46px; }
+@media (max-height: 740px) {
+  .baslik p { display: none; }
+  .yuva { height: 46px; }
+  .yuvalar, .giris, .tekrar, .clock { padding-top: 8px; }
+  .foot { padding-top: 8px; padding-bottom: 10px; }
 }
 
 /* ── Kayan panel: hedef + anlatım ───────────────────────────────────────── */
-.sheet-bg { position: fixed; inset: 0; z-index: 50; background: rgb(4 5 7 / .7);
-  opacity: 0; transition: opacity .22s ease; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.sheet-bg { position: fixed; inset: 0; z-index: 50; background: var(--scrim);
+  opacity: 0; transition: opacity .22s ease; }
 .sheet-bg.on { opacity: 1; }
 .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 51;
   max-width: var(--wrap); margin: 0 auto; max-height: 86dvh;
-  background: var(--s1); border-top: 1px solid var(--line2);
-  border-radius: var(--r3) var(--r3) 0 0;
+  background: var(--s1); border-radius: var(--r-l) var(--r-l) 0 0;
   display: flex; flex-direction: column;
   transform: translateY(101%); transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
 .sheet.on { transform: none; }
-.grab { display: block; width: 100%; padding: 12px 0 8px; flex: none; }
-.grab::before { content: ''; display: block; width: 40px; height: 3px; border-radius: 2px;
-  background: var(--line2); margin: 0 auto; }
+/* Tutamaç bir dokunma hedefi (Kapat): 44 px yüksek, çubuk ortada */
+.grab { display: grid; place-items: center; width: 100%; height: 44px; flex: none; }
+.grab::before { content: ''; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--line2); }
 .sheet-in { overflow-y: auto; -webkit-overflow-scrolling: touch;
-  padding: 4px 20px calc(24px + env(safe-area-inset-bottom, 0px)); }
-.sheet-in .t-h1 { margin-bottom: 2px; }
-.sheet-sub { margin: 0 0 18px; }
+  padding: 0 var(--gutter) calc(24px + env(safe-area-inset-bottom, 0px)); }
+.sheet-in h2 { font-size: var(--f-xl); font-weight: var(--w-bold); letter-spacing: -.02em; }
+.sheet-in .alt-baslik { color: var(--t2); font-size: var(--f-sm); margin: 2px 0 18px; }
+.sheet-in h3 { font-size: var(--f-sm); font-weight: var(--w-med); color: var(--t2); margin: 20px 0 8px; }
 
-.goal { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-  padding: 16px 0; margin-bottom: 18px; }
-.goal-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.reset-goal { color: var(--ink2); font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--line2); }
-.goal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 12px; }
-.gf .t-l { display: block; margin-bottom: 6px; }
-.gbox { display: flex; align-items: stretch; border: 1px solid var(--line2); border-radius: var(--r2); overflow: hidden; }
-.gbox button { width: 40px; flex: none; font-size: 18px; color: var(--ink2); }
-.gbox button:active { background: var(--s2); }
-.gbox input { flex: 1; min-width: 2ch; border: 0; background: none; color: var(--ink);
-  text-align: center; font-size: 18px; font-weight: 550; font-variant-numeric: tabular-nums;
-  padding: 11px 2px; -moz-appearance: textfield; }
-.gbox input::-webkit-outer-spin-button, .gbox input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.gbox input::placeholder { color: var(--ink3); font-weight: 400; }
-.goal .b1 { margin-top: 14px; }
-.goal-note { margin: 10px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink3); }
-
-.sheet .mus { margin: 0 0 16px; font-size: 14px; }
-.sheet .mus .t-l { display: block; margin-bottom: 3px; }
-.steps { margin: 0 0 18px; padding-left: 20px; font-size: 14.5px; line-height: 1.55; }
-.steps li { margin-bottom: 9px; }
-.steps li::marker { color: var(--ink3); font-size: 12px; }
-.tip { margin: 0; font-size: 14px; line-height: 1.5; color: var(--warn); }
-.tip .t-l { display: block; margin-bottom: 3px; color: var(--warn); opacity: .8; }
+.goal { background: var(--s2); border-radius: var(--r-l); padding: 16px; }
+.goal-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.goal-hd .cip { background: var(--s3); color: var(--t1); }
+.goal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 12px; }
+.gf .etiket { display: block; margin-bottom: 6px; }
+.gbox { display: flex; align-items: center; background: var(--s1); border-radius: var(--r-m); padding: 2px; }
+.gbox button { width: 44px; height: 44px; flex: none; border-radius: 12px; color: var(--t2); display: grid; place-items: center; }
+.gbox button:active { background: var(--s3); }
+.gbox input { flex: 1; min-width: 2ch; height: 44px; border: 0; background: none; text-align: center;
+  font-size: var(--f-lg); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; padding: 0; -moz-appearance: textfield; }
+.gbox input:focus { outline: none; }
+.gbox input::placeholder { color: var(--t3); font-weight: var(--w-reg); }
+.goal .btn { margin-top: 14px; }
+.goal-note { margin-top: 10px; font-size: var(--f-sm); color: var(--t2); }
+.mus { font-size: var(--f-md); }
+.steps { margin: 0; padding-left: 22px; line-height: 1.55; }
+.steps li { margin-bottom: 8px; }
+.steps li::marker { color: var(--t3); }
+.hatalar { margin: 0; padding: 0; list-style: none; }
+.hatalar li { padding: 8px 0; border-top: 1px solid var(--line); }
+.hatalar li:first-child { border-top: 0; padding-top: 0; }
+.hatalar b { font-weight: var(--w-med); }
+.hatalar span { display: block; font-size: var(--f-sm); color: var(--t2); }
+.tip-bas { display: flex; align-items: center; gap: 6px; }
+.tip-bas .i { width: 16px; height: 16px; color: var(--warn); }
 
 /* ── Bildirim ───────────────────────────────────────────────────────────── */
-/* ⚠️ İKİ SORUN BİRDEN: şerit hem düğmelerin ÜSTÜNE biniyordu hem de
-   kapanana kadar altındaki düğmelere BASILAMIYORDU.
-   · bottom yükseltildi: alt segment + kaydet bloğunun üstünde duruyor
-   · pointer-events:none — üzerinden geçen dokunuş ALTA ULAŞIR; yalnız
-     şeridin kendi düğmesi tıklanabilir. Örtse bile engellemiyor. */
-.toast { position: fixed; left: 16px; right: 16px; bottom: 168px; z-index: 60;
-  pointer-events: none;
-  background: var(--s2); border: 1px solid var(--line2); color: var(--ink);
-  padding: 13px 15px; border-radius: var(--r2); font-size: 14px;
-  display: flex; align-items: center; gap: 12px;
-  max-width: calc(var(--wrap) - 32px); margin: 0 auto;
-  box-shadow: 0 12px 40px rgb(0 0 0 / .6); }
-.toast.warn { border-color: var(--warn); }   /* amber: kırmızı yalnız CANLI olana ayrılı (tasarım dili kural 2) */
+/* Şerit düğmelerin ÜSTÜNDE durur ve dokunuşu ALTA geçirir (pointer-events:none);
+   yalnız kendi düğmesi tıklanabilir — örtse bile engellemez. */
+.toast { position: fixed; left: 16px; right: 16px; bottom: 168px; z-index: 60; pointer-events: none;
+  background: var(--s3); color: var(--t1); padding: 8px 8px 8px 16px; min-height: 56px;
+  border-radius: var(--r-m); font-size: var(--f-sm); display: flex; align-items: center; gap: 12px;
+  max-width: calc(var(--wrap) - 32px); margin: 0 auto; box-shadow: 0 12px 40px var(--golge); }
+.toast.warn { box-shadow: inset 0 0 0 1.5px var(--warn), 0 12px 40px var(--golge); }
 .toast span { flex: 1; }
-.toast button { pointer-events: auto; flex: none; border: 1px solid var(--line2); padding: 8px 12px;
-  border-radius: var(--r1); font-size: 13px; min-height: 38px; }
+.toast button { pointer-events: auto; flex: none; height: 44px; padding: 0 14px; border-radius: 12px;
+  background: var(--s2); font-weight: var(--w-med); }
 
-/* ══ AYARLAR EKRANI ═══════════════════════════════════════════════════════
-   Kart yok: bölümler kıl payı çizgiyle ayrılır (tasarım dili 2. sürüm).
-   Ekran KAYABİLİR — odak ekranından farkı bu; burada içerik uzayabilir ve
-   salonda tek elle hızlı olması gerekmiyor. */
-#settings-screen { padding-bottom: 28px; }
-.sect { padding: 22px 20px 0; border-top: 1px solid var(--line); margin-top: 22px; }
-.sect:first-of-type { border-top: 0; margin-top: 6px; }
-.sect > .t-l { margin: 0 0 12px; }
-.sect .split { margin-top: 14px; }
+/* ══ AYARLAR ══════════════════════════════════════════════════════════════
+   Ekran KAYABİLİR — odak ekranından farkı bu; salonda tek elle hızlı olması gerekmiyor. */
+#settings-screen, #history-screen, #session-screen { padding-bottom: 32px; }
+/* 7 gün tek satır: grubun iç dolgusuna 8 px taşar → 390 px'te hücre 44×44 */
+.cipler { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 0 -8px; }
+.cipler .cip { min-width: 0; padding: 0; background: var(--s2); font-size: var(--f-sm); }
+.cipler .cip[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+.segment { display: flex; background: var(--s2); border-radius: var(--r-m); padding: 3px; }
+.segment button { flex: 1; height: 44px; border-radius: 11px; font-weight: var(--w-med); color: var(--t2); font-variant-numeric: tabular-nums; }
+.segment button[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+.alan { display: flex; align-items: center; gap: 12px; }
+.alan label { flex: 1; }
+/* Kutunun tamamı bir label: dolguya dokunmak da alanı odaklar (dokunma yüzeyi = kutu) */
+.kutucuk { cursor: text; display: flex; align-items: center; justify-content: flex-end; gap: 6px; height: 48px; padding: 0 14px;
+  border-radius: var(--r-m); background: var(--s2); }
+.kutucuk input { width: 4.5ch; border: 0; background: none; padding: 0; text-align: right;
+  font-size: var(--f-lg); font-weight: var(--w-bold); font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.kutucuk input:focus { outline: none; }
+.kutucuk:focus-within { box-shadow: inset 0 0 0 1.5px var(--t2); }
+.kutucuk input::placeholder { color: var(--t3); font-weight: var(--w-reg); }
+.kutucuk small { font-size: var(--f-sm); color: var(--t2); }
+.alan .cip { background: var(--s2); color: var(--t1); }
+.alan.kilo-gir { margin-top: 14px; }
+.kucuk-yazi { margin: 20px calc(var(--gutter) + 4px) 0; font-size: var(--f-sm); color: var(--t3); }
+.kucuk-yazi b { color: var(--t1); font-weight: var(--w-med); }
+.kucuk-yazi.grup-alti { margin: 10px 4px 0; }
+.aciklama { margin: 12px var(--gutter) 0; font-size: var(--f-sm); color: var(--t2); }
+.kucuk-yazi a { color: var(--t2); text-decoration: underline; text-decoration-color: var(--line2); text-underline-offset: 3px; }
 
-.chips { display: flex; flex-wrap: wrap; gap: 7px; }
-.chips .b3 { min-width: 46px; justify-content: center; }
-.gun { font-variant-numeric: tabular-nums; }
-
-.hint { color: var(--ink3); font-size: 12.5px; line-height: 1.5; margin: 12px 0 0; }
-.hint b { color: var(--ink2); font-weight: 550; }
-.warnhint { color: var(--warn); }
-
-.frow { display: flex; align-items: center; gap: 12px; }
-.frow label { color: var(--ink2); font-size: 14px; min-width: 42px; }
-.frow input { width: 92px; height: 44px; padding: 0 12px; border-radius: var(--r1);
-  border: 1px solid var(--line2); background: transparent; color: var(--ink);
-  font-size: 17px; font-weight: 550; font-variant-numeric: tabular-nums; }
-.frow input:focus { outline: none; border-color: var(--ink3); }
-.frow .unit { color: var(--ink3); font-size: 13px; }
-
-/* ── Yarım kalan gün bandı ────────────────────────────────────────────────
-   Modal değil bant: ekranı kilitlemez, altındaki program görünmeye devam
-   eder. Vurgu rengi YOK — bu bir alarm değil, bir soru. */
-.carry { margin: 20px 20px 0; padding: 16px; border: 1px solid var(--line2);
-  border-radius: var(--r3); background: var(--s1); }
-.carry > .t-l { margin: 0; color: var(--ink2); }
-.carry-sub { margin: 5px 0 0; font-size: 12.5px; color: var(--ink3);
-  font-variant-numeric: tabular-nums; }
-.carry-list { margin: 11px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink); }
-.carry .split { margin-top: 15px; }
-.carry .b2, .carry .b1 { height: 46px; font-size: 13.5px; }
-
-/* Devredilen günde geçen sefer yapılmış hareket — sönük ama TIKLANABİLİR
-   (bilerek tekrar yapmak isteyebilirsin) */
-.li.prev .t-h2 { color: var(--ink3); }
-.li.prev .t-m { color: var(--ink3); font-style: italic; }
-
-/* ══ GEÇMİŞ EKRANI ════════════════════════════════════════════════════════
-   Grafikte VURGU RENGİ YOK: #FF3B4E yalnız canlı olana ayrıldı, geçmiş canlı
-   değil. Çizgi mürekkep tonunda; son nokta biraz daha parlak. */
-#history-screen { padding-bottom: 28px; }
-.hd-links { display: flex; gap: 14px; }
-
-.hero { display: flex; align-items: baseline; gap: 7px; margin: 2px 0 14px; }
-.hero b { font-size: 34px; font-weight: 600; letter-spacing: -.03em;
-  font-variant-numeric: tabular-nums; }
-.hero i { font-style: normal; font-size: 13px; color: var(--ink3); }
-.hero .delta { margin-left: auto; font-size: 12.5px; color: var(--ink2);
-  font-variant-numeric: tabular-nums; }
-
-.spark { display: block; width: 100%; height: auto; overflow: visible; }
-.spark polyline { fill: none; stroke: var(--ink2); stroke-width: 2;
-  stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.spark circle { fill: var(--ink); }
-
-.kilogir { margin-top: 16px; }
-.kilogir .b3 { height: 44px; padding: 0 16px; }
-
-.hrows { display: flex; flex-direction: column; }
-.hrow { display: flex; align-items: baseline; gap: 10px; padding: 11px 0;
-  border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
-.hrow:last-child { border-bottom: 0; }
-.hdate { font-size: 12.5px; color: var(--ink2); min-width: 74px; }
-.hday { font-size: 13px; color: var(--ink); flex: 1; }
-.hcount { font-size: 12.5px; color: var(--ink2); }
-.hcount em { font-style: normal; color: var(--warn); font-size: 11px; margin-left: 4px; }
-.hvol { font-size: 12.5px; color: var(--ink3); min-width: 72px; text-align: right; }
-
-/* İlerleme SIKIŞIK satır: ad · minik çizgi · sayı. Her hareket için tam
-   boy grafik 17 hareketde 1500px'lik bir duvar yapıyordu (canlıda görüldü);
-   sparkline'ın işi zaten ŞEKLİ göstermek, değeri yanındaki sayı veriyor. */
-.progs { display: flex; flex-direction: column; }
-.prog { display: flex; align-items: center; gap: 12px; padding: 7px 0;
-  border-bottom: 1px solid var(--line); }
-.prog:last-child { border-bottom: 0; }
-.prog-ad { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 550;
-  letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.prog-spark { flex: none; width: 96px; }
-.prog-spark .spark { width: 96px; }
-.prog-say { flex: none; min-width: 96px; text-align: right; font-size: 12px;
-  color: var(--ink3); font-variant-numeric: tabular-nums; }
-.prog-say b { color: var(--ink); font-weight: 600; }
-
-/* ── Gün seçici ───────────────────────────────────────────────────────────
-   Gün adı artık bir DÜĞME: sıra öneridir, son sözü kullanıcı söyler. */
-.day-btn { display: flex; align-items: baseline; gap: 8px; padding: 0; text-align: left; }
-/* Caret, bu özelliğin TEK giriş noktası — bulunamazsa özellik yok demektir.
-   Bu yüzden sönük değil orta tonda; ama başlığı gölgelemesin diye küçük. */
-.day-btn .caret { color: var(--ink2); font-size: 14px; line-height: 1;
-  border: 1px solid var(--line2); border-radius: 999px;
-  width: 22px; height: 22px; display: inline-flex;
-  align-items: center; justify-content: center; align-self: center; }
-.day-btn:active .caret { background: var(--s2); }
-.day-btn:active .day { color: var(--ink2); }
-
-.picker { margin: 14px 20px 0; padding: 15px; border: 1px solid var(--line2);
-  border-radius: var(--r3); background: var(--s1); }
-.picker > .t-l { margin: 0 0 11px; color: var(--ink2); }
-.picks { display: flex; flex-direction: column; gap: 7px; }
-.pick { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
-  padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--r2);
-  text-align: left; width: 100%; }
-.pick[aria-pressed="true"] { border-color: var(--ink); background: var(--s2); }
-.pick:disabled { opacity: .4; }
-.pick:not(:disabled):active { background: var(--s2); }
-.pick-ad { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
-.pick-kas { flex: 1; font-size: 12.5px; color: var(--ink2); }
-.pick-not { flex: none; font-size: 10.5px; font-weight: 550; letter-spacing: .045em;
-  text-transform: uppercase; color: var(--ink3); border: 1px solid var(--line);
-  border-radius: 999px; padding: 2px 8px; }
-.picker-alt { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
-.picker-alt .hint { margin: 0 0 11px; }
-/* Kayıtsız gün: "yarım" değil, kendi etiketi. Uyarı rengi DEĞİL — bu bir
-   kusur değil kullanıcının beyanı; nötr tonda durur. */
-.hcount em.kyt { color: var(--ink3); font-style: normal; font-size: 11px; }
+/* ══ GEÇMİŞ ═══════════════════════════════════════════════════════════════
+   Grafikte VURGU RENGİ YOK: vurgu yalnız canlı olana ayrılı, geçmiş canlı değil. */
+.kilo { display: flex; align-items: baseline; gap: 8px; }
+.kilo b { font-size: var(--f-2xl); font-weight: var(--w-bold); letter-spacing: -.035em; font-variant-numeric: tabular-nums; line-height: 1; }
+.kilo em { font-style: normal; color: var(--t2); font-size: var(--f-lg); }
+.kilo .fark { margin-left: auto; font-size: var(--f-sm); color: var(--t2); background: var(--s2); padding: 4px 10px;
+  border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.spark { display: block; width: 100%; height: 72px; margin-top: 14px; overflow: visible; }
+.spark .cizgi { fill: none; stroke: var(--t2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.spark .alan-dolgu { fill: color-mix(in oklab, var(--t2) 10%, transparent); stroke: none; }
+.spark .uc { stroke: var(--t1); stroke-width: 7; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.grup .ic.sira { padding: 4px 16px; }
+.seans { display: flex; align-items: center; gap: 12px; min-height: 52px; width: 100%; text-align: left;
+  font-size: var(--f-sm); font-variant-numeric: tabular-nums; }
+.seans + .seans { border-top: 1px solid var(--line); }
+button.seans:active { background: var(--s2); }
+.seans .tarih2 { width: 76px; flex: none; color: var(--t2); }
+.seans .g { background: var(--s2); color: var(--t1); padding: 3px 10px; border-radius: 999px; font-weight: var(--w-med); flex: none; }
+.seans .etk { color: var(--warn); font-size: var(--f-xs); font-weight: var(--w-med); }
+.seans .etk.kyt { color: var(--t2); }
+.seans .sag { margin-left: auto; color: var(--t2); white-space: nowrap; }
+.seans .sag b { color: var(--t1); font-weight: var(--w-med); }
+/* İlerleme: ad ve değer üst satırda (ad KESİLMEZ), eğri altta tam genişlik; değer kırılmaz */
+.ilerleme { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "ad deger" "cizgi cizgi";
+  row-gap: 8px; column-gap: 12px; padding: 12px 0; align-items: baseline; }
+.ilerleme + .ilerleme { border-top: 1px solid var(--line); }
+.ilerleme > b { grid-area: ad; font-weight: var(--w-med); min-width: 0; }
+.ilerleme > span { grid-area: deger; font-size: var(--f-sm); color: var(--t2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ilerleme > span em { font-style: normal; color: var(--t1); font-weight: var(--w-med); }
+.ilerleme > svg { grid-area: cizgi; width: 100%; height: 18px; margin: 0; overflow: visible; }
+.ilerleme.tek { grid-template-areas: "ad deger"; }
 
 /* ══ SEANS DÜZENLEME ══════════════════════════════════════════════════════ */
-#session-screen { padding-bottom: 28px; }
-.hrow[data-seans] { width: 100%; text-align: left; }
-.hrow[data-seans]:active { background: var(--s1); }
+.eset { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.eno { flex: none; width: 22px; font-size: var(--f-xs); color: var(--t3); font-variant-numeric: tabular-nums; }
+.efield { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 10px; border-radius: 12px; background: var(--s2); }
+.efield:focus-within { box-shadow: inset 0 0 0 1.5px var(--t2); }
+.efield input { width: 4.5ch; border: 0; background: none; padding: 0; text-align: right;
+  font-weight: var(--w-bold); font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.efield input:focus { outline: none; }
+.eunit { font-size: var(--f-xs); color: var(--t2); }
+.esil { margin-left: auto; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; color: var(--t2); flex: none; }
+.esil:active { background: var(--s3); }
 
-.eex-list { margin-top: 6px; }
-.eex { padding: 15px 20px 13px; border-top: 1px solid var(--line); }
-.eex > .t-h2 { display: block; margin-bottom: 9px; }
-.eset { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
-.eno { flex: none; width: 20px; font-size: 11.5px; color: var(--ink3);
-  font-variant-numeric: tabular-nums; }
-.efield { display: inline-flex; align-items: center; gap: 5px; }
-.efield input { width: 74px; height: 42px; padding: 0 10px; border-radius: var(--r1);
-  border: 1px solid var(--line2); background: transparent; color: var(--ink);
-  font-size: 16px; font-weight: 550; font-variant-numeric: tabular-nums; text-align: center; }
-.efield input:focus { outline: none; border-color: var(--ink3); }
-.eunit { font-size: 11.5px; color: var(--ink3); }
-.esil { margin-left: auto; flex: none; font-size: 12px; color: var(--ink3);
-  padding: 10px 4px; min-height: 40px; }
-.esil:active { color: var(--live); }
-
-/* Yıkıcı eylem: kırmızı DOLGU değil kenar — bu bir alarm değil, geri
-   alınabilir bir işlem. Vurgu rengi canlı olana ayrılı. */
-.b2.danger { border-color: rgb(238 85 104 / .45); color: var(--live); }
-.b2.danger:active { background: rgb(238 85 104 / .1); }
+/* ══ SEANS SONU ═══════════════════════════════════════════════════════════ */
+#summary-screen { min-height: 100vh; min-height: 100dvh; }
+.bitis { padding: 16px var(--gutter) 0; }
+.bitis .durum.tamam { width: 48px; height: 48px; }
+.bitis .durum.tamam .i { width: 26px; height: 26px; }
+.bitis h1 { font-size: var(--f-2xl); font-weight: var(--w-bold); letter-spacing: -.03em; line-height: 1.12; margin-top: 16px; }
+.bitis p { color: var(--t2); margin-top: 4px; }
+.fark-satir { display: flex; align-items: center; gap: 12px; }
+.fark-satir .i { color: var(--acc); }
+.fark-satir span { flex: 1; }
+.fark-satir b { font-size: var(--f-lg); font-variant-numeric: tabular-nums; }

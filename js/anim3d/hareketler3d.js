@@ -23,8 +23,12 @@ const sehpa = (pr, ust = 38.5) => [
   ...M.kutu(pr, [-72, -64], [0, ust - 6], [-8, 8]), ...M.kutu(pr, [4, 12], [0, ust - 6], [-8, 8])];
 const oturak = (pr, ust, x = [-16, 14]) => [...M.kutu(pr, x, [ust - 6, ust], [-15, 15], SEHPA), ...M.kutu(pr, [-4, 4], [0, ust - 6], [-4, 4])];
 /** Gövdenin arkasındaki yönlü minder: gövde yönü g boyunca, gövdenin ARKASINDA */
-const sirtMinderi = (pr, s, n, boy = 70, ofset = 30) =>
-  M.kutuY(pr, ekle(ekle(s.P, s.g, ofset), n, -(R.gogus + 3)), [Z, s.g, n], [30, boy, 6], PED);
+const sirtMinderi = (pr, s, n, boy = 70, ofset = 30, destekY = null) => {
+  const merkez = ekle(ekle(s.P, s.g, ofset), n, -(R.gogus + 3)), o = M.kutuY(pr, merkez, [Z, s.g, n], [30, boy, 6], PED);
+  // ⚠️ Minder havada duruyordu (27 Eyl denetimi): arkasından oturak tabanına inen destek borusu
+  if (destekY != null) { const arka = ekle(merkez, n, -4); o.push(M.kapsul(pr, arka, [arka[0], destekY, 0], 2.2, METAL)); }
+  return o;
+};
 /** Temas: gövde yüzeyi ile minderin ön yüzü arasındaki boşluk (0 = değiyor) */
 const sirtTemas = n => s => nokta(fark(s.gogusAlt, ekle(ekle(s.P, s.g, 30), n, -(R.gogus + 3) + 3)), n) - R.gogus;
 
@@ -56,7 +60,10 @@ export const KUTUPHANE = {
 
   /* ─── 1. GÜN ─────────────────────────────────────────────────────────── */
 
-  bb_bench_press: bitisik(M.HAREKETLER.bench, 'Barbell Bench Press', { dizYonu: [0.7, 0.7, 0] }),
+  bb_bench_press: bitisik(M.HAREKETLER.bench, 'Barbell Bench Press', { dizYonu: [0.7, 0.7, 0],
+    // Gerçek bench press kollar DÜZ başlar (bar yukarıda) ve oraya döner — duran görüntü de bu (27 Eyl)
+    ozel: [{ ad: 'başlangıçta kollar düz, bar en yüksekte', f: ks => { const y = ks.map(s => (s.eA[1] + s.eB[1]) / 2), en = Math.max(...y);
+      return { gecti: y[0] >= en - 0.5, olcum: `başta ${y[0].toFixed(1)} · en yüksek ${en.toFixed(1)}` }; } }] }),
 
   db_bench_fly: {
     ad: 'Dumbbell Bench Fly', kamera: [40, 32], seritKameralar: [[0, 0], [90, 24], [40, 32]], merkez: [-20, 0, 0],
@@ -66,7 +73,7 @@ export const KUTUPHANE = {
       A: { hedef: [s.omA[0] + 6, s.omA[1] + 58 * Math.cos(th), s.omA[2] - 58 * Math.sin(th)], kutup: [0.3, -0.2, -1] },
       B: { hedef: [s.omB[0] + 6, s.omB[1] + 58 * Math.cos(th), s.omB[2] + 58 * Math.sin(th)], kutup: [0.3, -0.2, 1] } }); },
     ekipman: (pr, s) => [...sehpa(pr), ...M.dambil(pr, s.eA, [1, 0, 0]), ...M.dambil(pr, s.eB, [1, 0, 0])],
-    cisimler: s => [[ekle(s.eA, [1, 0, 0], -7), ekle(s.eA, [1, 0, 0], 7), 5.5], [ekle(s.eB, [1, 0, 0], -7), ekle(s.eB, [1, 0, 0], 7), 5.5]],
+    cisimler: s => [M.dambilCismi(s.eA, [1, 0, 0]), M.dambilCismi(s.eB, [1, 0, 0])],
     izlenen: 'eB',
     kisit: { ayaklar: 'yerde', dizYonu: [0.7, 0.7, 0], dirsek: { aralik: [10, 35], sabit: true }, temas: sehpaTemaslari },
   },
@@ -84,12 +91,16 @@ export const KUTUPHANE = {
       uclar: t => { const c = yol(t); return () => ({
         A: { hedef: [c[0], c[1], 26], kutup: [0, -0.6, 1] }, B: { hedef: [c[0], c[1], -26], kutup: [0, -0.6, -1] } }); },
       ekipman(pr, s, t) {
-        const c = yol(t), o = [...oturak(pr, 36), ...sirtMinderi(pr, s, n, 74, 32)];
+        const c = yol(t), o = [...oturak(pr, 36), ...sirtMinderi(pr, s, n, 74, 32, 30)];
         for (const zz of [1, -1]) {
           o.push(M.kapsul(pr, [PIVOT[0], PIVOT[1], 34 * zz], [c[0], c[1], 34 * zz], 2.4, METAL));   // kaldıraç kolu (sabit boy)
           o.push(M.kapsul(pr, [c[0], c[1], 20 * zz], [c[0], c[1], 34 * zz], 2.4, '#8a929c'));        // tutamak (pronasyon, geniş)
+          // ⚠️ Pivot ve kollar havada asılıydı (27 Eyl denetimi): pivotu taşıyan dikme + yere oturan şase
+          o.push(M.kapsul(pr, [PIVOT[0], 0, 39 * zz], [PIVOT[0], PIVOT[1], 39 * zz], 3.2, METAL),
+                 M.kapsul(pr, [PIVOT[0], 2.5, 39 * zz], [14, 2.5, 39 * zz], 2.5, METAL));
         }
-        o.push(M.kapsul(pr, [PIVOT[0], PIVOT[1], -36], [PIVOT[0], PIVOT[1], 36], 3, METAL));         // pivot mili
+        o.push(M.kapsul(pr, [PIVOT[0], PIVOT[1], -40], [PIVOT[0], PIVOT[1], 40], 3, METAL),          // pivot mili
+               M.kapsul(pr, [0, 2.5, -39], [0, 2.5, 39], 2.5, METAL));                                // şase: oturak altı travers
         return o;
       },
       izlenen: 'eA',
@@ -108,8 +119,8 @@ export const KUTUPHANE = {
       uclar: t => { const k = ease(t); return s => ({
         A: { hedef: ekle(s.omA, [ara(4, 2, k), ara(27, 58.3, k), ara(29, 8, k)]), kutup: [0.1, -1, 0.7] },
         B: { hedef: ekle(s.omB, [ara(4, 2, k), ara(27, 58.3, k), -ara(29, 8, k)]), kutup: [0.1, -1, -0.7] } }); },
-      ekipman: (pr, s) => [...oturak(pr, 36), ...sirtMinderi(pr, s, n, 62, 34), ...M.dambil(pr, s.eA, Z), ...M.dambil(pr, s.eB, Z)],
-      cisimler: s => [[ekle(s.eA, Z, -7), ekle(s.eA, Z, 7), 5.5], [ekle(s.eB, Z, -7), ekle(s.eB, Z, 7), 5.5]],
+      ekipman: (pr, s) => [...oturak(pr, 36), ...sirtMinderi(pr, s, n, 62, 34, 30), ...M.dambil(pr, s.eA, Z), ...M.dambil(pr, s.eB, Z)],
+      cisimler: s => [M.dambilCismi(s.eA, Z), M.dambilCismi(s.eB, Z)],
       izlenen: 'eA',
       kisit: { ayaklar: 'yerde', dizYonu: [1, 0.3, 0],
         temas: [kalcaOturakta(36), { ad: 'sırt pedde', f: sirtTemas(n), aralik: [-1.5, 1.5] }] },
@@ -130,7 +141,7 @@ export const KUTUPHANE = {
       uclar: t => s => ({ A: { hedef: el(s.omA, t, 1), kutup: [-0.2, -1, 0.5] }, B: { hedef: el(s.omB, t, -1), kutup: [-0.2, -1, -0.5] }, ...ayakBilekleri(2, 16) }),
       ekipman(pr, s) {
         const m = bar(s);
-        return [...M.kutu(pr, [-48, -34], [0, 20], [-8, 8], PED), M.makara(pr, MAKARA), M.kablo(pr, MAKARA, m),
+        return [...M.kutu(pr, [-48, -34], [0, 20], [-8, 8], PED), ...M.makara(pr, MAKARA), M.kablo(pr, MAKARA, m),
           M.kapsul(pr, [m[0], m[1], -22], [m[0], m[1], 22], 1.8, '#8a929c')];            // düz bar, pronasyon
       },
       cisimler: s => { const m = bar(s); return [[MAKARA, m, 0.7], [[m[0], m[1], -22], [m[0], m[1], 22], 1.8]]; },
@@ -155,7 +166,7 @@ export const KUTUPHANE = {
       ekipman(pr, s) {
         const m = s.eA.map((v, i) => (v + s.eB[i]) / 2), tepe = ekle(m, [0, 7, 0]);
         return [M.kapsul(pr, [46, 0, -34], [46, 195, -34], 3, METAL), M.kapsul(pr, [46, 192, -34], MAKARA, 2.4, METAL),   // kolon yanda: önde durunca kolları örtüyordu
-          M.makara(pr, MAKARA), M.kablo(pr, MAKARA, tepe),
+          ...M.makara(pr, MAKARA), M.kablo(pr, MAKARA, tepe),
           M.kapsul(pr, s.eA, tepe, 1.6, '#8a929c'), M.kapsul(pr, s.eB, tepe, 1.6, '#8a929c')];
       },
       cisimler: s => { const m = s.eA.map((v, i) => (v + s.eB[i]) / 2); return [[MAKARA, ekle(m, [0, 7, 0]), 0.7]]; },
@@ -174,8 +185,8 @@ export const KUTUPHANE = {
       uclar: t => s => ({
         A: { hedef: el(s, t), kutup: fark(E(s), s.omA) },
         B: { hedef: ekle(s.P, [24, 10, -13]), kutup: [-0.3, 0, -1] } }),   // boştaki el uyluğun üstünde (dirseği desteklemek başın önünden geçirir)
-      ekipman: (pr, s) => [...oturak(pr, 36), ...M.dambil(pr, s.eA, Z, 14, 6)],          // sap yatay (sağ-sol), avuç öne
-      cisimler: s => [[ekle(s.eA, Z, -7), ekle(s.eA, Z, 7), 6]],
+      ekipman: (pr, s) => [...oturak(pr, 36), ...M.dambil(pr, s.eA, Z)],          // sap yatay (sağ-sol), avuç öne
+      cisimler: s => [M.dambilCismi(s.eA, Z)],
       izlenen: 'eA',
       kisit: { tekTaraf: true, dirsekYerinde: ['A'], ayaklar: 'yerde', dizYonu: [1, 0.3, 0], temas: [kalcaOturakta(36)] },
     };
@@ -230,7 +241,7 @@ export const KUTUPHANE = {
         const c = yol(t), tepe = ekle(c, d, 6);
         return [...oturak(pr, 33, [-14, 12]), ...M.kutu(pr, [14, 26], [49, 55], [-16, 16], PED),
           M.kapsul(pr, [40, 0, -34], [40, 210, -34], 3, METAL), M.kapsul(pr, [40, 52, -34], [26, 52, -16], 2.4, METAL),   // kolon yanda
-          M.kapsul(pr, [40, 208, -34], MAKARA, 2.4, METAL), M.makara(pr, MAKARA), M.kablo(pr, MAKARA, tepe),
+          M.kapsul(pr, [40, 208, -34], MAKARA, 2.4, METAL), ...M.makara(pr, MAKARA), M.kablo(pr, MAKARA, tepe),
           M.kapsul(pr, [c[0], c[1], 6], tepe, 1.6, '#8a929c'), M.kapsul(pr, [c[0], c[1], -6], tepe, 1.6, '#8a929c')];
       },
       cisimler: s => [[MAKARA, ekle(yol(s.t), d, 6), 0.7]],
@@ -251,13 +262,16 @@ export const KUTUPHANE = {
         return { A: { hedef: hA, kutup: fark(ekle(hA, [0, 29, 0]), s.omA) }, B: { hedef: hB, kutup: fark(ekle(hB, [0, 29, 0]), s.omB) },
           ...ayakBilekleri(12, 9) }; }; },
     ekipman: (pr, s) => [...M.dambil(pr, s.eA, [1, 0, 0]), ...M.dambil(pr, s.eB, [1, 0, 0])],
-    cisimler: s => [[ekle(s.eA, [1, 0, 0], -7), ekle(s.eA, [1, 0, 0], 7), 5.5], [ekle(s.eB, [1, 0, 0], -7), ekle(s.eB, [1, 0, 0], 7), 5.5]],
+    cisimler: s => [M.dambilCismi(s.eA, [1, 0, 0]), M.dambilCismi(s.eB, [1, 0, 0])],
     izlenen: 'eA',
     kisit: { ayaklar: 'yerde', dizYonu: [1, 0, 0], onKolDikey: 20, govde: { aralik: [15, 25], oynama: 1 } },
   },
 
   cable_seated_row: (() => {
-    const MAKARA = [78, 40, 0];
+    // Sabri (27 Eyl): "halat tam karşıdan bir yerden çıkmalı". Makara 40 cm'deydi, tutamak 70'te: kablo
+    // ellerden ayak tablasına doğru EĞİK iniyordu. Makara artık tutamak yüksekliğinde, tam karşıda bir
+    // kolonun üstünde → çekiş yere paralel, kablo yatay.
+    const MAKARA = [98, 70, 0], KOLON_X = 106;
     const yol = t => [ara(60, 28, ease(t)), 70, 0];                // tutamak yere PARALEL gelir, karnın önüne
     return {
       ad: 'Seated Cable Row', kamera: [30, 16], seritKameralar: [[0, 0], [30, 16], [140, 20]], merkez: [35, 0, 0],
@@ -268,13 +282,21 @@ export const KUTUPHANE = {
       ekipman(pr, s, t) {
         const c = yol(t), tepe = ekle(c, [8, 0, 0]);
         return [...M.kutu(pr, [-20, 40], [26, 32], [-13, 13], SEHPA), ...M.kutu(pr, [-12, 32], [0, 26], [-6, 6]),
-          ...M.kutu(pr, [80, 84], [8, 54], [-18, 18], PED), M.makara(pr, MAKARA), M.kablo(pr, MAKARA, tepe),
+          ...M.kutu(pr, [80, 84], [8, 54], [-18, 18], PED),                                          // ayak tablası
+          ...M.kutu(pr, [KOLON_X - 4, KOLON_X + 4], [0, 118], [-5, 5]),                               // kolon
+          ...M.kutu(pr, [72, KOLON_X + 6], [0, 6], [-8, 8]),                                           // taban rayı
+          M.kapsul(pr, [KOLON_X - 4, MAKARA[1], 0], MAKARA, 2.2, METAL),                              // makara kolu
+          ...M.makara(pr, MAKARA), M.kablo(pr, MAKARA, tepe),
           M.kapsul(pr, [c[0], c[1], 5], tepe, 1.6, '#8a929c'), M.kapsul(pr, [c[0], c[1], -5], tepe, 1.6, '#8a929c')];
       },
       cisimler: s => [[MAKARA, ekle(yol(s.t), [8, 0, 0]), 0.7]],
       izlenen: 'eA',
       kisit: { ortakBar: true, dizYonu: [0.2, 1, 0], govde: { aralik: [80, 91], oynama: 10 }, temas: [kalcaOturakta(32)],
-        ozel: [{ ad: 'ayaklar platformda sabit', f: ks => { const d = Math.max(...ks.map(s => mesafe(s.aA, ks[0].aA))); return { gecti: d <= 0.5, olcum: `kayma ${d.toFixed(1)}` }; } }] },
+        ozel: [{ ad: 'ayaklar platformda sabit', f: ks => { const d = Math.max(...ks.map(s => mesafe(s.aA, ks[0].aA))); return { gecti: d <= 0.5, olcum: `kayma ${d.toFixed(1)}` }; } },
+          // Sabri (27 Eyl): "halat tam karşıdan bir yerden çıkmalı"
+          { ad: 'kablo tam karşıdan gelir (yere paralel, ≤ 5°)', f: ks => { const a = Math.max(...ks.map(s => { const c = ekle(yol(s.t), [8, 0, 0]);
+              return Math.abs(Math.atan2(MAKARA[1] - c[1], MAKARA[0] - c[0])) * 180 / Math.PI; }));
+            return { gecti: a <= 5 && MAKARA[0] > 72, olcum: `en fazla ${a.toFixed(1)}°` }; } }] },
     };
   })(),
 
@@ -288,7 +310,7 @@ export const KUTUPHANE = {
       uclar: t => s => ({ A: { hedef: el(s, t, 1), kutup: fark(E(s, 1), s.omA) }, B: { hedef: el(s, t, -1), kutup: fark(E(s, -1), s.omB) }, ...ayakBilekleri(2, 11) }),
       ekipman(pr, s) {
         const m = [s.eA[0], s.eA[1], 0];
-        return [...M.kutu(pr, [12, 26], [0, 4], [-8, 8], PED), M.makara(pr, MAKARA), M.kablo(pr, MAKARA, m),
+        return [...M.kutu(pr, [12, 26], [0, 4], [-8, 8], PED), ...M.makara(pr, MAKARA), M.kablo(pr, MAKARA, m),
           M.kapsul(pr, [m[0], m[1], -24], [m[0], m[1], 24], 1.8, '#8a929c')];    // düz bar, supinasyon
       },
       cisimler: s => [[MAKARA, [s.eA[0], s.eA[1], 0], 0.7], [[s.eA[0], s.eA[1], -24], [s.eA[0], s.eA[1], 24], 1.8]],
@@ -298,7 +320,7 @@ export const KUTUPHANE = {
   })(),
 
   db_hammer_curl: (() => {
-    const bet = Math.asin(5 / 29);                                 // dambıllar uylukların DIŞINDA sarkar
+    const bet = Math.asin(7 / 29);                                 // dambıllar uylukların DIŞINDA sarkar (Ø14 altıgen baş uyluğa değmesin — 27 Eyl)
     const E = (s, i) => ekle(i > 0 ? s.omA : s.omB, [3, -30.6, 4 * i]);
     const aci = t => rd(ara(8, 135, ease(t)));
     const el = (s, t, i) => dirsekEtrafinda(E(s, i), 29, aci(t), bet, i);
@@ -309,7 +331,7 @@ export const KUTUPHANE = {
       // Kollar SIRAYLA (ExRx): sol kol sağın tersi zamanlamayla
       uclar: t => s => ({ A: { hedef: el(s, t, 1), kutup: fark(E(s, 1), s.omA) }, B: { hedef: el(s, 1 - t, -1), kutup: fark(E(s, -1), s.omB) }, ...ayakBilekleri(2, 11) }),
       ekipman: (pr, s, t) => [...M.dambil(pr, s.eA, eksen(t)), ...M.dambil(pr, s.eB, eksen(1 - t))],
-      cisimler: s => [[ekle(s.eA, eksen(s.t), -7), ekle(s.eA, eksen(s.t), 7), 5.5], [ekle(s.eB, eksen(1 - s.t), -7), ekle(s.eB, eksen(1 - s.t), 7), 5.5]],
+      cisimler: s => [M.dambilCismi(s.eA, eksen(s.t)), M.dambilCismi(s.eB, eksen(1 - s.t))],
       izlenen: 'eA',
       kisit: { sirayla: true, dirsekYerinde: ['A', 'B'], ayaklar: 'yerde', dizYonu: [1, 0, 0], govde: { aralik: [88, 92], oynama: 1 } },
     };
@@ -328,9 +350,13 @@ export const KUTUPHANE = {
       ekipman(pr, s, t) {
         const orta = ekle(ekle(P, r, s0 + sH * (1 - ease(t)) + 5), pY, 6);
         return [...M.kutu(pr, [-14, 14], [16, 22], [-15, 15], SEHPA), ...M.kutu(pr, [-10, 10], [0, 16], [-8, 8]),
-          ...sirtMinderi(pr, s, n, 70, 32),
+          ...sirtMinderi(pr, s, n, 70, 32, 16),
           ...M.kutuY(pr, orta, [Z, pY, r], [44, 40, 4], PED),
           ...[26, -26].map(zz => M.kapsul(pr, ekle(ekle(P, r, 40), Z, zz), ekle(ekle(P, r, 105), Z, zz), 2.2, METAL)),
+          // ⚠️ Raylar havada duruyordu (27 Eyl denetimi): iki uçtan yere inen dikme + taban kirişi
+          ...[28, -28].flatMap(zz => { const alt = ekle(ekle(P, r, 40), Z, zz), ust = ekle(ekle(P, r, 105), Z, zz);
+            return [M.kapsul(pr, [alt[0], 0, zz], alt, 2.6, METAL), M.kapsul(pr, [ust[0], 0, zz], ust, 2.6, METAL),
+                    M.kapsul(pr, [-16, 2.5, zz], [ust[0] + 4, 2.5, zz], 2.6, METAL)]; }),
           ...[24, -24].map(zz => M.kapsul(pr, [P[0] + 2, P[1] + 4, zz], [P[0] + 10, P[1] + 4, zz], 2.2, '#8a929c'))];
       },
       izlenen: 'aA',

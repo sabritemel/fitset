@@ -29,6 +29,23 @@
 /** Ekipman başına en küçük artış (kg). Bar: en küçük plaka 1,25 × 2. Makine/kablo yığını: tipik 5. */
 export const ADIM = { barbell: 2.5, dumbbell: 2.5, machine: 5, cable: 5 };
 
+/** Dambıl seti salona göre 2 ya da 2,5 kg artar — kullanıcı Ayarlar'da seçer */
+export const DAMBIL_ADIMLARI = [2, 2.5];
+
+/**
+ * AĞIRLIK ADIMI — TEK KAYNAK: odak ekranındaki +/−, hedef panelinin adımlayıcısı ve
+ * önerinin yuvarlaması bunu çağırır.
+ * ⚠️ 27 Eyl'e kadar +/− her ekipmanda sabit 2,5'ti (ui.js), öneri motoru ise makineyi 5'e
+ * yuvarlıyordu: aynı uygulama iki ayrı adım biliyordu. 16 kg dambılda "+" 18,5 yazıyordu.
+ * @returns {number|null} null: ekipmanın standart adımı yok (vücut ağırlığı) — öneri yapılmaz
+ */
+export function agirlikAdimi(ex, settings) {
+  if (ex.equipment === 'dumbbell' && DAMBIL_ADIMLARI.includes(settings?.dambilAdimi)) return settings.dambilAdimi;
+  return ADIM[ex.equipment] ?? null;
+}
+/** Standart adımı olmayan ekipmanda (vücut ağırlığına eklenen yük) giriş adımı */
+export const GIRIS_ADIMI_YEDEK = 2.5;
+
 /** Bileşik (çok eklemli) hareketler — büyük kas, %5 artış */
 export const BILESIK = new Set([
   'bb_bench_press', 'machine_incline_press', 'db_shoulder_press',
@@ -58,11 +75,12 @@ export function calismaSetleri(seans, exerciseId) {
  * @param {object} ex        egzersiz tanımı (id, setType, equipment)
  * @param {Array}  seanslar  bitmiş seanslar, EN YENİDEN eskiye (store.doneSessions)
  * @param {{sets:number, reps:number}} hedef  etkin hedef (session.effective)
+ * @param {number|null} [adim]  ekipman adımı — uygulama agirlikAdimi(ex, ayarlar) geçer
+ *        (dambıl adımı kullanıcının seçimi); verilmezse ekipman tablosu
  * @returns {null | {tur:'agirlik', agirlik, onceki, setler, tekrar} | {tur:'tekrar', agirlik, hedefTekrar, adimOrani}}
  */
-export function oneri(ex, seanslar, hedef) {
+export function oneri(ex, seanslar, hedef, adim = ADIM[ex.equipment]) {
   if (ex.setType !== 'weight_reps') return null;
-  const adim = ADIM[ex.equipment];
   if (!adim || !(hedef?.reps > 0) || !(hedef?.sets > 0)) return null;
 
   const son = [];

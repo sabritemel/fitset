@@ -291,6 +291,33 @@ export function exerciseProgress(session, ex, settings) {
   return { sets, calisma, hedef, tamam: calisma >= hedef };
 }
 
+/**
+ * "DEVAM ET" HEDEFİ — kaldığın hareketin sırası.
+ * Önce YARIM bırakılan (en az bir çalışma seti var, hedefe ulaşmamış) hareket; yoksa
+ * programda sırası gelen ilk tamamlanmamış hareket. Hepsi tamamsa -1.
+ * ⚠️ 27 Eyl'e kadar liste bunu hiç söylemiyordu: `.li.now` stili tanımlıydı ama hiçbir
+ * satır o sınıfı almıyordu, "nerede kaldım" 5 px'lik gri noktalardan okunuyordu.
+ */
+export function devamHedefi(session, dayIndex, settings) {
+  const q = exercisesFor(dayIndex).map(ex => exerciseProgress(session, ex, settings));
+  const yarim = q.findIndex(p => p.calisma > 0 && !p.tamam);
+  return yarim >= 0 ? yarim : q.findIndex(p => !p.tamam);
+}
+
+/**
+ * LİSTE EKRANININ BİRİNCİL EYLEMİ — tek yerden karar.
+ * Eskiden ekranın en büyük, en parlak düğmesi ilk setten itibaren "Seansı bitir"di:
+ * uygulama kullanıcıyı bitirmeye yönlendiriyordu. Artık sıradaki iş öne çıkar,
+ * bitirmek ancak her hareket tamamken birincil olur.
+ *   {tur:'isinma'} · {tur:'hareket', idx, basladi} · {tur:'bitir'}
+ */
+export function siradakiEylem(session, dayIndex, settings) {
+  if (!hasAnySet(session) && !session.warmupDone) return { tur: 'isinma' };
+  const idx = devamHedefi(session, dayIndex, settings);
+  if (idx < 0) return { tur: 'bitir' };
+  return { tur: 'hareket', idx, basladi: exerciseProgress(session, exercisesFor(dayIndex)[idx], settings).calisma > 0 };
+}
+
 /** Seansı bitirir ve kaydeder. Hiç set yoksa kaydetmez — boş seans geçmişi kirletir. */
 export async function finish(session) {
   if (!hasAnySet(session)) { await abandon(session); return null; }
@@ -397,6 +424,62 @@ export async function summary(session) {
   const dk = session.finishedAt && session.startedAt
     ? Math.max(1, Math.round((session.finishedAt - session.startedAt) / 60000)) : null;
   return { ...v, minutesElapsed: dk, dayName: DAY_NAMES[session.dayIndex] };
+}
+
+/** Bir seansta o hareketin en ağır ÇALIŞMA seti (ısınma ve ağırlıksız setler hariç) */
+const enAgirSet = (s, exerciseId) => {
+  const w = (s.entries.find(e => e.exerciseId === exerciseId)?.sets ?? [])
+    .filter(x => !x.warmup && x.type === 'weight_reps' && x.weight > 0).map(x => x.weight);
+  return w.length ? Math.max(...w) : null;
+};
+
+/**
+ * SEANS SONU ÖZETİ — saf hesap (özet ekranı bunu gösterir).
+ *
+ * ⚠️ Antrenmanın son anı eskiden tek bir bildirim şeridiydi ve her 8. seansta 0,9 sn sonra
+ * yedek hatırlatması onu SİLİYORDU (toast() öncekini kaldırır); ardından liste bir sonraki
+ * günün boş hâline dönüyordu. Veri (hacim farkı, aşılan en ağır setler) vardı, gösterilmiyordu.
+ *
+ * @param {object} seans   az önce biten seans
+ * @param {Array}  onceki  bitmiş seanslar, EN YENİDEN eskiye, bu seans HARİÇ
+ * @returns {{sure, calismaSet, kg, seconds, hacimFarki, artislar:Array<{ex, once, simdi}>}}
+ *   hacimFarki: aynı günün önceki sayılabilir seansına göre oran (−0,05 = %5 az); kıyas yoksa null
+ *   artislar  : bugünkü en ağır set, o hareketin EN SON yapıldığı önceki seanstakinden ağırsa
+ */
+export function seansOzeti(seans, onceki) {
+  const v = store.sessionVolume(seans, byId);
+  const calismaSet = seans.entries.reduce((a, e) => a + e.sets.filter(s => !s.warmup).length, 0);
+  const sure = seans.finishedAt && seans.startedAt
+    ? Math.max(1, Math.round((seans.finishedAt - seans.startedAt) / 60000)) : null;
+  // Kayıtsız gün hacimsizdir — kıyasa girerse her şey "+∞" görünürdü
+  const sayilir = onceki.filter(s => !s.kayitsiz && s.id !== seans.id);
+  const ayniGun = sayilir.find(s => s.dayIndex === seans.dayIndex && store.sessionVolume(s, byId).kg > 0);
+  const oncekiKg = ayniGun ? store.sessionVolume(ayniGun, byId).kg : 0;
+  const hacimFarki = oncekiKg > 0 && v.kg > 0 ? (v.kg - oncekiKg) / oncekiKg : null;
+  const artislar = [];
+  for (const ex of exercisesFor(seans.dayIndex)) {
+    const simdi = enAgirSet(seans, ex.id);
+    if (simdi == null) continue;
+    const son = sayilir.find(s => enAgirSet(s, ex.id) != null);
+    const once = son ? enAgirSet(son, ex.id) : null;
+    if (once != null && simdi > once + 1e-9) artislar.push({ ex, once, simdi });
+  }
+  return { sure, calismaSet, kg: v.kg, seconds: v.seconds, hacimFarki, artislar };
+}
+
+/**
+ * Bitmiş seansı YENİDEN AÇ — "Seansı bitir"in geri alması (özet ekranından).
+ * Eskiden bitirmenin ne onayı ne geri alması vardı; uygulamanın geri kalanında her şey
+ * geri alınabiliyordu. İşlemsel: önce kopya diske, başarılıysa bellek.
+ */
+export async function reopen(session) {
+  const k = structuredClone(session);
+  k.status = 'active';
+  delete k.finishedAt;
+  await store.saveSession(k);
+  Object.assign(session, k);
+  delete session.finishedAt;
+  return session;
 }
 
 /* ── Geçmiş seansı düzenleme ───────────────────────────────────────────────

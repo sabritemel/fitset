@@ -30,6 +30,7 @@ const EKRAN_ADI = {
   'settings-screen': 'Ayarlar',
   'history-screen': 'Geçmiş',
   'session-screen': 'Seans düzenleme',
+  'summary-screen': 'Seans sonu',
 };
 
 let pass = 0, fail = 0;

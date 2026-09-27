@@ -22,12 +22,12 @@ const ctx = {
   lastPerf: {}, settings: S.DEFAULT_SETTINGS, status: null,
   oneri: {},                 // ağırlık artırma önerisi (iki seans kuralı) — hareket başına
   draft: {},                 // o an ekranda duran, henüz kaydedilmemiş değerler
-  tumRozetler: false,        // "+N" açıldı mı — harekete özel, geçicidir
   yarim: null,               // yarım kalan gün önerisi (cevap verilene kadar)
   oncekiYapilan: null,       // devredilen günde geçen sefer yapılmış hareketler
   kilolar: [], gecmis: [], ilerleme: [],   // geçmiş ekranı — açılırken doldurulur
   gunSecici: false,          // gün seçici paneli açık mı
   duzenlenen: null,          // geçmiş ekranından açılan seans
+  ozet: null,                // az önce biten seansın özeti (seans sonu ekranı)
   onerilen: 0,               // programın önerdiği gün (kullanıcı ezebilir)
   view: 'list',
 };
@@ -64,31 +64,35 @@ function toast(msg, { action, label, warn, sticky } = {}) {
 /* ── Sayaçlar ──────────────────────────────────────────────────────────── */
 
 /**
- * Dinlenme — gezinme satırının ortasında, ayrı bant AÇMADAN.
- * Yeni bir şerit belirse ekranda her şey kayar; boşta zaten orada duran
- * "Dinlenme 90 sn" düğmesi canlı sayaca dönüşüyor, göz aynı noktada kalıyor.
+ * Dinlenme — alt bantta, ayrı şerit AÇMADAN. Bant yüksekliği sabit; sayaç çalışırken yan
+ * gezinme (Önceki/Sonraki) bant dışına çekilir ve bant tümüyle sayaca döner: +30 · kalan · Geç.
+ * Böylece dinlenme ortasında yanlış dokunuş hareketi değiştiremez.
  */
 const rest = new Countdown({
   onTick: (k, toplam) => {
     const e = $('rest-time'); if (e) e.textContent = mmss(k);
-    const l = $('restline'); if (l) l.style.transform = `scaleX(${toplam ? k / toplam : 0})`;
+    const b = $('rest-bar'); if (b) b.style.transform = `scaleX(${toplam ? k / toplam : 0})`;
   },
   onDone: gecikme => {
     restSlot();
     if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
     toast(gecikme > 2
       ? `Dinlenme ${Math.round(gecikme)} sn önce bitti.`   // dürüst: kaçırdıysa söyler
-      : 'Dinlenme bitti — sıradaki set.');
+      : 'Dinlenme bitti. Sıradaki set.');
   },
 });
 
-/** Yuvayı mevcut duruma göre tazeler (boşta düğme / çalışırken sayaç) */
+/** Alt bandı mevcut duruma göre tazeler (boşta gezinme / çalışırken sayaç) */
 function restSlot() {
-  const slot = $('restslot');
-  if (!slot) return;
-  slot.innerHTML = UI.restSlotHTML(ctx.settings, rest.running ? rest.remaining : null);
-  const l = $('restline');
-  if (l) l.style.transform = `scaleX(${rest.running && rest.total ? rest.remaining / rest.total : 0})`;
+  const bant = $('gezinme');
+  if (!bant) return;
+  bant.outerHTML = UI.gezinmeHTML(ctx, rest.running ? rest.remaining : null, rest.total);
+}
+
+/** "Şimdi" yuvasının ön izlemesi — adımlayıcı ya da klavye kutudaki değeri değiştirince */
+function onizlemeTazele() {
+  const e = $('yuva-onizleme');
+  if (e && ctx.view === 'focus') e.textContent = UI.onizleme(curEx(), ctx);
 }
 
 /**
@@ -102,6 +106,7 @@ function saatDurumu(ex) {
   c?.classList.toggle('run', çalışıyor);
   if (b) b.textContent = çalışıyor ? 'Durdur' : 'Başlat';
   if (t && !çalışıyor) t.textContent = mmss(ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds);
+  onizlemeTazele();
 }
 
 /** Set süresi — izometrik hareketler (Plank) */
@@ -111,7 +116,7 @@ const hold = new Countdown({
     const ex0 = curEx(); saatDurumu(ex0);
     const ex = ex0;
     const oldu = await kaydet(ex, { type: 'time', seconds: ctx.draft.seconds ?? N.effective(ex, ctx.settings).seconds, warmup: !!ctx.draft.warmup });
-    if (oldu) toast('Süre doldu — set kaydedildi.');   // başarısızsa hata şeridi yerinde kalsın
+    if (oldu) toast('Süre doldu, set kaydedildi.');   // başarısızsa hata şeridi yerinde kalsın
   },
 });
 
@@ -120,6 +125,8 @@ const hold = new Countdown({
 function sheet(aç) {
   const s = $('sheet'), bg = document.querySelector('.sheet-bg');
   if (!s || !bg) return;
+  // ⚠️ Kapalıyken `inert`: ekran dışında dursa da 11 kontrolü odak sırasına giriyordu
+  s.inert = !aç;
   if (aç) {
     bg.hidden = false;
     requestAnimationFrame(() => { bg.classList.add('on'); s.classList.add('on'); });
@@ -180,15 +187,11 @@ function isinmaOynat() {
 
   const adım = now => {
     if (!isinmaAnim.t0) isinmaAnim.t0 = now;
-    const e = (now - isinmaAnim.t0) / DONGU;
+    const ms = now - isinmaAnim.t0;
     const w = adımlar[isinmaAnim.hangi % adımlar.length];
-    if (e >= 1) {
-      isinmaÇiz(w, 0.55);                            // durağan kareye dön
-      isinmaAnim.hangi++; isinmaAnim.t0 = now;
-    } else {
-      // Gidip gelen hareket 0→1→0 zıplamadan; dönen hareket (kol çevirme) 0→1 bir tur
-      isinmaÇiz(w, A3.hareketBul(w)?.dongu ? e : (1 - Math.cos(2 * Math.PI * e)) / 2);
-    }
+    // Bir tekrar; A3.animT başlangıç noktasından başlar ve TAM orada biter (duran kareyle aynı → sıçrama yok)
+    isinmaÇiz(w, A3.animT(A3.hareketBul(w), ms, DONGU, 1));
+    if (ms >= DONGU) { isinmaAnim.hangi++; isinmaAnim.t0 = now; }
     isinmaAnim.raf = requestAnimationFrame(adım);
   };
   isinmaAnim.raf = requestAnimationFrame(adım);
@@ -197,7 +200,8 @@ function isinmaOynat() {
 function isinmaÇiz(w, t) {
   A3.ciz(document.querySelector(`[data-anim="${w.id}"]`), A3.hareketBul(w), t, { bicim: 'sabit' });
 }
-function isinmaDurağan() { N.warmupFor(ctx.dayIndex).forEach(w => isinmaÇiz(w, 0.55)); }
+/** Duran figürler BAŞLANGIÇ noktasında (eskiden hareketin ortası, t=0,55: oynayınca 0'a sıçrıyordu) */
+function isinmaDurağan() { N.warmupFor(ctx.dayIndex).forEach(w => isinmaÇiz(w, A3.DURAGAN_T)); }
 function isinmaDur() {
   if (isinmaAnim.raf) cancelAnimationFrame(isinmaAnim.raf);
   isinmaAnim.raf = 0; isinmaAnim.t0 = 0;
@@ -214,6 +218,7 @@ const EKRAN = {
   settings: { el: () => $('settings-screen'), html: () => UI.settingsHTML(ctx) },
   history:  { el: () => $('history-screen'),  html: () => UI.historyHTML(ctx) },
   seans:    { el: () => $('session-screen'),  html: () => UI.sessionEditHTML(ctx) },
+  ozet:     { el: () => $('summary-screen'),  html: () => UI.summaryHTML(ctx) },
 };
 
 function render() {
@@ -228,11 +233,10 @@ function render() {
   } else if (ad === 'focus') {
     const ex = curEx();
     if (ex.hold) varyantlarıÇiz(ex);
-    else { draw(ex, 0); if (!reduced) play(ex); }
+    else animasyonuKur(ex);
     saatDurumu(ex);
-    // Yuva her çizimde tazelenmeli: yeniden çizim sonrası işaretleme boştaki
-    // düğmeyi basıyor, ama sayaç hâlâ çalışıyor olabilir. Ayrıca kalan-süre
-    // çizgisi eski değerinde takılı kalıyordu (ekranda kırmızı kalıntı).
+    // Bant her çizimde tazelenmeli: yeniden çizim boştaki gezinmeyi basıyor,
+    // ama sayaç hâlâ çalışıyor olabilir.
     restSlot();
   }
   guncellemeyiDene();          // bekleyen sürüm varsa ve artık güvenliyse uygula
@@ -249,16 +253,40 @@ function draw(ex, t) {
   const h = A3.hareketBul(ex);
   if (h) A3.ciz($('fig3d'), h, t, { kamera: kameraOf(ex, h) });
 }
-function play(ex) {
+/**
+ * OYNATMA — Sabri (27 Eyl): 6 tekrar yapıp durur; dururken figüre dokununca ya da döndürünce
+ * 6 tekrar daha. Hareket başlangıç noktasından başlar ve TAM orada biter (A3.animT); duran
+ * görüntü de başlangıç noktasıdır, harekete geçince hiçbir yere sıçramaz.
+ * Oynatma ekrandan BAĞIMSIZ tutulur: set kaydı ekranı yeniden kurar, ama süren oynatma kaldığı
+ * yerden devam eder (eskiden baştan başlıyordu — ortadaki figür 0'a sıçrıyordu).
+ */
+const oynatma = { exId: null, t0: 0 };
+const oynuyor = () => raf !== 0;
+
+/** Harekete ilk girişte kendiliğinden oynar; aynı harekette yeniden çizimde sürer ya da başlangıçta durur */
+function animasyonuKur(ex) {
+  const h = A3.hareketBul(ex);
+  const gecen = performance.now() - oynatma.t0;
+  if (oynatma.exId === ex.id && gecen < A3.animSure()) { draw(ex, A3.animT(h, gecen)); dongu(ex); return; }
+  draw(ex, A3.DURAGAN_T);
+  if (oynatma.exId !== ex.id) {
+    oynatma.exId = ex.id;
+    if (!reduced) oynat(ex);                             // hareket azaltma tercihinde kendiliğinden OYNAMAZ
+  }
+}
+/** 6 tekrar oynat (dokunuş ve döndürme de bunu çağırır; hareket azaltmada da — kullanıcı istedi) */
+function oynat(ex) {
+  oynatma.exId = ex.id;
+  oynatma.t0 = performance.now();
+  dongu(ex);
+}
+function dongu(ex) {
   stopAnim();
-  const dongu = A3.hareketBul(ex)?.dongu;
-  const t0 = performance.now();
+  const h = A3.hareketBul(ex);
   const adım = now => {
-    const ms = now - t0;
-    // Gidip gelen hareket 0→1→0 (1,5 sn'de bir yön); dönen hareket (lunge: sağ adım, dön, sol adım,
-    // dön) 0→1 sürekli, 3 sn'de bir tur. İkisi de 9 sn sonra durur — pil.
-    draw(ex, dongu ? (ms / 3000) % 1 : (1 - Math.cos(ms / 1500 * Math.PI)) / 2);
-    if (ms < 9000) raf = requestAnimationFrame(adım); else { raf = 0; draw(ex, 0); }
+    const ms = now - oynatma.t0;
+    draw(ex, A3.animT(h, ms));                           // süre dolunca TAM başlangıç noktası
+    raf = ms < A3.animSure() ? requestAnimationFrame(adım) : 0;
   };
   raf = requestAnimationFrame(adım);
 }
@@ -300,14 +328,16 @@ document.addEventListener('pointermove', e => {
   if (!döndür.oynadı && Math.hypot(dx, dy) < 4) return;
   döndür.oynadı = true;
   kamera3d[döndür.id] = [döndür.te - dx * 0.6, Math.max(-5, Math.min(75, döndür.fi + dy * 0.4))];
-  if (!raf) draw(curEx(), sonT);                       // oynuyorsa sonraki kare zaten yeni açıyla çizer
+  // Duruyorken döndürmek 6 tekrar daha oynatır; oynuyorsa sonraki kare zaten yeni açıyla çizer
+  if (!oynuyor()) oynat(curEx());
 });
 const bırak = () => {
   if (!döndür) return;
-  if (!döndür.oynadı) {                                // dokunuş (sürükleme değil): çift dokunuş → ilk açı
+  if (!döndür.oynadı) {                                // dokunuş (sürükleme değil)
     const şimdi = performance.now();
+    // Çift dokunuş → ilk açı; tek dokunuş duran figürü 6 tekrar daha oynatır
     if (şimdi - sonDokunuş < 320) { delete kamera3d[döndür.id]; if (!raf) draw(curEx(), sonT); sonDokunuş = 0; }
-    else sonDokunuş = şimdi;
+    else { sonDokunuş = şimdi; if (!oynuyor()) oynat(curEx()); }
   }
   döndür = null;
 };
@@ -325,7 +355,7 @@ function draftFor(ex) {
  * Kaydetme başarısız olduğunda söylenecek tek cümle. Sessiz kalmak en kötüsü:
  * kullanıcı "basmadım galiba" deyip tekrar basar (bkz. session.transact).
  */
-const KAYIT_HATASI = 'Kaydedilemedi — telefonun depolaması yazmayı reddetti. Tekrar dene; sürerse yedek al.';
+const KAYIT_HATASI = 'Kaydedilemedi: telefonun depolaması yazmayı reddetti. Tekrar dene; sürerse yedek al.';
 
 async function kaydet(ex, veri) {
   try {
@@ -395,7 +425,7 @@ document.addEventListener('click', async e => {
       // Son set de gitti → seans boşaldı. Kullanıcı kararı (6 Eyl): seansı sil.
       const id = ctx.duzenlenen.id;
       ctx.duzenlenen = null; ctx.view = 'history'; render();
-      toast('Son set silindi — seans da silindi.', {
+      toast('Son set silindi; seans da silindi.', {
         label: 'Geri getir', sticky: true,
         action: async () => { await N.restoreSession(id); await gecmisYukle(); await yükle();
                               ctx.view = 'history'; render(); },
@@ -430,7 +460,7 @@ document.addEventListener('click', async e => {
     const hedef = +gsec.dataset.gunSec;
     if (hedef !== ctx.dayIndex) {
       const r = await N.chooseDay(ctx.session, hedef);
-      if (!r.ok) { toast('Bugün set girdin — önce seansı bitir ya da bugünü sıfırla.', { warn: true }); return; }
+      if (!r.ok) { toast('Bugün set girdin. Önce seansı bitir ya da bugünü sıfırla.', { warn: true }); return; }
       ctx.dayIndex = hedef; ctx.idx = 0; ctx.oncekiYapilan = null;
       await lastPerfYukle();
       toast(`${N.DAY_NAMES[hedef].split(' — ')[0]} seçildi.`);
@@ -445,6 +475,12 @@ document.addEventListener('click', async e => {
   if (gunBtn) { await gunuCevir(+gunBtn.dataset.gun); return; }
   const restBtn = t.closest('[data-rest]');
   if (restBtn) { ctx.settings = await S.saveSettings({ restSeconds: +restBtn.dataset.rest }); render(); return; }
+  const dambilBtn = t.closest('[data-dambil]');
+  if (dambilBtn) {
+    // Adım hem +/−'yi hem önerinin yuvarlamasını değiştirir (ilerleme.agirlikAdimi tek kaynak)
+    ctx.settings = await S.saveSettings({ dambilAdimi: +dambilBtn.dataset.dambil });
+    await oneriYukle(); render(); return;
+  }
 
   const go = t.closest('[data-go]');
   if (go) { git(+go.dataset.go); return; }
@@ -455,15 +491,7 @@ document.addEventListener('click', async e => {
     const inp = $('f-' + field);
     inp.value = Math.max(0, Math.round(((+inp.value || 0) + +d) * 100) / 100);
     ctx.draft[field] = +inp.value;
-    if (field === 'reps') { const s = $('reps-show'); if (s) s.textContent = inp.value; }
-    return;
-  }
-
-  // Tekrar satırı: hedeften geliyor, ama bu sete özel değiştirilebilsin
-  if (t.closest('[data-act="reps-edit"]')) {
-    const ed = $('repsedit'), btn = t.closest('[data-act="reps-edit"]');
-    ed.hidden = !ed.hidden;
-    btn.setAttribute('aria-expanded', String(!ed.hidden));
+    onizlemeTazele();
     return;
   }
 
@@ -620,8 +648,18 @@ document.addEventListener('click', async e => {
       if (o?.tur === 'agirlik') { ctx.draft.weight = o.agirlik; render(); }
       break;
     }
-    case 'rozet-hepsi': ctx.tumRozetler = true;  render(); break;
-    case 'rozet-az':    ctx.tumRozetler = false; render(); break;
+    case 'ozet-tamam': ctx.ozet = null; ctx.view = 'list'; render(); scrollTo(0, 0); break;
+    case 'ozet-geri-al': {
+      // "Seansı bitir"in geri alması: seans yeniden açılır, liste kaldığın yerden sürer
+      const s = ctx.ozet?.seans;
+      if (!s) break;
+      try { await N.reopen(s); }
+      catch (err) { console.error('[yeniden aç]', err); toast(KAYIT_HATASI, { warn: true, sticky: true, label: 'Kapat', action: () => {} }); break; }
+      ctx.ozet = null;
+      await yükle();                                   // açılış kuralı: açık seansa devam edilir
+      toast('Seans yeniden açıldı.');
+      break;
+    }
 
     case 'undo': {
       // Geri al da işlemsel: yazma başarısızsa set bellekte de KALIR (ekran
@@ -668,7 +706,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'scrub') { stopAnim(); draw(curEx(), +t.value / 100); return; }
   
-  if (t.id?.startsWith('f-')) ctx.draft[t.id.slice(2)] = t.value === '' ? null : +t.value;
+  if (t.id?.startsWith('f-')) { ctx.draft[t.id.slice(2)] = t.value === '' ? null : +t.value; onizlemeTazele(); }
 });
 
 /* Boy: her tuşta değil ALAN BIRAKILINCA yazılır. Yazarken kaydetmek "17" gibi
@@ -712,26 +750,32 @@ function git(i) {
   if (i < 0 || i >= exs.length) return;
   stopAnim(); hold.stop();
   ctx.idx = i; ctx.view = 'focus'; ctx.draft = draftFor(exs[i]);
-  ctx.tumRozetler = false;        // her harekete katlanmış başla
+  oynatma.exId = null;            // harekete her girişte baştan 6 tekrar
   render(); scrollTo(0, 0);
 }
 
 /* ── Seans işlemleri ───────────────────────────────────────────────────── */
+/**
+ * SEANSI BİTİR → seans sonu ekranı.
+ * ⚠️ Eskiden tek bir bildirim şeridiydi ve her 8. seansta yedek hatırlatması onu 0,9 sn sonra
+ * SİLİYORDU (toast() öncekini kaldırır). Artık özet bir ekran; yedek hatırlatması onun içinde
+ * bir satır. Bitirmenin geri alması da orada ("Geri al" → seans yeniden açılır).
+ */
 async function bitir() {
+  const oncekiler = await S.doneSessions();             // bu seans henüz aktif → listede değil
   const bitti = await N.finish(ctx.session);
-  if (!bitti) return toast('Hiç set girilmemiş — seans kaydedilmedi.', { warn: true });
-  const o = await N.summary(bitti);
-  const satır = [`${o.sets} set`,
-    o.kg ? `${o.kg.toLocaleString('tr-TR')} ${ctx.settings.unit}` : null,
-    o.seconds ? `${o.seconds} sn plank` : null,
-    o.minutesElapsed ? `${o.minutesElapsed} dk` : null].filter(Boolean).join(' · ');
-
+  if (!bitti) return toast('Hiç set girilmemiş; seans kaydedilmedi.', { warn: true });
+  rest.stop(); hold.stop();                              // biten seansın sayacı öbür ekranda ötmesin
   const say = (await S.doneSessions()).length;
-  toast(`Seans kaydedildi. ${satır}`, { sticky: true, label: 'Tamam', action: () => {} });
-  if (say % ctx.settings.backupNagEvery === 0)
-    setTimeout(() => toast('Veri yalnız bu telefonda. Yedek almanın tam zamanı.',
-      { label: 'Yedek al', action: yedekAl, sticky: true }), 900);
-  await yükle();
+  const sonrakiGun = await N.nextDayIndex();
+  const sonrakiTarih = C.nextTrainingDay(new Date(), ctx.settings.trainingDays);
+  ctx.ozet = {
+    ...N.seansOzeti(bitti, oncekiler), seans: bitti, dayIndex: bitti.dayIndex, bitis: bitti.finishedAt,
+    yedekZamani: say % ctx.settings.backupNagEvery === 0,
+    sonraki: N.DAY_NAMES[sonrakiGun].split(' — ')[0] + (sonrakiTarih ? `, ${C.fmtShort(sonrakiTarih)}` : ''),
+  };
+  await yükle();                                         // yeni günün listesi arkada hazır
+  ctx.view = 'ozet'; render(); scrollTo(0, 0);
 }
 
 function sıfırla() {
@@ -805,7 +849,9 @@ async function lastPerfYukle() {
 async function oneriYukle() {
   const bitmis = (await S.doneSessions()).filter(s => s.id !== ctx.session.id);
   ctx.oneri = {};
-  for (const ex of N.exercisesFor(ctx.dayIndex)) ctx.oneri[ex.id] = I.oneri(ex, bitmis, N.effective(ex, ctx.settings));
+  // Adım kullanıcının seçimiyle (dambıl 2 / 2,5) — odak ekranındaki +/− ile AYNI kaynak
+  for (const ex of N.exercisesFor(ctx.dayIndex))
+    ctx.oneri[ex.id] = I.oneri(ex, bitmis, N.effective(ex, ctx.settings), I.agirlikAdimi(ex, ctx.settings));
 }
 
 async function yükle() {
@@ -882,7 +928,7 @@ function guncellemeyiDene() {
   if (karar === 'uygula') { bekleyenSW = null; sw.postMessage('SKIP_WAITING'); return; }
   if (karar === 'sor' && sorulanSW !== sw) {
     sorulanSW = sw;                                   // her çizimde yeniden sorma
-    toast('Yeni sürüm hazır — seansı bitirince kendiliğinden uygulanacak.', {
+    toast('Yeni sürüm hazır; seansı bitirince kendiliğinden uygulanacak.', {
       sticky: true, label: 'Şimdi yenile', action: () => sw.postMessage('SKIP_WAITING'),
     });
   }

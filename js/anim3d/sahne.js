@@ -18,6 +18,32 @@ import { hareketBul } from './hareketler3d.js';
 
 export { hareketBul };
 
+/* ── ANİMASYON ZAMANI — TEK KAYNAK (odak ekranı + ısınma satırları) ──────────────────────────
+   Sabri (27 Eyl): "6 tekrar yapıp dursun; dururken dokununca ya da döndürünce 6 tekrar daha" ·
+   "hareket nereden başlıyorsa orada bitsin; duran görüntü yalnız BAŞLANGIÇ noktasında olsun,
+   harekete geçince başka bir noktaya sıçramasın".
+   ⚠️ Eskiden ısınma figürleri dururken hareketin ORTASINDA (t=0,55) çiziliyordu: sırası gelince
+   0'a sıçrıyor, bitince 0,55'e geri sıçrıyordu. Kural artık burada ve fizik denetiminde sınanıyor. */
+export const TEKRAR = 6;
+export const TEKRAR_MS = 3000;          // bir tekrar: gidip gelen 0→1→0 · dönen (lunge, kol çevirme) 0→1 tam tur
+export const DURAGAN_T = 0;             // duran görüntü = hareketin başlangıç noktası
+
+/**
+ * Oynatmanın ms'inci anındaki hareket zamanı t (0…1). Başlamadan önce ve süre dolunca TAM başlangıç
+ * noktası döner — ilk kare de son kare de duran görüntüyle aynıdır, sıçrama olmaz.
+ * @param {object} h      3B hareket (hareketBul) — `dongu` dönen hareketi işaretler
+ * @param {number} ms     oynatma başladığından beri geçen süre
+ * @param {number} [donem=TEKRAR_MS]  bir tekrarın süresi
+ * @param {number} [tekrar=TEKRAR]    kaç tekrar oynatılır
+ */
+export function animT(h, ms, donem = TEKRAR_MS, tekrar = TEKRAR) {
+  if (!(ms > 0) || ms >= donem * tekrar) return DURAGAN_T;
+  const e = (ms / donem) % 1;
+  return h?.dongu ? e : (1 - Math.cos(2 * Math.PI * e)) / 2;
+}
+/** Oynatma süresi (ms) — bu süreden sonra animT hep başlangıç noktasını verir */
+export const animSure = (donem = TEKRAR_MS, tekrar = TEKRAR) => donem * tekrar;
+
 let motor = null;                 // { r, tuval, ciz, w, h } — WebGL hazırsa
 let kayip = false;                // GPU bağlamı kayıp (geri gelene kadar SVG)
 let yukleme = null;

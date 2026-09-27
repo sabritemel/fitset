@@ -12,6 +12,11 @@
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
+  /* 27 Eyl: uygulama tasarım dili 3'e geçti — bu eski mokap aynı stil sayfasını paylaşıyor.
+     Kaldırılan değişkenler ve .alt (uygulamada artık yapışkan alt çubuk) burada yerel olarak karşılanır. */
+  :root { --ink: var(--t1); --ink2: var(--t2); --ink3: var(--t3); --live: var(--acc); }
+  .alt { position: static; display: block; padding: 0; background: none; }
+  .t-l { font-size: 12px; font-weight: 560; color: var(--t3); }
   body { padding: 18px 16px 40px; display: block; }
   .wrap { max-width: 640px; margin: 0 auto; }
   h1 { font-size: 20px; margin: 0 0 6px; }

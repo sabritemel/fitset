@@ -65,6 +65,11 @@ const GEO = {
   // öteleme şart, yoksa her silindir yarı boyu kadar kayar (omuz kuşağı omuzdan dışarı taştı, ölçüldü).
   silindir: new T.CylinderGeometry(1, 1, 1, 18, 1, true).translate(0, 0.5, 0),
 };
+/** KAPAKLI silindir (plaka, altıgen dambıl başı, makara tekeri) — kenar sayısına göre önbellekte */
+const kapakliSilindir = new Map();
+const kapakli = kenar => { if (!kapakliSilindir.has(kenar))
+  kapakliSilindir.set(kenar, new T.CylinderGeometry(1, 1, 1, kenar, 1, false).rotateY(kenar === 6 ? Math.PI / 6 : 0).translate(0, 0.5, 0));
+  return kapakliSilindir.get(kenar); };
 /** Yumurta kafa (yüzsüz): üstü geniş kafatası, altı sivrilen çene — lathe, ekseni öne-aşağı eğilecek */
 const KAFA = { yari: 12, rMax: 9.2, en: 0.84, egim: 24 };   // boy 24 · derinlik ~19 · en ~16 (baş/boy ≈ 1/7,5)
 GEO.kafa = (() => {
@@ -177,7 +182,7 @@ function ekipmanIlkelleri(h, s, t) {
   for (const e of hepsi) {
     if (!e.geo) continue;
     const g = e.geo, anahtar = g.tur === 'p' ? 'p' + g.P3.map(q => q.map(v => v.toFixed(2)).join(',')).sort().join(';')
-      : g.tur === 'k' ? 'k' + [g.a3, g.b3].map(q => q.map(v => v.toFixed(2)).join(',')).sort().join(';') + g.r : 's' + g.c3.join(',') + g.r;
+      : g.tur === 'k' || g.tur === 'c' ? g.tur + [g.a3, g.b3].map(q => q.map(v => v.toFixed(2)).join(',')).sort().join(';') + g.r : 's' + g.c3.join(',') + g.r;
     if (gor.has(anahtar)) continue;
     gor.add(anahtar);
     const renkler = [...e.svg.matchAll(/(?:fill|stroke)="(#[0-9a-fA-F]{6})"/g)].map(m => m[1]).filter(c => c.toLowerCase() !== '#0a0b0d');
@@ -194,6 +199,8 @@ export function ekipmanKur(h, s, t) {
       bg.setAttribute('position', new T.Float32BufferAttribute(new Float32Array((geo.P3.length - 2) * 9), 3));
       const m = mesh(bg, ekipmanMalzemesi(renk, false));
       grup.add(m); parcalar.push({ tur: 'p', m });
+    } else if (geo.tur === 'c') {
+      const m = mesh(kapakli(geo.kenar), ekipmanMalzemesi(renk, geo.metal)); grup.add(m); parcalar.push({ tur: 'c', m });
     } else if (geo.tur === 'k') {
       const metal = geo.r < 3.2;
       const g2 = new T.Group(), c = mesh(GEO.silindir, ekipmanMalzemesi(renk, metal)), u1 = mesh(GEO.kure, ekipmanMalzemesi(renk, metal)), u2 = mesh(GEO.kure, ekipmanMalzemesi(renk, metal));
@@ -215,6 +222,8 @@ export function ekipmanGuncelle(ek, h, s, t) {
       for (let j = 1; j < P.length - 1; j++) for (const [n, q] of [[0, P[0]], [1, P[j]], [2, P[j + 1]]])
         pos.setXYZ((j - 1) * 3 + n, q[0], q[1], q[2]);
       pos.needsUpdate = true; pc.m.geometry.computeBoundingSphere();
+    } else if (pc.tur === 'c') {
+      uzat(pc.m, geo.a3, geo.b3, geo.r);
     } else if (pc.tur === 'k') {
       uzat(pc.c, geo.a3, geo.b3, geo.r);
       for (const [u, q] of [[pc.u1, geo.a3], [pc.u2, geo.b3]]) { u.position.copy(V(q)); u.scale.setScalar(geo.r); }
@@ -235,7 +244,7 @@ export function motorKur(renderer) {
   const scene = new T.Scene();
   const fg = figurKur();
   scene.add(fg.grup);
-  const zemin = mesh(new T.CircleGeometry(78, 48), MAT.zemin, false);
+  const zemin = mesh(new T.CircleGeometry(M.ZEMIN_R, 48), MAT.zemin, false);
   zemin.rotation.x = -Math.PI / 2;
   scene.add(zemin);
   // Işık: gökyüzü/yer dolgusu + gölge atan ana ışık (dünyada sabit) + figürün ARKASINDAN kontur ışığı

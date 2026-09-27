@@ -279,5 +279,63 @@ console.log('\nPLANK VARYANTLARI — uygulama metinleriyle aynı sıra, yanlış
   });
 }
 
+/* ── ALETLERİN KALINLIĞI — Sabri (27 Eyl): "dambıl ve halterlerin hiç kalınlığı yok, karşıdan bakınca tek
+   piksellik çizgi". Plakalar düz 24 köşeli çokgendi (disk). Artık silindir parçası; bu denetim kalınlıksız
+   daire bir daha ekipmana girerse kırmızı yakar ve dambılın gerçekçi boyunu tutar. ── */
+console.log('\nALETLER — plaka ve dambıl başları KALIN (kenardan bakınca çizgi değil), ölçüler gerçekçi');
+{
+  const yaz = (gecti, ad, olcum = '') => { console.log(`  ${gecti ? '✓' : '✗'} ${ad}${olcum ? ` — ${olcum}` : ''}`); if (!gecti) kalan++; };
+  const D = M.birim([0.31, 0.53, 0.79]), pr = q => [q[0], q[1], q[0] * D[0] + q[1] * D[1] + q[2] * D[2]];
+  let duz = [], silindir = 0;
+  for (const [id, h] of Object.entries(KUTUPHANE)) for (const t of [0, 1]) {
+    const s = M.an(h, t);
+    for (const e of h.ekipman(pr, s, t)) {
+      if (e.geo?.tur === 'c') silindir++;
+      if (e.geo?.tur === 'p' && e.geo.P3.length === 24) duz.push(id);          // eski disk(): düz 24-gen
+    }
+  }
+  yaz(!duz.length, 'hiçbir ekipman parçası kalınlıksız daire değil', duz.length ? [...new Set(duz)].join(', ') : `${silindir} silindir parça`);
+  const { sap, r, bas } = M.DAMBIL;
+  yaz(sap + 2 * bas >= 22 && 2 * r >= 12 && bas >= 4, `dambıl gerçekçi (toplam ${sap + 2 * bas} cm · baş Ø${2 * r} · baş boyu ${bas})`);
+}
+
+/* ── ANİMASYON BAŞLANGIÇTA BİTER — Sabri (27 Eyl): "hareket nereden başlıyorsa orada bitsin;
+   duran görüntü başlangıç noktasında olsun, harekete geçince sıçramasın". Uygulama ve bu
+   denetim AYNI zaman fonksiyonunu (sahne.animT) çağırır. Konum ölçülür, çizici değil. ── */
+console.log('\nANİMASYON — başlangıç noktasından başlar, TAM orada biter, turlar arasında sıçramaz');
+{
+  const A3 = await import('../js/anim3d/sahne.js');
+  const yaz = (gecti, ad, olcum = '') => { console.log(`  ${gecti ? '✓' : '✗'} ${ad}${olcum ? ` — ${olcum}` : ''}`); if (!gecti) kalan++; };
+  // Poz farkı: iskeletin tüm eklem noktaları arasındaki en büyük uzaklık (motor birimi ~ cm)
+  const fark = (a, b) => Math.max(...Object.keys(a).filter(k => Array.isArray(a[k]) && a[k].length === 3 && Array.isArray(b[k]))
+    .map(k => M.mesafe(a[k], b[k])));
+  const ESIK = 0.5;                                        // yarım santimden büyük fark gözle sıçrama
+  const sure = A3.animSure(), dm = A3.TEKRAR_MS;
+  yaz(A3.TEKRAR === 6 && A3.DURAGAN_T === 0, `6 tekrar, duran görüntü başlangıç noktası (t=${A3.DURAGAN_T})`);
+  let say = 0;
+  for (const [id, h] of Object.entries(KUTUPHANE)) {
+    if (h.statik || h.varyantlar) continue;                // plank: hareket yok
+    say++;
+    const bas = M.an(h, A3.DURAGAN_T);
+    // Son kare hiçbir zaman tam süre anında gelmez: bir kare geç (≈16 ms) ya da arka plandan dönüşte
+    // çok geç gelir. İkisinde de TAM başlangıç noktası olmalı (tam süre anında dalga zaten 0'dır,
+    // yalnız onu ölçmek sıfırlamanın yokluğunu gizler — mutasyonla yakalandı).
+    const ilk = A3.animT(h, 1), sonOnce = A3.animT(h, sure - 1);
+    const gecKareler = [sure, sure + 16, sure + 1234].map(ms => A3.animT(h, ms));
+    const bitis = Math.max(...gecKareler.map(t => t === A3.DURAGAN_T ? 0 : 1 + fark(M.an(h, t), bas))), sinir = fark(M.an(h, sonOnce), bas);
+    // Dönen hareket turu t=1'de bitirir → t=1 pozu başlangıç pozuna EŞİT olmalı (her turda da sıçrama yok)
+    const tur = h.dongu ? fark(M.an(h, 1), bas) : 0;
+    const ok = A3.animT(h, 0) === A3.DURAGAN_T && fark(M.an(h, ilk), bas) < ESIK && bitis === 0 && sinir < ESIK && tur < ESIK;
+    if (!ok) yaz(false, `${id}: ilk kare ${f(fark(M.an(h, ilk), bas))} · son kare ${f(bitis)} · bitişten 1 ms önce ${f(sinir)}${h.dongu ? ` · tur sonu ${f(tur)}` : ''}`);
+  }
+  yaz(say > 20, `${say} hareketin hepsi başlangıç pozundan başlıyor ve orada bitiyor (eşik ${ESIK})`);
+  // Isınma: bir tekrar oynar, başlangıçta biter
+  const isinmaDongu = 2400;
+  const isinmalar = Object.values(KUTUPHANE).filter(h => h.isinma);
+  yaz(isinmalar.length > 0 && isinmalar.every(h => A3.animT(h, isinmaDongu, isinmaDongu, 1) === A3.DURAGAN_T
+      && fark(M.an(h, A3.animT(h, isinmaDongu - 1, isinmaDongu, 1)), M.an(h, A3.DURAGAN_T)) < ESIK),
+    `ısınma figürleri (${isinmalar.length}) bir tekrarın sonunda başlangıç pozunda`);
+}
+
 console.log(`\n${kalan ? `✗ ${kalan} sorun` : '✓ tümü temiz'}`);
 process.exit(kalan ? 1 : 0);

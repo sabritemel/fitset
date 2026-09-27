@@ -34,6 +34,7 @@ export const DEFAULT_SETTINGS = {
   trainingDays: [2, 4, 6],       // 0=Pazar … 2=Salı, 4=Perşembe, 6=Cumartesi
   heightCm: null,                // bir kez girilir; kilo takibi ayrı tabloda
   backupNagEvery: 8,             // kaç seansta bir yedek hatırlatması
+  dambilAdimi: 2.5,              // dambıl setinin artışı (2 ya da 2,5) — ilerleme.agirlikAdimi okur
   // Egzersiz bazında kullanıcı hedefleri: { [exerciseId]: {sets, reps, seconds, weight} }
   // Program dosyasına dokunmadan üzerine yazmayı sağlar; yedeğe de dahildir.
   overrides: {},
@@ -317,6 +318,7 @@ function temizAyar(a) {
     o.trainingDays = [...new Set(a.trainingDays)].sort((x, y) => x - y);
   if (a.heightCm === null || (sayiMi(a.heightCm) && a.heightCm >= 100 && a.heightCm <= 250)) o.heightCm = a.heightCm;
   if (Number.isInteger(a.backupNagEvery) && a.backupNagEvery > 0) o.backupNagEvery = a.backupNagEvery;
+  if (a.dambilAdimi === 2 || a.dambilAdimi === 2.5) o.dambilAdimi = a.dambilAdimi;
   if (a.overrides && typeof a.overrides === 'object' && !Array.isArray(a.overrides)) {
     o.overrides = {};
     for (const [id, v] of Object.entries(a.overrides)) {

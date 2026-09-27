@@ -163,16 +163,75 @@ export function kutuY(pr, merkez, [u, v, n], [w, h, d], ton = { ust: '#343a42', 
   return yuzler.filter(y => pr(y.nrm)[2] - o[2] > 1e-6).map(y => ({ ...cokgen(pr, y.p, y.c),
     ...(y.nrm[1] > 0.9 && { ustYuz: true, Y: y.p.reduce((a, q) => a + q[1], 0) / 4 }) }));   // yalnız YATAYA yakın yüz taşıyıcıdır (0,7 iken 45° kızak kenarı da sayılıyordu)
 }
-/** Dambıl: tutamak `eksen` boyunca, iki uçta plaka */
-export function dambil(pr, el, eksen, uz = 14, r = 5.5) {
-  const e = birim(eksen), a = ekle(el, e, -uz / 2), b = ekle(el, e, uz / 2);
-  return [kapsul(pr, a, b, 1.6, '#737b85'), disk(pr, a, e, r, '#4b525b'), disk(pr, b, e, r, '#4b525b'),
-          disk(pr, ekle(a, e, -2.2), e, r, '#434951'), disk(pr, ekle(b, e, 2.2), e, r, '#434951')];
+/* ── KALIN SİLİNDİR PARÇA — plaka, dambıl başı, makara tekeri ─────────────────────────────
+ * ⚠️ 27 Eyl (Sabri): "dambıl ve halterlerin hiç kalınlığı yok, karşıdan bakınca tek piksellik çizgi".
+ * Plakalar düz tek bir çokgendi (disk): kenardan bakınca sıfır kalınlık. Artık gerçek bir silindir:
+ * WebGL kapaklı silindir çizer; SVG yedek iki yüzün izdüşümlerinin DIŞBÜKEY ZARFINI çizer — her açıdan
+ * doğru dış hat. geo kapsülle UYUMLU alanlar taşır (a2/b2/a3/b3/r): kapsül bekleyen kod kırılmaz. */
+const capraz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+/** 2B dışbükey zarf (monoton zincir) */
+function zarf(P) {
+  const p = [...P].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const alt = [], ust = [];
+  for (const q of p) { while (alt.length > 1 && cr(alt.at(-2), alt.at(-1), q) <= 0) alt.pop(); alt.push(q); }
+  for (const q of p.reverse()) { while (ust.length > 1 && cr(ust.at(-2), ust.at(-1), q) <= 0) ust.pop(); ust.push(q); }
+  return [...alt.slice(0, -1), ...ust.slice(0, -1)];
 }
-/** Kablo: ince çizgi (makaradan tutamağa) */
-export const kablo = (pr, a, b) => kapsul(pr, a, b, 0.7, '#8a929c', '#0A0B0D');
-/** Makara: küçük disk */
-export const makara = (pr, c, eksen = [0, 0, 1]) => disk(pr, c, eksen, 4, '#5d646d');
+/**
+ * @param c        merkez   @param eksen  silindir ekseni   @param r  yarıçap (çokgende köşe yarıçapı)
+ * @param kalinlik eksen boyunca boy   @param kenar  24 = yuvarlak, 6 = altıgen (kauçuk dambıl başı)
+ */
+export function silindirParca(pr, c, eksen, r, kalinlik, renk, { kenar = 24, metal = false, kontur = '#0A0B0D' } = {}) {
+  const e = birim(eksen), a = ekle(c, e, -kalinlik / 2), b = ekle(c, e, kalinlik / 2);
+  const u = Math.abs(e[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0], v1 = birim(capraz(e, u)), v2 = capraz(e, v1);
+  const faz = kenar === 6 ? Math.PI / 6 : 0;
+  const cember = m => Array.from({ length: kenar }, (_, i) => { const q = i / kenar * 2 * Math.PI + faz;
+    return ekle(ekle(m, v1, r * Math.cos(q)), v2, r * Math.sin(q)); });
+  const P3 = [...cember(a), ...cember(b)], P2 = zarf(P3.map(q => { const p = pr(q); return [p[0], p[1]]; }));
+  const A = pr(a), B = pr(b), Y = P3.map(q => q[1]);
+  return { d: (A[2] + B[2]) / 2,
+    svg: `<polygon points="${P2.map(p => f1(p[0]) + ',' + f1(p[1])).join(' ')}" fill="${renk}" stroke="${kontur}" stroke-width="1.5" stroke-linejoin="round"/>`,
+    geo: { tur: 'c', a2: [A[0], A[1]], b2: [B[0], B[1]], a3: a, b3: b, r, kenar, metal, P3, minY: Math.min(...Y), maxY: Math.max(...Y) } };
+}
+
+/* ── GERÇEKÇİ ÖLÇÜLER (cm; motor birimi ≈ cm, bkz. L) ─────────────────────────────────────
+ * Dambıl: kauçuk kaplı ALTIGEN başlar (salonların çoğunda), sap 13 · baş Ø ~14 · baş boyu 6 → toplam 25.
+ *   Eskiden 18 cm'lik düz plakalar (Ø11) — oyuncak gibi duruyordu.
+ * Halter: olimpik bar Ø2,8 gövde + Ø5 kovan; 1,6 m (gerçeği 2,2 m — kadraj için kısaltıldı, oranlar
+ *   korundu). Plakalar Ø32 (10 kg) + Ø21 (2,5 kg), kalınlıklarıyla; yaka ve kilit. Eskiden 1 m'lik çubuğa
+ *   iki düz Ø28 daire. */
+export const DAMBIL = { sap: 13, r: 7, bas: 6 };
+/** Dambıl: sap `eksen` boyunca, iki uçta altıgen baş */
+export function dambil(pr, el, eksen) {
+  const { sap, r, bas } = DAMBIL, e = birim(eksen), a = ekle(el, e, -sap / 2), b = ekle(el, e, sap / 2);
+  return [kapsul(pr, a, b, 1.6, '#8a929c'),
+          silindirParca(pr, ekle(a, e, -bas / 2), e, r, bas, '#353a41', { kenar: 6 }),
+          silindirParca(pr, ekle(b, e, bas / 2), e, r, bas, '#353a41', { kenar: 6 })];
+}
+/** Dambılın çarpışma kapsülü (fizik denetimi: beden içinden geçmiyor) — başların dış ucunu ve çapını kapsar */
+export const dambilCismi = (el, eksen) => {
+  const e = birim(eksen), k = DAMBIL.sap / 2 + DAMBIL.bas - DAMBIL.r;
+  return [ekle(el, e, -k), ekle(el, e, k), DAMBIL.r];
+};
+/** Halter: bar ekseni `eksen` (varsayılan sağ-sol), merkez m */
+export function halter(pr, m, eksen = [0, 0, 1]) {
+  const e = birim(eksen), P = k => ekle(m, e, k), o = [kapsul(pr, P(-56), P(56), 1.4, '#9aa2ac')];
+  for (const i of [-1, 1]) {
+    o.push(silindirParca(pr, P(i * 56.8), e, 3.4, 1.6, '#8a929c', { metal: true }),      // yaka
+           kapsul(pr, P(i * 58), P(i * 80), 2.5, '#9aa2ac'),                             // kovan
+           silindirParca(pr, P(i * 60.5), e, 16, 4, '#2f343a'),                          // 10 kg plaka Ø32
+           silindirParca(pr, P(i * 63.8), e, 10.5, 2.6, '#2f343a'),                      // 2,5 kg plaka Ø21
+           silindirParca(pr, P(i * 66.2), e, 3.6, 2.2, '#8a929c', { metal: true }));     // kilit
+  }
+  return o;
+}
+/** Kablo: ince çelik halat (makaradan tutamağa) */
+export const kablo = (pr, a, b) => kapsul(pr, a, b, 0.6, '#8a929c', '#0A0B0D');
+/** Makara: metal teker (kalınlığıyla) + göbek */
+export const makara = (pr, c, eksen = [0, 0, 1]) => [
+  silindirParca(pr, c, eksen, 4.5, 2.4, '#5d646d', { metal: true }),
+  silindirParca(pr, c, eksen, 1.6, 4, '#8a929c', { metal: true })];
 
 /** Disk (halter plakası): eksenine dik düzlemde daire */
 export function disk(pr, c, eksen, r, dolgu = '#4b525b') {
@@ -282,7 +341,9 @@ export function kafaZarfi(c1, r1, c2, r2, pay = 0) {
   return { dis: cz(r1 + pay, r2 + pay), ic: cz(r1, r2) };
 }
 
-export function zemin(pr, merkez, r = 78) {
+/** Zemin diskinin yarıçapı — SVG (zemin) ve WebGL (webgl.js) aynı değeri kullanır; sabit kadraj da */
+export const ZEMIN_R = 78;
+export function zemin(pr, merkez, r = ZEMIN_R) {
   const P = Array.from({ length: 40 }, (_, i) => { const a = i / 40 * 2 * Math.PI; return pr([merkez[0] + r * Math.cos(a), 0, merkez[2] + r * Math.sin(a)]); });
   return `<polygon points="${P.map(p => f1(p[0]) + ',' + f1(p[1])).join(' ')}" fill="#13161a"/>`;
 }
@@ -323,21 +384,21 @@ export const HAREKETLER = {
     merkez: [-20, 0, 0],
     a: { P: [8, 50, 0], g: [180, 0], yan: [90, 0], yuz: [0, 90], ayak: 0,
          thA: [25, -12], shA: [25, -85], thB: [-25, -12], shB: [-25, -85] },
+    // ⚠️ Zaman TERS: t=0 kollar düz (bar yukarıda) → t=1 bar göğüste. Gerçek bench press yukarıda başlar
+    // ve yukarıda biter; eskiden başlangıç (ve duran görüntü) bar göğüsteydi (27 Eyl denetimi).
     uclar: t => {
-      const b = benchBar(t);
+      const b = benchBar(1 - t);
       return () => ({
         A: { hedef: [b[0], b[1], -BENCH_TUTUS], kutup: [0.4, -0.6, -0.7] },   // dirsek dışarı-aşağı, hafif ayağa doğru (45°)
         B: { hedef: [b[0], b[1], BENCH_TUTUS], kutup: [0.4, -0.6, 0.7] },
       });
     },
     ekipman(pr, s, t) {
-      const b = benchBar(t), o = [];
+      const b = benchBar(1 - t), o = [];
       o.push(...kutu(pr, [-80, 18], [BENCH_UST - 6, BENCH_UST], [-13, 13], { ust: '#3a4149', yan: '#272c33' }));
       o.push(...kutu(pr, [-72, -64], [0, BENCH_UST - 6], [-8, 8]));
       o.push(...kutu(pr, [4, 12], [0, BENCH_UST - 6], [-8, 8]));
-      o.push(kapsul(pr, [b[0], b[1], -52], [b[0], b[1], 52], 1.8, '#737b85', '#0A0B0D'));
-      o.push(disk(pr, [b[0], b[1], 42], [0, 0, 1], 14));
-      o.push(disk(pr, [b[0], b[1], -42], [0, 0, 1], 14));
+      o.push(...halter(pr, b));                                        // gerçekçi olimpik tip bar (27 Eyl)
       return o;
     },
     izlenen: 'eB',
@@ -480,7 +541,7 @@ function hacimNoktalari(h) {
       const pr = q => [q[0], q[1], nokta(q, y)];
       for (const e of h.ekipman(pr, s, t)) {
         const g = e.geo; if (!g) continue;
-        if (g.tur === 'p') for (const q of g.P3) n.push([q, 0]);
+        if (g.tur === 'p' || g.tur === 'c') for (const q of g.P3) n.push([q, 0]);
         else if (g.tur === 'k') n.push([g.a3, g.r], [g.b3, g.r]);
         else n.push([g.c3, g.r]);
       }
@@ -498,6 +559,15 @@ export function cerceve(h, teta, fi, bicim = 'donen', pay = 0.06) {
     for (const [q, r] of n) {
       const P = pr(q), x = P[0], y = -P[1];
       c.sol = Math.min(c.sol, x - r); c.sag = Math.max(c.sag, x + r); c.ust = Math.max(c.ust, y + r); c.alt = Math.min(c.alt, y - r);
+    }
+    /* ZEMİN DİSKİNİN ÖN KENARI kadraja girer. ⚠️ 27 Eyl'e kadar yalnız gövde sığdırılıyordu:
+       ısınma listesinin mini figürlerinde disk alttan DÜZ bir çizgiyle kesiliyordu (24 Eyl 3B
+       geçişinden kalma). Yalnız ALT sınır genişler — yanlar gövdeye sıkı kalır, disk yanlardan
+       taşabilir; zemin bir yama, kesik alt kenar ise "kırpılmış" okunuyordu. */
+    const m = h.merkez ?? [0, 0, 0];
+    for (let i = 0; i < 48; i++) {
+      const a = i / 48 * 2 * Math.PI;
+      c.alt = Math.min(c.alt, -pr([m[0] + ZEMIN_R * Math.cos(a), 0, m[2] + ZEMIN_R * Math.sin(a)])[1]);
     }
   } else {
     let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, y0 = 0, y1 = -Infinity;
