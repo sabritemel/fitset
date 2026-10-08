@@ -26,6 +26,7 @@
  *   · uzuv boyu = IK'nın girdisi → sabit
  * Yine de "tanım gereği" bir iddiadır; fizik-denetimi.mjs her kareyi ölçer.
  */
+import { OLCU } from './olcu.js';
 export const rd = d => d * Math.PI / 180;
 export const yon = (yaw, pitch) => [Math.cos(rd(pitch)) * Math.cos(rd(yaw)), Math.sin(rd(pitch)), -Math.cos(rd(pitch)) * Math.sin(rd(yaw))];
 export const ekle = (p, v, k = 1) => [p[0] + v[0] * k, p[1] + v[1] * k, p[2] + v[2] * k];
@@ -36,8 +37,25 @@ export const birim = v => { const m = boy(v) || 1; return [v[0] / m, v[1] / m, v
 export const ara = (a, b, t) => a + (b - a) * t;
 export const mesafe = (a, b) => boy(fark(a, b));
 
-/** Segment uzunlukları 2B motorla AYNI — ölçek değişmesin */
-export const L = { torso: 60, head: 13, ua: 31, fa: 29, th: 39, sh: 37 };
+/** Segment uzunlukları — B1 (7 Eki 2026): ürün mankeni C'nin (MakeHuman) KENDİ ölçüleri (olcu.js, üretilmiş).
+ *  ⚠️ Eskiden 2B motorla aynı elle yazılmış sayılardı (omuz yarı eni 14, üst kol 31, ön kol 29, uyluk 39, baldır 37);
+ *  C ile oranlar çok farklıydı ve çizici bunu her karede yamayla kapatıyordu (docs/2026-10-07-b1-veri-modeli-v2-PLAN.md).
+ *  fa = dirsek → avuçtaki kavrama noktası (ön kol + bilekten kavramaya). head yalnız çizim içindir. */
+export const L = { torso: OLCU.torso, head: 13, ua: OLCU.ua, fa: OLCU.fa + OLCU.elKavrama, th: OLCU.th, sh: OLCU.sh };
+/** Omuz eklemi boyuna göre (yan · aşağı · ön), kalça eklemi yarı eni, ayak bileği yüksekliği ve ayak boyu (bilek → parmak kökü) */
+export { OLCU };
+export const OMUZ = OLCU.omuz, KALCA_YAN = OLCU.kalcaYan, AYAK_Y = OLCU.ayakBilek, AYAK_BOY = OLCU.ayakBoy, TOP_Y = OLCU.topYuk;
+/** C'nin başı (8 Eki): merkez boyundan yuk yukarı + on öne; çarpışma denetimleri yarı derinliği yarıçap alır (yüz → ense) */
+export const KAFA = OLCU.kafa, KAFA_R = OLCU.kafa.yariDerin;
+/** C'nin sırt derinliği (gövde ekseninden sırt derisine) ve kalça arkası — sırtüstü/sırt pedi temasları (eskiden kapsül yarıçapı 12,5) */
+export const SIRT = OLCU.sirt, KALCA_ARKA = OLCU.kalcaArka;
+/** Sırtüstü yatay gövdede başın arkası `ust` yüzeyine değsin diye boyun eğimi (°, + = başı geriye; pivot boyun) */
+export function basYaslanmaEgimi(Py, ust) {
+  let b = 0; for (let i = 0; i < 40; i++) { const f = Py - KAFA.yuk * Math.sin(b) + KAFA.on * Math.cos(b) - KAFA_R - ust;
+    b += f / (KAFA.yuk * Math.cos(b) + KAFA.on * Math.sin(b)); }
+  return Math.max(0, b * 180 / Math.PI);
+}
+/** Kapsül yarıçapları (çizim + çarpışma). ayak = ayak kapsülü (parmak ucu yerdeyken yüksekliği de bu) */
 export const R = { karin: 10.5, gogus: 12.5, kafa: 10, ua: 5.6, fa: 4.6, el: 4.2, th: 7.8, sh: 5.8, ayak: 3.6, omuz: 6.2, kalca: 8 };
 
 /**
@@ -63,13 +81,18 @@ export function ik2(S, T, a, b, kutup) {
  */
 export function iskelet(p, uclar) {
   const P = p.P, g = yon(...p.g), yan = yon(...p.yan);
-  const boyun = ekle(P, g, L.torso), kafa = ekle(boyun, g, L.head + 1);
+  const boyun = ekle(P, g, L.torso);
   const gogusAlt = ekle(P, g, 24);
-  const omA = ekle(ekle(boyun, yan, 14), g, -5), omB = ekle(ekle(boyun, yan, -14), g, -5);
-  const kaA = ekle(P, yan, 8.5), kaB = ekle(P, yan, -8.5);
   const capraz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const yuz = p.yuz ? yon(...p.yuz) : birim(capraz(g, yan));        // yüzün baktığı yön
-  const s = { P, g, yan, yuz, boyun, kafa, gogusAlt, omA, omB, kaA, kaB, ulasti: true };
+  // 8 Eki: C'nin baş merkezi (eskiden boyundan düz 14 yukarı — yüz 17,8 cm öndeydi). `bas` = boyun eğimi (° + geriye),
+  // pivot boyun: sırtüstünde başın arkası sehpaya iner (C'nin dinlenme duruşunda baş öne eğik, sırtüstünde 7 cm havadaydı)
+  const bE = rd(p.bas ?? 0), gBas = birim(ekle(g.map(v => v * Math.cos(bE)), yuz, -Math.sin(bE))), yuzBas = birim(ekle(yuz.map(v => v * Math.cos(bE)), g, Math.sin(bE)));
+  const kafa = ekle(ekle(boyun, gBas, KAFA.yuk), yuzBas, KAFA.on);
+  const omuzNok = i => ekle(ekle(ekle(boyun, yan, i * OMUZ.yan), g, -OMUZ.asagi), yuz, OMUZ.on);
+  const omA = omuzNok(1), omB = omuzNok(-1);
+  const kaA = ekle(P, yan, KALCA_YAN), kaB = ekle(P, yan, -KALCA_YAN);
+  const s = { P, g, yan, yuz, boyun, kafa, gBas, yuzBas, gogusAlt, omA, omB, kaA, kaB, ulasti: true };
   const h = uclar ? uclar(s) : {};
   // Uç (el/ayak) hedefe bağlıysa IK, değilse açıyla (FK)
   const uzuv = (kok, hedef, a, b, ust, alt, ad1, ad2) => {
@@ -82,10 +105,20 @@ export function iskelet(p, uclar) {
   uzuv(omB, h.B, L.ua, L.fa, p.uaB, p.faB, 'dB', 'eB');
   uzuv(kaA, h.ayakA, L.th, L.sh, p.thA, p.shA, 'zA', 'aA');
   uzuv(kaB, h.ayakB, L.th, L.sh, p.thB, p.shB, 'zB', 'aB');
-  // Ayak (bilek → parmak ucu): her ayak kendi yönünde; [yaw,pitch] ya da yalnız yaw
-  const ayakYon = v => Array.isArray(v) ? yon(...v) : yon(v ?? 0, 0);
-  s.uA = ekle(s.aA, ayakYon(p.ayakA ?? p.ayak), 9);
-  s.uB = ekle(s.aB, ayakYon(p.ayakB ?? p.ayak), 9);
+  // Ayak (bilek → parmak kökü): her ayak kendi yönünde; [yaw,pitch] TABANIN açısı (0 = düz basar).
+  // Bilek tabandan AYAK_Y yukarıda, parmak kökü (ball eklemi) TOP_Y yukarıda → u, taban yönünde AYAK_BOY ileri ve
+  // tabana dik (AYAK_Y − TOP_Y) aşağı. Düz basan ayakta u.y = TOP_Y (C bedeninin parmak eklemi, olcu.js · topYuk).
+  const ayakYon = v => Array.isArray(v) ? v : [v ?? 0, 0];
+  const ayakUc = (a, v) => { const [yw, pt] = ayakYon(v); return ekle(ekle(a, yon(yw, pt), AYAK_BOY), yon(yw, pt - 90), AYAK_Y - TOP_Y); };
+  // Kapsül çizimi için ayak ucu: kapsül yarıçapı R.ayak > TOP_Y; uç tabandan R.ayak yukarıda (eski u) ama hiçbir
+  // zaman parmak ekleminin (R.ayak − TOP_Y) altında değil — plankta kapsül zemine gömülmesin
+  const kapsulUc = (u, v) => { const [yw, pt] = ayakYon(v), d = R.ayak - TOP_Y, k = ekle(u, yon(yw, pt - 90), -d);
+    return k[1] < u[1] + d ? [k[0], u[1] + d, k[2]] : k; };
+  s.uA = ayakUc(s.aA, p.ayakA ?? p.ayak);
+  s.uB = ayakUc(s.aB, p.ayakB ?? p.ayak);
+  s.ukA = kapsulUc(s.uA, p.ayakA ?? p.ayak); s.ukB = kapsulUc(s.uB, p.ayakB ?? p.ayak);
+  // tabanın ileri yönü (birim) — çizici ayağı buna hizalar (a→u değil: u tabanın altına doğru kaydırılmış nokta)
+  s.tabA = yon(...ayakYon(p.ayakA ?? p.ayak)); s.tabB = yon(...ayakYon(p.ayakB ?? p.ayak));
   s.hedef = h;
   return s;
 }
@@ -215,6 +248,27 @@ export const dambilCismi = (el, eksen) => {
   return [ekle(el, e, -k), ekle(el, e, k), DAMBIL.r];
 };
 /** Halter: bar ekseni `eksen` (varsayılan sağ-sol), merkez m */
+/**
+ * SEHPA / OTURAK (8 Eki, Sabri: "aletler gerçek şekillere kabaca benzesin"): kalın minder + altında çerçeve kirişi +
+ * iki uçta geniş tabanlı bacak (eskiden minder tek dikmeli kutuydu). Minder üstü `ust`, x aralığı [x0, x1], eni `en`.
+ */
+export const SEHPA_TON = { minder: { ust: '#3a4149', yan: '#272c33' }, cerceve: { ust: '#4a525c', yan: '#363c44' } };
+export function sehpaCiz(pr, [x0, x1], ust, en = 26) {
+  const o = [...kutu(pr, [x0, x1], [ust - 7, ust], [-en / 2, en / 2], SEHPA_TON.minder),
+    ...kutu(pr, [x0 + 3, x1 - 3], [ust - 10, ust - 7], [-en / 2 + 3, en / 2 - 3], SEHPA_TON.cerceve)];
+  for (const xb of [x0 + 7, x1 - 7]) o.push(...kutu(pr, [xb - 2.5, xb + 2.5], [4, ust - 10], [-2.5, 2.5], SEHPA_TON.cerceve),
+    ...kutu(pr, [xb - 3, xb + 3], [0, 4], [-Math.max(20, en / 2 + 6), Math.max(20, en / 2 + 6)], SEHPA_TON.cerceve));
+  return o;
+}
+/** Bench dikmeleri + J kancaları: bar kilitli kolun hemen başa yakın tarafında, iki el ile plakalar arasında */
+export function benchDikmeleri(pr, x, kancaY) {
+  const o = [];
+  for (const z of [-48, 48]) o.push(...kutu(pr, [x - 2.5, x + 2.5], [0, kancaY + 14], [z - 2.5, z + 2.5], SEHPA_TON.cerceve),
+    ...kutu(pr, [x - 2.5, x + 6], [kancaY - 3, kancaY], [z - 2.5, z + 2.5], SEHPA_TON.cerceve),
+    ...kutu(pr, [x + 4, x + 6], [kancaY, kancaY + 4], [z - 2.5, z + 2.5], SEHPA_TON.cerceve),
+    ...kutu(pr, [x - 22, x + 22], [0, 4], [z - 3, z + 3], SEHPA_TON.cerceve));
+  return o;
+}
 export function halter(pr, m, eksen = [0, 0, 1]) {
   const e = birim(eksen), P = k => ekle(m, e, k), o = [kapsul(pr, P(-56), P(56), 1.4, '#9aa2ac')];
   for (const i of [-1, 1]) {
@@ -270,8 +324,8 @@ export function figurOgeleri(pr, s) {
     ['govde', 'k', s.boyun, s.kafa, 4.5], ['govde', 's', s.kafa, null, R.kafa],                   // 4 5
     ['kolA', 'k', s.omA, s.dA, R.ua], ['kolA', 'k', s.dA, s.eA, R.fa], ['kolA', 's', s.eA, null, R.el],   // 6 7 8
     ['kolB', 'k', s.omB, s.dB, R.ua], ['kolB', 'k', s.dB, s.eB, R.fa], ['kolB', 's', s.eB, null, R.el],   // 9 10 11
-    ['bacakA', 'k', s.kaA, s.zA, R.th], ['bacakA', 'k', s.zA, s.aA, R.sh], ['bacakA', 'k', s.aA, s.uA, R.ayak], // 12 13 14
-    ['bacakB', 'k', s.kaB, s.zB, R.th], ['bacakB', 'k', s.zB, s.aB, R.sh], ['bacakB', 'k', s.aB, s.uB, R.ayak], // 15 16 17
+    ['bacakA', 'k', s.kaA, s.zA, R.th], ['bacakA', 'k', s.zA, s.aA, R.sh], ['bacakA', 'k', s.aA, s.ukA, R.ayak], // 12 13 14
+    ['bacakB', 'k', s.kaB, s.zB, R.th], ['bacakB', 'k', s.zB, s.aB, R.sh], ['bacakB', 'k', s.aB, s.ukB, R.ayak], // 15 16 17
   ];
   const d = parca.map(p => p[1] === 'k' ? (pr(p[2])[2] + pr(p[3])[2]) / 2 : pr(p[2])[2]);
   const mn = Math.min(...d), mx = Math.max(...d), k = v => mx - mn < 1e-6 ? 1 : 0.15 + 0.85 * (v - mn) / (mx - mn);
@@ -298,7 +352,7 @@ export function figurOgeleri(pr, s) {
     ortu(s.boyun, [[s.gogusAlt, R.gogus], [s.kafa, 4.5]], 'govde', [1, 4]),
     ortu(s.dA, [[s.omA, R.ua], [s.eA, R.fa]], 'kolA', [6, 7]), ortu(s.dB, [[s.omB, R.ua], [s.eB, R.fa]], 'kolB', [9, 10]),
     ortu(s.zA, [[s.kaA, R.th], [s.aA, R.sh]], 'bacakA', [12, 13]), ortu(s.zB, [[s.kaB, R.th], [s.aB, R.sh]], 'bacakB', [15, 16]),
-    ortu(s.aA, [[s.zA, R.sh], [s.uA, R.ayak]], 'bacakA', [13, 14]), ortu(s.aB, [[s.zB, R.sh], [s.uB, R.ayak]], 'bacakB', [16, 17]),
+    ortu(s.aA, [[s.zA, R.sh], [s.ukA, R.ayak]], 'bacakA', [13, 14]), ortu(s.aB, [[s.zB, R.sh], [s.ukB, R.ayak]], 'bacakB', [16, 17]),
     // Uzuv kökleri (omuz, kalça): uzuv, gövde çubuğunun ÜSTÜNDE yuvarlak biter — sıra ne olursa olsun
     ortu(s.omA, [[s.dA, R.ua]], 'kolA', [2, 6], R.ua), ortu(s.omB, [[s.dB, R.ua]], 'kolB', [2, 9], R.ua),
     ortu(s.kaA, [[s.zA, R.th]], 'bacakA', [3, 12], R.th), ortu(s.kaB, [[s.zB, R.th]], 'bacakB', [3, 15], R.th),
@@ -366,15 +420,21 @@ const ease = t => t * t * (3 - 2 * t);
 
 /* BENCH PRESS — bar sehpaya dik düzlemde hafif J yolu çizer (altta göğsün alt
    kısmında, üstte omuzların üstünde). Eller barda SABİT genişlikte. */
-const BENCH_TUTUS = 26;                        // yarım tutuş: omuz yarı-genişliği 14 → tutuş ≈ 1,9× omuz
-const BENCH_UST = 38.5;                        // sehpa üst yüzü
-const benchBar = t => [ara(-35, -45, 1 - (1 - t) ** 2), ara(65.5, 106, ease(t)), 0];
+/* B1: tutuş ve bar yolu OMUZA göre (eski sabitler: tutuş 26, sehpa 38,5, bar x −35…−45, y 65,5…106) */
+export const BENCH_UST = 43;                   // sehpa üst yüzü (IPF: 42–45 cm)
+const BENCH_P = [8, BENCH_UST + SIRT, 0];      // sırtüstü kalça merkezi — gövde ekseni sırt derinliği kadar yukarıda (8 Eki: eskiden 11,5)
+const BENCH_OM_X = BENCH_P[0] - L.torso + OMUZ.asagi;   // sırtüstü omuz eklemi x (baş −x yönünde)
+const BENCH_TUTUS = OMUZ.yan + 11;             // yarım tutuş: omuzdan 11 cm dışarıda (≈ 1,5× omuz genişliği)
+const BENCH_UST_Y = BENCH_P[1] + 0.952 * Math.sqrt((L.ua + L.fa) ** 2 - (BENCH_TUTUS - OMUZ.yan) ** 2);   // dirsek hafif bükük
+const benchBar = t => [ara(BENCH_OM_X + 14, BENCH_OM_X + 2, 1 - (1 - t) ** 2), ara(BENCH_P[1] + 17, BENCH_UST_Y, ease(t)), 0];   // altta göğüs ucu (C: göğüs önü ekseninden 14,6), dirsek ≤ 140°
 
 /* REVERSE PEC FLY — makinenin her kolu omuz ekleminin DÜŞEY EKSENİ etrafında
    döner (makine ayarının kuralı: "omzu dönme ekseniyle hizala"). Tutamak o
    eksenden sabit yarıçapta; el tutamakta. Göğüs pede yaslı, ayaklar yerde. */
-const FLY_R = 58.5;                            // tutamağın eksene uzaklığı → dirsek ~25° bükük (54 iken 51,6° ölçüldü: 'hafif' değildi)
-const FLY_UST = 132;                           // makine üst kirişi
+const FLY_R = (L.ua + L.fa) * 0.978;          // tutamağın eksene uzaklığı → dirsek ~25° bükük (eski 58,5 / kol 60)
+const FLY_OTURAK = Math.round(AYAK_Y + L.sh - R.kalca);   // oturak: kaval dik, uyluk yatay (eski 36)
+const FLY_DY = FLY_OTURAK - 36;                // makine (ped, kiriş) oturakla birlikte yükselir
+export const FLY_UST = 132 + FLY_DY;                  // makine üst kirişi
 const flyAci = t => ara(-8, 92, ease(t));      // -8 = eller önde yakın (−12 iken eller İÇ İÇE girdi, ölçüldü), 92 = yana açık
 
 export const HAREKETLER = {
@@ -382,22 +442,21 @@ export const HAREKETLER = {
     ad: 'Barbell Bench Press', ref: 'bb_bench_press',
     kamera: [28, 22], seritKameralar: [[0, 0], [28, 22], [72, 34]],
     merkez: [-20, 0, 0],
-    a: { P: [8, 50, 0], g: [180, 0], yan: [90, 0], yuz: [0, 90], ayak: 0,
-         thA: [25, -12], shA: [25, -85], thB: [-25, -12], shB: [-25, -85] },
+    a: (() => { const th = -Math.asin((BENCH_P[1] - AYAK_Y - L.sh * Math.sin(rd(85))) / L.th) * 180 / Math.PI;   // bilek yerde
+      return { P: BENCH_P, g: [180, 0], yan: [90, 0], yuz: [0, 90], ayak: 0, bas: basYaslanmaEgimi(BENCH_P[1], BENCH_UST),
+         thA: [25, th], shA: [25, -85], thB: [-25, th], shB: [-25, -85] }; })(),
     // ⚠️ Zaman TERS: t=0 kollar düz (bar yukarıda) → t=1 bar göğüste. Gerçek bench press yukarıda başlar
     // ve yukarıda biter; eskiden başlangıç (ve duran görüntü) bar göğüsteydi (27 Eyl denetimi).
     uclar: t => {
       const b = benchBar(1 - t);
       return () => ({
-        A: { hedef: [b[0], b[1], -BENCH_TUTUS], kutup: [0.4, -0.6, -0.7] },   // dirsek dışarı-aşağı, hafif ayağa doğru (45°)
-        B: { hedef: [b[0], b[1], BENCH_TUTUS], kutup: [0.4, -0.6, 0.7] },
+        A: { hedef: [b[0], b[1], -BENCH_TUTUS], kutup: [0.4, -0.6, -0.7], tutamak: { eksen: [0, 0, 1], r: 1.4, avuc: 'ayak' } },   // dirsek dışarı-aşağı, hafif ayağa doğru (45°)
+        B: { hedef: [b[0], b[1], BENCH_TUTUS], kutup: [0.4, -0.6, 0.7], tutamak: { eksen: [0, 0, 1], r: 1.4, avuc: 'ayak' } },
       });
     },
     ekipman(pr, s, t) {
       const b = benchBar(1 - t), o = [];
-      o.push(...kutu(pr, [-80, 18], [BENCH_UST - 6, BENCH_UST], [-13, 13], { ust: '#3a4149', yan: '#272c33' }));
-      o.push(...kutu(pr, [-72, -64], [0, BENCH_UST - 6], [-8, 8]));
-      o.push(...kutu(pr, [4, 12], [0, BENCH_UST - 6], [-8, 8]));
+      o.push(...sehpaCiz(pr, [-80, 18], BENCH_UST, 28), ...benchDikmeleri(pr, BENCH_OM_X - 10, BENCH_UST_Y - 6));   // 8 Eki: bacaklı sehpa + bar dikmeleri
       o.push(...halter(pr, b));                                        // gerçekçi olimpik tip bar (27 Eyl)
       return o;
     },
@@ -406,8 +465,8 @@ export const HAREKETLER = {
       ortakBar: true,                                                  // iki el aynı barda
       ayaklar: 'yerde',
       temas: [
-        { ad: 'sırt sehpada', f: s => (s.gogusAlt[1] - R.gogus) - BENCH_UST, aralik: [-2, 2] },
-        { ad: 'baş sehpada', f: s => (s.kafa[1] - R.kafa) - BENCH_UST, aralik: [-2, 3] },
+        { ad: 'sırt sehpada', f: s => (s.gogusAlt[1] - SIRT) - BENCH_UST, aralik: [-2, 2] },     // C'nin sırt derinliği (8 Eki)
+        { ad: 'baş sehpada', f: s => (s.kafa[1] - KAFA_R) - BENCH_UST, aralik: [-2, 3] },
       ],
     },
   },
@@ -415,23 +474,22 @@ export const HAREKETLER = {
     ad: 'Reverse Pec Fly', ref: 'machine_reverse_fly',
     kamera: [-40, 34], seritKameralar: [[-90, 4], [-40, 34], [55, 30]],
     merkez: [8, 0, 0],
-    a: { P: [0, 44, 0], g: [0, 84], yan: [-90, 0], ayak: 0,
-         thA: [-8, -5], shA: [-8, -88], thB: [8, -5], shB: [8, -88] },
+    a: (() => { const P = [0, FLY_OTURAK + R.kalca, 0], th = -Math.asin((P[1] - AYAK_Y - L.sh * Math.sin(rd(88))) / L.th) * 180 / Math.PI;
+      return { P, g: [0, 84], yan: [-90, 0], ayak: 0, thA: [-8, th], shA: [-8, -88], thB: [8, th], shB: [8, -88] }; })(),
     uclar: t => {
       const f = rd(flyAci(t));
       return s => ({
-        // Dirsekler YUKARIDA (omuz iç rotasyonda): ExRx — dirsek omuz hizasının altına düşmez
-        A: { hedef: [s.omA[0] + FLY_R * Math.cos(f), s.omA[1] - 2, s.omA[2] + FLY_R * Math.sin(f)], kutup: [-0.4, 0.5, 0.8] },
-        B: { hedef: [s.omB[0] + FLY_R * Math.cos(f), s.omB[1] - 2, s.omB[2] - FLY_R * Math.sin(f)], kutup: [-0.4, 0.5, -0.8] },
+        // B1 (Sabri, 7 Eki): dirsek omuz hizasını GEÇMEZ — tutamak omzun 4 cm altında, dirsek yatay düzlemde açılır
+        A: { hedef: [s.omA[0] + FLY_R * Math.cos(f), s.omA[1] - 4, s.omA[2] + FLY_R * Math.sin(f)], kutup: [-0.4, 0, 0.8], tutamak: { eksen: [0, 1, 0], r: 2.6, avuc: 'ic' } },
+        B: { hedef: [s.omB[0] + FLY_R * Math.cos(f), s.omB[1] - 4, s.omB[2] - FLY_R * Math.sin(f)], kutup: [-0.4, 0, -0.8], tutamak: { eksen: [0, 1, 0], r: 2.6, avuc: 'ic' } },
       });
     },
     eksenler: s => [[s.omA[0], FLY_UST, s.omA[2]], [s.omB[0], FLY_UST, s.omB[2]]],
     ekipman(pr, s) {
       const o = [];
-      o.push(...kutu(pr, [-16, 12], [30, 36], [-14, 14], { ust: '#3a4149', yan: '#272c33' }));   // oturak
-      o.push(...kutu(pr, [-4, 4], [0, 30], [-4, 4]));                                           // oturak direği
-      o.push(...kutu(pr, [16.5, 22.5], [55, 88], [-11, 11], { ust: '#3a4149', yan: '#2c323a' })); // göğüs pedi
-      o.push(...kutu(pr, [28, 34], [0, FLY_UST], [-4, 4]));                                     // kolon
+      o.push(...sehpaCiz(pr, [-20, 16], FLY_OTURAK, 28));                                                            // oturak (8 Eki: bacaklı)
+      o.push(...kutu(pr, [16.5, 22.5], [55 + FLY_DY, 88 + FLY_DY], [-11, 11], { ust: '#3a4149', yan: '#2c323a' })); // göğüs pedi
+      o.push(...kutu(pr, [28, 36], [0, FLY_UST + 4], [-4, 4], SEHPA_TON.cerceve), ...kutu(pr, [-4, 36], [0, 4], [-6, 6], SEHPA_TON.cerceve));   // kolon + taban kirişi
       const [pA, pB] = this.eksenler(s);
       o.push(kapsul(pr, [31, FLY_UST, 0], pA, 2.4, '#5d646d', '#0A0B0D'));                      // üst kiriş → eksenler
       o.push(kapsul(pr, [31, FLY_UST, 0], pB, 2.4, '#5d646d', '#0A0B0D'));
@@ -449,9 +507,9 @@ export const HAREKETLER = {
       dirsek: { aralik: [10, 35], sabit: true },                       // fly'ın tanımı: dirsek hafif bükük ve DEĞİŞMEZ
       ayaklar: 'yerde',
       temas: [
-        { ad: 'kalça oturakta', f: s => (s.P[1] - R.kalca) - 36, aralik: [-1.5, 1.5] },
+        { ad: 'kalça oturakta', f: s => (s.P[1] - R.kalca) - FLY_OTURAK, aralik: [-1.5, 1.5] },
         { ad: 'göğüs pedde', f: s => {                                  // pedin yüksekliğinin ortasında göğüs yüzeyi ↔ ped arka yüzü
-            const y = 72, k = (y - s.gogusAlt[1]) / (s.boyun[1] - s.gogusAlt[1]);
+            const y = 72 + FLY_DY, k = (y - s.gogusAlt[1]) / (s.boyun[1] - s.gogusAlt[1]);
             return 16.5 - (ara(s.gogusAlt[0], s.boyun[0], k) + R.gogus);
           }, aralik: [-2, 2] },
       ],
@@ -510,11 +568,19 @@ export function sahneOgeleri(h, t, pr) {
   return { s, ogeler: pr.yon ? gorunurlukDuzelt(ogeler, pr.yon) : ogeler };
 }
 
+/** Yörünge izi: izlenen eklemin 19 noktalık yolu. `izKaydir` [x,y,z] verilirse iz o kadar yana taşınır
+ * (8 Eki, Sabri: topuk kaldırmada kalça izi mankenin içinde kalıyor, görünmüyordu). */
+export function izYolu(h) {
+  if (h.statik) return [];
+  const k = h.izKaydir ?? [0, 0, 0];
+  return Array.from({ length: 19 }, (_, i) => an(h, i / 18)[h.izlenen].map((v, j) => v + k[j]));
+}
+
 export function sahne(h, t, teta, fi) {
   const t0 = performance.now();
   const pr = kamera(teta, fi);
   const { s, ogeler } = sahneOgeleri(h, t, pr);
-  const yol = Array.from({ length: 19 }, (_, i) => an(h, i / 18)[h.izlenen]);
+  const yol = izYolu(h);
   // Duruş hareketinde (plank) yol tek noktadır — iz çizmek anlamsız bir ok bırakırdı
   const svg = zemin(pr, h.merkez) + golge(pr, [s.P, s.aA, s.aB]) + ogeler.map(o => o.svg).join('') + (h.statik ? '' : iz(pr, yol));
   return { svg, oge: (svg.match(/<(line|circle|polygon|ellipse|polyline)/g) || []).length, ms: performance.now() - t0 };

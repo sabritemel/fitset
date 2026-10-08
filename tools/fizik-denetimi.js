@@ -52,10 +52,40 @@ export function denetle(h) {
   // K4 el ekipmanda (IK hedefe ulaştı mı)
   if (h.uclar) ekle('eller/ayaklar hedefe ulaşıyor', kareler.every(s => s.ulasti), `${kareler.filter(s => !s.ulasti).length}/${ORNEK} karede ulaşamadı`);
 
-  // K5 eklem açıları: dirsek ve diz fleksiyonu 0–150°
+  // K5 eklem açıları: dirsek ≤ 145° ön kolda (B1, 7 Eki: kaslı kolda ön kol pazıya dayanır — 150'de C'nin ön kolu pazının
+  // içine giriyordu, ölçüldü), diz 0–150°. ⚠️ fa = dirsek → KAVRAMA noktası (ön kol + el); açı ona göre.
   const fleks = kareler.flatMap(s => [180 - aci(s.omA, s.dA, s.eA), 180 - aci(s.omB, s.dB, s.eB)]);
   const [fa, fb] = aralik(fleks);
-  ekle('dirsek fleksiyonu 0–150°', fa >= 0 && fb <= 150, `${f(fa)}° … ${f(fb)}°`);
+  // ⚠️ açı KAVRAMA noktasına göre ölçülür; ön kol ekseni ~5° daha bükük olur (C, ölçüldü) → 140 ≈ ön kolda 145
+  ekle('dirsek fleksiyonu 0–140° (kavramaya göre)', fa >= 0 && fb <= 140, `${f(fa)}° … ${f(fb)}°`);
+  // K5c DİRSEK OMUZ HİZASINI GEÇMEZ (Sabri, 7 Eki: ters fly'da dirsekler omzun üstüne çıkıyordu): el omuz hizasında
+  // ya da altındayken dirsek omuzdan en çok 0,5 cm yukarıda. El başın üstüne çıkan hareketler (pres, baş üstü) muaf.
+  // "Yukarı" GÖVDE EKSENİ boyunca (g): eğik kürekte dirsek sırta doğru kalkar — bu dünyada yukarı ama gövdede aşağıdır.
+  {
+    let en = -Infinity, yer = '';
+    for (const s of kareler) for (const [om, d, e, kol] of [['omA', 'dA', 'eA', 'sağ'], ['omB', 'dB', 'eB', 'sol']]) {
+      if (M.nokta(M.fark(s[e], s[om]), s.g) > 0.5) continue;
+      const v = M.nokta(M.fark(s[d], s[om]), s.g);
+      if (v > en) { en = v; yer = `${kol} · t=${s.t.toFixed(2)}`; }
+    }
+    if (en > -Infinity) ekle('el omuz altındayken dirsek omuz hizasını geçmiyor', en <= 0.5, `dirsek omuzdan en çok ${f(en)} yukarıda (${yer})`);
+  }
+  // K5d DİRSEK GÖVDENİN DIŞINDA — C'nin ölçülen gövde kesiti (olcu.js · govde) + üst kol yarıçapı. Dirsek gövde
+  // boyunca (kalça → boyun) ve kesitin derinliği içindeyse yanal uzaklığı en az yarı en + kol olmalı.
+  {
+    const { yariEn, yariDerin, merkezOn } = M.OLCU.govde, rKol = 4.8;
+    let en = Infinity, yer = '';
+    for (const s of kareler) {
+      const yanv = s.yan, gv = s.g, onv = s.yuz;
+      for (const [d, kol] of [['dA', 'sağ'], ['dB', 'sol']]) {
+        const v = M.fark(s[d], s.P), boy = M.nokta(v, gv), en1 = Math.abs(M.nokta(v, yanv)), der = M.nokta(v, onv) - merkezOn;
+        if (boy < 4 || boy > M.L.torso + 4 || Math.abs(der) >= yariDerin + rKol) continue;
+        const q = Math.abs(der) / (yariDerin + rKol), gereken = (yariEn + rKol) * Math.sqrt(1 - q * q), pay = en1 - gereken;
+        if (pay < en) { en = pay; yer = `${kol} · t=${s.t.toFixed(2)}`; }
+      }
+    }
+    if (en < Infinity) ekle('dirsek gövdenin içine girmiyor', en >= -0.5, `en yakın ${f(en)} (${yer})`);
+  }
   if (k.dirsek) {                                             // hareketin KENDİ tanımı (ör. fly: sabit, hafif bükük)
     const kollar = k.dirsek.kollar ?? (k.tekTaraf ? ['A'] : ['A', 'B']);   // tek kollu harekette boştaki kol muaf
     const [xa, xb] = aralik(kareler.flatMap(s => kollar.map(y => 180 - aci(s[`om${y}`], s[`d${y}`], s[`e${y}`]))));
@@ -81,7 +111,7 @@ export function denetle(h) {
   const ayaklar = typeof k.ayaklar === 'string' ? { A: k.ayaklar, B: k.ayaklar } : (k.ayaklar ?? {});
   for (const [yan, tur] of Object.entries(ayaklar)) {
     const nokta = tur === 'yerde' ? `a${yan}` : `u${yan}`, zemin = k.zeminY ?? 0;   // basamaklı hareketlerde zemin = basamak üstü
-    const [ya, yb] = aralik(kareler.map(s => s[nokta][1] - M.R.ayak - zemin));
+    const [ya, yb] = aralik(kareler.map(s => s[nokta][1] - (tur === 'yerde' ? M.AYAK_Y : M.TOP_Y) - zemin));   // B1: bilek AYAK_Y, parmak kökü TOP_Y yüksekte (C ölçüsü)
     ekle(`${yan === 'A' ? 'sağ' : 'sol'} ayak ${tur === 'yerde' ? 'tabanı' : 'parmak ucu'} yerde`, ya >= -1 && yb <= 1.5, `zemine göre ${f(ya)} … ${f(yb)}`);
     const kay = Math.max(...kareler.map(s => yatay(s[nokta], kareler[0][nokta])));
     ekle(`${yan === 'A' ? 'sağ' : 'sol'} ayak kaymıyor`, kay <= 0.5, `en fazla ${f(kay)}`);
@@ -109,7 +139,8 @@ export function denetle(h) {
     let en = Infinity, nerede = '';
     for (const s of kareler) h.cisimler(s).forEach(([a, b, rc = 0.7], ci) => {
       for (const [p, q, r, ad] of [[s.P, s.gogusAlt, M.R.karin, 'karın'], [s.gogusAlt, s.boyun, M.R.gogus, 'göğüs'],
-        [s.kaA, s.zA, M.R.th, 'sağ uyluk'], [s.zA, s.aA, M.R.sh, 'sağ baldır'], [s.kaB, s.zB, M.R.th, 'sol uyluk'], [s.zB, s.aB, M.R.sh, 'sol baldır'], [s.kafa, s.kafa, M.R.kafa, 'baş']]) {
+        // 8 Eki: bacak C'nin kalınlığıyla (uyluk + şort 1, baldır; olcu.js) — eski kapsül (7,8 / 5,8) V-bar kolunun uyluğa girdiğini görmüyordu
+        [s.kaA, s.zA, M.OLCU.uyluk + 1, 'sağ uyluk'], [s.zA, s.aA, M.OLCU.baldir, 'sağ baldır'], [s.kaB, s.zB, M.OLCU.uyluk + 1, 'sol uyluk'], [s.zB, s.aB, M.OLCU.baldir, 'sol baldır'], [s.kafa, s.kafa, M.KAFA_R, 'baş']]) {
         const d = dogruParcaMesafe(a, b, p, q, 16) - r - rc;
         if (d < en) { en = d; nerede = `${ad} · cisim ${ci + 1} · t=${s.t.toFixed(2)}`; }
       }
@@ -134,12 +165,33 @@ export function denetle(h) {
   // K10 ön kol ve el gövdeye / başa girmiyor (kapsül–kapsül mesafesi)
   let gomulme = -Infinity, gyer = '';
   for (const s of kareler) for (const [d, e, kol] of [['dA', 'eA', 'sağ'], ['dB', 'eB', 'sol']])
-    for (const [p, q, r, ad] of [[s.P, s.gogusAlt, M.R.karin, 'karın'], [s.gogusAlt, s.boyun, M.R.gogus, 'göğüs'], [s.kafa, s.kafa, M.R.kafa, 'baş']]) {
+    for (const [p, q, r, ad] of [[s.P, s.gogusAlt, M.R.karin, 'karın'], [s.gogusAlt, s.boyun, M.R.gogus, 'göğüs'], [s.kafa, s.kafa, M.KAFA_R, 'baş']]) {
       const g = (r + M.R.fa) - dogruParcaMesafe(s[d], s[e], p, q);
       if (g > gomulme) { gomulme = g; gyer = `${kol} ön kol → ${ad} · t=${s.t.toFixed(2)}`; }
     }
   ekle('ön kol gövdeye/başa girmiyor', gomulme <= 1.5, `en fazla gömülme ${f(Math.max(0, gomulme))} (${gyer})`);
 
+  // K13 TUTAMAK VERİSİ ÇİZİLEN ALETLE ÖRTÜŞÜR (B1, D3): her tutan el için, elin ≤ 1,5 cm yakınından geçen ve ekseni
+  // beyan edilen eksenle ≤ 12° paralel bir kapsül (bar, sap, kulp) çizilmiş olmalı. Eskiden çizici tutamağı TAHMİN
+  // ediyordu (en yakın kapsül) — V-bar'da el kareden kareye başka parçaya atlıyordu.
+  {
+    const pr = q => [q[0], q[1], q[2]];
+    let kotu = 0, ilk = '', say = 0;
+    for (const s of kareler) {
+      const ogeler = h.ekipman(pr, s, s.t);
+      for (const y of ['A', 'B']) {
+        const tm = s.hedef?.[y]?.tutamak; if (!tm) continue; say++;
+        const e = s[`e${y}`];
+        const uyar = ogeler.some(o => { const g = o.geo; if (!g || g.tur !== 'k') return false;
+          const ab = M.fark(g.b3, g.a3), L2 = M.nokta(ab, ab); if (L2 < 1) return false;
+          const u = Math.max(0, Math.min(1, M.nokta(M.fark(e, g.a3), ab) / L2)), p = M.ekle(g.a3, ab, u);
+          const c = Math.abs(M.nokta(M.birim(ab), tm.eksen));
+          return M.mesafe(p, e) <= 1.5 && c >= Math.cos(12 * Math.PI / 180) && Math.abs(g.r - tm.r) <= 0.6; });
+        if (!uyar) { kotu++; if (!ilk) ilk = `${y === 'A' ? 'sağ' : 'sol'} · t=${s.t.toFixed(2)}`; }
+      }
+    }
+    if (say) ekle('tutamak verisi çizilen aletle örtüşüyor', kotu === 0, kotu ? `${kotu}/${say} el-kare uyuşmuyor (ilk: ${ilk})` : `${say} el-kare`);
+  }
   // K11 harekete özel denetimler (ör. plank: omuz–kalça–bilek tek çizgide)
   for (const o of k.ozel ?? []) { const r = o.f(kareler); ekle(o.ad, r.gecti, r.olcum); }
 
@@ -214,6 +266,18 @@ Object.assign(ESKI, {
     h: bozukUc(K.db_two_arm_row, (o, t) => ({ ...o, ayakA: { ...o.ayakA, hedef: M.ekle(o.ayakA.hedef, [6 * t, 0, 0]) } })) },
   'ÖN KOL EĞİK (row, dirsek aşağıda)': { beklenen: 'ön kol dikeye ≤ 20°',   // ilk sürüm yalnız 18° eğiyordu — bozma yetersizdi, denetim değil
     h: bozukUc(K.db_two_arm_row, o => ({ ...o, A: { ...o.A, kutup: [0, -1, 0.2] }, B: { ...o.B, kutup: [0, -1, -0.2] } })) },
+  // B1 (7 Eki) — yeni kuralların ESKİ hatalarla kırmızı yandığı kanıtlanır
+  'DİRSEK OMZUN ÜSTÜNDE (ters fly, eski kutup yukarı)': { beklenen: 'el omuz altındayken dirsek omuz hizasını geçmiyor',
+    h: bozukUc(K.machine_reverse_fly, o => ({ ...o, A: { ...o.A, kutup: [-0.4, 0.5, 0.8] }, B: { ...o.B, kutup: [-0.4, 0.5, -0.8] } })) },
+  'DİRSEK GÖVDEDE (curl, dirsek omzun hizasında içeride)': { beklenen: 'dirsek gövdenin içine girmiyor',
+    h: bozukUc(K.cable_curl, o => ({ ...o, A: { ...o.A, kutup: [0.3, 0, -1] }, B: { ...o.B, kutup: [0.3, 0, 1] } })) },
+  'EL DİREĞİN YANINDA (calf raise, eski 5 cm)': { beklenen: 'tutamak verisi çizilen aletle örtüşüyor',
+    h: bozukUc(K.calf_raise, o => ({ ...o, A: { ...o.A, hedef: M.ekle(o.A.hedef, [-3, 0, -4]) } })) },
+  // 8 Eki — halat yüzden geçiyordu (makara x=26); veri kafası C'nin başına bağlanınca görünür oldu
+  'HALAT YÜZDE (pushdown, makara eski yerinde)': { beklenen: 'kablo/bar/dambıl bedenin içinden geçmiyor',
+    h: { ...K.cable_vbar_pushdown, cisimler: s => K.cable_vbar_pushdown.cisimler(s).map(([a, b, r], i) => i === 0 ? [[26, a[1], a[2]], b, r] : [a, b, r]) } },
+  'AŞIRI BÜKÜK DİRSEK (bench, bar omza yakın)': { beklenen: 'dirsek fleksiyonu 0–140° (kavramaya göre)',
+    h: bozukUc(K.bb_bench_press, (o, t) => ({ A: { ...o.A, hedef: M.ekle(o.A.hedef, [-4 * t, -5 * t, 0]) }, B: { ...o.B, hedef: M.ekle(o.B.hedef, [-4 * t, -5 * t, 0]) } })) },
 });
 
 let kalan = 0;
@@ -355,7 +419,7 @@ console.log('\nKADRAJ — beden hiçbir açıda kırpılmaz, zemin diski kesilme
       const c = M.cerceve(h, te, fi, 'donen'), pr = M.kamera(te, fi);
       for (let i = 0; i <= 12; i++) {
         const s = M.an(h, i / 12);
-        for (const [q, r] of [...EKLEM.map(k => [s[k], 8]), [s.kafa, M.R.kafa + 2]]) {
+        for (const [q, r] of [...EKLEM.map(k => [s[k], 8]), [s.kafa, M.KAFA_R + 2]]) {
           const P = pr(q), x = P[0], y = -P[1];
           if (x - r < c.sol - TOL || x + r > c.sag + TOL || y + r > c.ust + TOL || y - r < c.alt - TOL) tasan.push(`${id}@${te}°`);
         }

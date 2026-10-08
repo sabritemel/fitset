@@ -274,7 +274,7 @@ export function motorKur(renderer) {
     zemin.position.set(h.merkez[0], 0, h.merkez[2]);
     ana.position.set(h.merkez[0] + 70, 170, h.merkez[2] + 90);
     ana.target.position.set(h.merkez[0], 40, h.merkez[2]);
-    const yol = h.statik ? [] : Array.from({ length: 19 }, (_, i) => M.an(h, i / 18)[h.izlenen]);
+    const yol = M.izYolu(h);
     izler.forEach((m, i) => { m.visible = i < yol.length; if (m.visible) m.position.copy(V(yol[i])); });
     aktifH = h;
   };
