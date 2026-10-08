@@ -251,6 +251,8 @@ button.satir:active { background: var(--s1); }
 .fig-not { flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--f-sm); color: var(--t2); padding-top: 4px; }
 .fig-not .i { width: 16px; height: 16px; stroke-width: 2.4; }
 .fig .sahne3d[data-varyant] { cursor: default; touch-action: auto; }
+/* plank: yanlış duruşlar gri tonlarda (8 Eki, Sabri) — doğru duruş renkli kalır ve göz önce ona gider */
+.variants figure:not(.ok) .sahne3d { filter: grayscale(1); opacity: .78; }
 /* 3B sahne kabı — anim3d/sahne.js içine WebGL tuvali ya da SVG yedeği koyar */
 .sahne3d > canvas, .sahne3d > svg { display: block; width: 100%; height: 100%; }
 .art { stroke: var(--fig); }

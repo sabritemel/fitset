@@ -759,6 +759,9 @@ export function settingsHTML(ctx) {
 
   const dinlenme = DINLENME.map(sn => `
     <button data-rest="${sn}" aria-pressed="${settings.restSeconds === sn}" aria-label="${sn} saniye">${sn}</button>`).join('');
+  const basit = !!settings.basitGorunum;
+  const gorunum = [['tam', 'Tam', false], ['basit', 'Basit', true]].map(([k, ad, b]) => `
+    <button data-gorunum="${k}" aria-pressed="${basit === b}">${ad}</button>`).join('');
   const dambil = I.DAMBIL_ADIMLARI.map(a => `
     <button data-dambil="${a}" aria-pressed="${settings.dambilAdimi === a}">${fmt(a)} kg</button>`).join('');
 
@@ -779,6 +782,12 @@ export function settingsHTML(ctx) {
     <div class="grup"><h2 class="etiket">Dambıl adımı</h2><div class="ic">
       <div class="segment" role="group" aria-label="Dambıl adımı">${dambil}</div>
       <p>Salondaki dambıl setinde bir sonraki ağırlık. Bar 2,5 kg, makine ve kablo 5 kg adımla ilerler.</p>
+    </div></div>
+
+    <div class="grup"><h2 class="etiket">Hareket çizimi</h2><div class="ic">
+      <div class="segment" role="group" aria-label="Hareket çizimi">${gorunum}</div>
+      <p>${basit && settings.basitOto ? 'Bu telefonda ayrıntılı manken yavaş çizildiği için basit görünüm kendiliğinden açıldı. '
+        : ''}Basit görünüm daha hafif bir manken çizer, pili korur.</p>
     </div></div>
 
     <div class="grup"><h2 class="etiket">Vücut</h2><div class="ic">
@@ -807,5 +816,6 @@ export function settingsHTML(ctx) {
     </div></div>
 
     <p class="kucuk-yazi">Ağrı hissettiğin bir harekette dur; bu uygulama tıbbi tavsiye vermez.
-      Hareket çizimleri <a href="js/vendor/three-LICENSE.txt" target="_blank" rel="noopener">three.js</a> ile yapılır (MIT lisansı).</p>`;
+      Hareket çizimleri <a href="js/vendor/three-LICENSE.txt" target="_blank" rel="noopener">three.js</a> ile yapılır (MIT lisansı);
+      manken MakeHuman ile üretildi (CC0).</p>`;
 }

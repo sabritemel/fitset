@@ -265,7 +265,11 @@ function render() {
   for (const [k, v] of Object.entries(EKRAN)) v.el().classList.toggle('on', k === ad);
   EKRAN[ad].el().innerHTML = EKRAN[ad].html();
 
-  if (ad === 'warmup' || ad === 'focus') A3.webglHazirla(yenidenÇiz);   // three.js arka planda; hazır olunca geçer
+  if (ad === 'warmup' || ad === 'focus') A3.webglHazirla(yenidenÇiz, {   // three.js arka planda; hazır olunca geçer
+    basit: !!ctx.settings?.basitGorunum,
+    // C manken bu cihazda yavaş kaldı → basit görünüm; karar cihazda saklanır, Ayarlar'da görünür ve geri alınabilir
+    yedegeGecti: async () => { ctx.settings = await S.saveSettings({ basitGorunum: true, basitOto: true }); render(); },
+  });
   if (ad === 'warmup') {
     isinmaOynat();
   } else if (ad === 'focus') {
@@ -285,11 +289,13 @@ let raf = 0;
 let sonT = 0;                                          // son çizilen an — döndürürken aynı kare yeniden çizilir
 /** Kullanıcının döndürdüğü açı, hareket başına (oturum içi; kalıcı değil — her açılış ilk açıyla) */
 const kamera3d = {};
+/** Odak ekranında görüntü %15 büyük (8 Eki, Sabri: "ortadaki görüntüyü birazcık büyütelim") */
+const ODAK_YAKINLIK = 1.15;
 const kameraOf = (ex, h) => kamera3d[ex.id] ?? h.kamera;
 function draw(ex, t) {
   sonT = t;
   const h = A3.hareketBul(ex);
-  if (h) A3.ciz($('fig3d'), h, t, { kamera: kameraOf(ex, h) });
+  if (h) A3.ciz($('fig3d'), h, t, { kamera: kameraOf(ex, h), yakinlik: ODAK_YAKINLIK });
 }
 /**
  * OYNATMA — Sabri (27 Eyl): 6 tekrar yapıp durur; dururken figüre dokununca ya da döndürünce
@@ -337,7 +343,9 @@ function varyantlarıÇiz(ex) {
   const hs = h.varyantlar.map((_, i) => A3.varyant(h, i));
   // Tam YANDAN: "baştan topuğa tek çizgi" yandan okunan bir şey; 3/4 açıda kalçanın sapması kaybolur
   const kam = [0, 6], c = A3.ortakCerceve(hs, kam);
-  document.querySelectorAll('[data-varyant]').forEach(el => A3.ciz(el, hs[+el.dataset.varyant], 0, { kamera: kam, cerceve: c }));
+  // yanlış duruşlarda kas vurgusu yok (8 Eki, Sabri): vurgu "doğru çalışan kas" demek; gri tonu CSS verir (.variants)
+  document.querySelectorAll('[data-varyant]').forEach(el => A3.ciz(el, hs[+el.dataset.varyant], 0,
+    { kamera: kam, cerceve: c, kas: ex.variants?.[+el.dataset.varyant]?.ok !== false }));
 }
 
 /** Ekrandaki 3B görselleri yeniden çiz: WebGL hazır olduğunda, GPU bağlamı geri geldiğinde, boyut değişince */
@@ -514,6 +522,8 @@ document.addEventListener('click', async e => {
   if (gunBtn) { await gunuCevir(+gunBtn.dataset.gun); return; }
   const restBtn = t.closest('[data-rest]');
   if (restBtn) { ctx.settings = await S.saveSettings({ restSeconds: +restBtn.dataset.rest }); render(); return; }
+  const gorunumBtn = t.closest('[data-gorunum]');
+  if (gorunumBtn) { ctx.settings = await S.saveSettings({ basitGorunum: gorunumBtn.dataset.gorunum === 'basit', basitOto: false }); render(); return; }
   const dambilBtn = t.closest('[data-dambil]');
   if (dambilBtn) {
     // Adım hem +/−'yi hem önerinin yuvarlamasını değiştirir (ilerleme.agirlikAdimi tek kaynak)

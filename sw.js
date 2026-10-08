@@ -19,7 +19,7 @@
  * gelir → devralır → sayfa yenilenir. Kullanıcı antrenman ortasında sürüm
  * değiştirmez; kararı o verir.
  */
-const CACHE = 'fitset-b79d072c59';
+const CACHE = 'fitset-e98e1260e8';
 
 const ASSETS = [
   './',
@@ -35,11 +35,16 @@ const ASSETS = [
   './js/timer.js',
   './js/ilerleme.js',
   './js/anim/equipment.js',          // hareket verisi hâlâ içe aktarıyor (2B çizim emekli, bkz. CLAUDE.md)
+  './js/anim3d/olcu.js',
   './js/anim3d/manken3d.js',
   './js/anim3d/hareketler3d.js',
   './js/anim3d/sahne.js',
-  './js/anim3d/webgl.js',
-  './js/vendor/three.min.js',         // three.js r186 alt kümesi (MIT) — çevrimdışı da 3B çizsin
+  './js/anim3d/webgl.js',             // kapsül manken — C açılamazsa/yavaşsa ya da "basit görünüm"de
+  './js/anim3d/c/motor.js',           // C manken (8 Eki, varsayılan): sahne + alet malzemeleri
+  './js/anim3d/c/govde.js',           //   gövde: deri bağlama, IK, giysiler
+  './js/anim3d/c/govde.glb',          //   MakeHuman/MPFB2 gövdesi (CC0) — kurulumda önbelleğe: çevrimdışı ilk açılışta da C
+  './js/vendor/three-c.min.js',       // three.js r186 C alt kümesi (MIT)
+  './js/vendor/three.min.js',         // three.js r186 alt kümesi (MIT) — kapsül manken
   './js/vendor/three-LICENSE.txt',
   './js/data/exercises.js',
   './js/data/warmup.js',

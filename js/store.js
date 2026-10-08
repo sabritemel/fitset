@@ -35,6 +35,10 @@ export const DEFAULT_SETTINGS = {
   heightCm: null,                // bir kez girilir; kilo takibi ayrı tabloda
   backupNagEvery: 8,             // kaç seansta bir yedek hatırlatması
   dambilAdimi: 2.5,              // dambıl setinin artışı (2 ya da 2,5) — ilerleme.agirlikAdimi okur
+  // Hareket çizimi (8 Eki): false = C manken; true = basit (kapsül) manken. basitOto: cihaz yavaş kaldığı için
+  // kendiliğinden açıldı. CİHAZA ÖZGÜ — yedekten geri yüklenmez (temizAyar almaz): başka telefonun hızı burada geçmez.
+  basitGorunum: false,
+  basitOto: false,
   // Egzersiz bazında kullanıcı hedefleri: { [exerciseId]: {sets, reps, seconds, weight} }
   // Program dosyasına dokunmadan üzerine yazmayı sağlar; yedeğe de dahildir.
   overrides: {},
