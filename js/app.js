@@ -259,17 +259,22 @@ const EKRAN = {
   ozet:     { el: () => $('summary-screen'),  html: () => UI.summaryHTML(ctx) },
 };
 
+/** 3B çizici (three.js) arka planda hazırlanır; hazır olunca ekrandaki 3B görseller yeniden çizilir */
+function ucBoyutHazirla() {
+  A3.webglHazirla(yenidenÇiz, {
+    basit: !!ctx.settings?.basitGorunum,
+    // C manken bu cihazda yavaş kaldı → basit görünüm; karar cihazda saklanır, Ayarlar'da görünür ve geri alınabilir
+    yedegeGecti: async () => { ctx.settings = await S.saveSettings({ basitGorunum: true, basitOto: true }); render(); },
+  });
+}
+
 function render() {
   if (ctx.view !== 'warmup') isinmaDur();
   const ad = EKRAN[ctx.view] ? ctx.view : 'list';
   for (const [k, v] of Object.entries(EKRAN)) v.el().classList.toggle('on', k === ad);
   EKRAN[ad].el().innerHTML = EKRAN[ad].html();
 
-  if (ad === 'warmup' || ad === 'focus') A3.webglHazirla(yenidenÇiz, {   // three.js arka planda; hazır olunca geçer
-    basit: !!ctx.settings?.basitGorunum,
-    // C manken bu cihazda yavaş kaldı → basit görünüm; karar cihazda saklanır, Ayarlar'da görünür ve geri alınabilir
-    yedegeGecti: async () => { ctx.settings = await S.saveSettings({ basitGorunum: true, basitOto: true }); render(); },
-  });
+  if (ad === 'warmup' || ad === 'focus') ucBoyutHazirla();
   if (ad === 'warmup') {
     isinmaOynat();
   } else if (ad === 'focus') {
@@ -939,6 +944,9 @@ async function yükle() {
   S.requestPersistence().catch(() => {});
   const r = await yükle();
   if (r.resumed) toast('Yarım kalan seansına devam ediyorsun.');
+  // 8 Eki (Sabri: "uygulama ilk açılınca ilk animasyon eski çizimle geliyor"): manken açılışta, liste ekranı
+  // çizildikten sonra arka planda yüklenir — harekete geçildiğinde çoğu zaman hazırdır
+  (globalThis.requestIdleCallback ?? (f => setTimeout(f, 300)))(ucBoyutHazirla);
 })();
 
 /**

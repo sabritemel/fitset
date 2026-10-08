@@ -19,7 +19,7 @@
  * gelir → devralır → sayfa yenilenir. Kullanıcı antrenman ortasında sürüm
  * değiştirmez; kararı o verir.
  */
-const CACHE = 'fitset-e98e1260e8';
+const CACHE = 'fitset-eab4532ce5';
 
 const ASSETS = [
   './',

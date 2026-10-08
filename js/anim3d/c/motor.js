@@ -254,6 +254,21 @@ export function motorKur(renderer, { govde }) {
 
   return {
     ayar,
+    /** ISINMA (8 Eki): ilk çizimde gölgelendirici derlemesi ana iş parçacığını ~1,2 sn kilitliyordu (hareket ekranına
+     * geçiş donuyordu). Açılıştaki arka plan yüklemesinde bir hareketin sahnesi kurulur ve programlar ASENKRON derlenir
+     * (KHR_parallel_shader_compile); ardından küçük bir çizim gölge geçişini de ısıtır. */
+    async isit(h) {
+      const s = M.an(h, 0);
+      hareketeGec(h, s, 0);
+      govde.guncelle(s, { ...ayar, nabiz: 1, ilkeller: ekipmanIlkelleri(h, s, 0), h, kasGuc: 1 });
+      const c = M.sigdir(M.cerceve(h, ...h.kamera, 'donen'), 1);
+      Object.assign(kamera, { left: c.sol, right: c.sag, top: c.ust, bottom: c.alt }); kamera.position.set(300, 300, 300); kamera.lookAt(0, 0, 0);
+      kamera.updateProjectionMatrix();
+      if (renderer.compileAsync) await renderer.compileAsync(scene, kamera);
+      // gölge geçişinin derinlik programları yalnız gerçek çizimde derlenir → 1×1 piksellik bir çizim
+      const boy = renderer.getSize(new T.Vector2());
+      renderer.setSize(1, 1, false); renderer.render(scene, kamera); renderer.setSize(boy.x || 1, boy.y || 1, false);
+    },
     ciz(h, t, teta, fi, c, ms = 0) {
       const s = M.an(h, t);
       if (aktifH !== h) hareketeGec(h, s, t);

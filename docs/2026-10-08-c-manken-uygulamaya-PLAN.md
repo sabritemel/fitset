@@ -66,3 +66,13 @@
 
 - **Bölge denetimi** (17 hareket × 4 açı) üç yanlış buldu: omuz/ön omuz köprücüğe bağlıydı → vurgu boyun–trapezdeydi (artık üst kolun omuz başı, deltoid) · göğüs karına taşıyordu · lat ve orta sırt bel ve kalçaya iniyordu. Tek kol baş üstü triceps'te çalışmayan kol da yanıyordu → yalnız çalışan kol.
 - **Evre** (`motor.js` `kasEvresi`, `KAS_EVRE`): t = 0 dinlenme ucu. Kaldırma/çekme hareketlerinde kalkışta hemen yanar, tepede tam, indirirken söner, dinlenmede 0. Bench press, fly, baş üstü triceps, leg press ve lunge'da indirirken gerilim birikir, iterken tam, kilitlenince söner. Plank sürekli. Yön kareden kareye okunur; duran görüntüde yalnız konum.
+
+### Açılışta eski çizim (8 Eki gece, Sabri telefonda gördü)
+
+- **Kusur:** manken yüklenirken SVG yedeği çiziyordu → ilk animasyon eski çizimle başlıyor, sonra yeni sporcuya geçiyordu.
+- **Çözüm (Sabri onayı):** manken açılışta, liste çizildikten sonra arka planda yüklenir (`requestIdleCallback`); yükleme
+  sürerken alan boş kalır, SVG yalnız WebGL hiç yoksa ya da bağlam kaybolduysa. Ölçüldü: hemen de geçilse, 5 sn sonra da
+  geçilse alan doğrudan C ile açılıyor, SVG hiç görünmüyor.
+- **Isınma:** ilk çizimdeki gölgelendirici derlemesi hareket ekranına geçişi ~1,2 sn donduruyordu → yüklemede bir hareketin
+  sahnesi `compileAsync` ile derlenir + 1×1 piksellik çizim gölge programlarını ısıtır. Geçiş **1 228 → 53–198 ms**;
+  bedeli liste ekranındayken arka planda tek seferlik ~0,5 sn'lik duraklama (masaüstü ölçümü).

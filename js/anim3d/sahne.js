@@ -7,8 +7,9 @@
  *   Kapsül — bugünkü ışıklı manken (anim3d/webgl.js, three.js alt kümesi). Seçenek DEĞİL, yedek:
  *            C açılamazsa, cihaz yavaş kalırsa (ilk oynatmada kare aralığı ortancası > 50 ms) ya da
  *            kullanıcı Ayarlar'da "basit görünüm"ü açtıysa.
- *   SVG    — aynı motorun bağımlılıksız çizimi (manken3d.sahne). Yükleme sürerken, WebGL hiç
- *            yoksa ya da GPU bağlamı kaybolduysa (telefon arka plana alınınca olabilir) bu çizer.
+ *   SVG    — aynı motorun bağımlılıksız çizimi (manken3d.sahne). WebGL hiç yoksa ya da GPU bağlamı
+ *            kaybolduysa (telefon arka plana alınınca olabilir) bu çizer. Yükleme sürerken alan boş kalır
+ *            (8 Eki); uygulama mankeni açılışta arka planda yükler.
  * three.js açılışı YAVAŞLATMAMALI → ilk çizimde arka planda yüklenir, hazır olunca geçilir.
  *
  * Tek paylaşılan WebGL bağlamı: her görünüm kendi 2B tuvaline kopyalanır. Tarayıcılar ~16
@@ -83,6 +84,7 @@ async function cKur(hazir) {
   try {
     const m = await G.motorKur(r, { tur: 'C' });
     Object.assign(m.ayar, { kas: true, iz: true });
+    try { await m.isit?.(KUTUPHANE.bb_bench_press); } catch (e) { console.warn('[3b] ısınma atlandı:', e?.message ?? e); }
     return { tur: 'c', r, tuval, w: 0, h: 0,
       ciz(h, t, teta, fi, c, { kas = true } = {}) { m.ayar.id = kimlik(h); m.ayar.kas = kas; m.ciz(h, t, teta, fi, c, performance.now()); } };
   } catch (e) { r.dispose(); r.forceContextLoss(); throw e; }
@@ -187,6 +189,14 @@ export function ciz(el, h, t, { kamera = h.kamera, bicim = 'donen', cerceve, yak
     const g = cv.getContext('2d');
     g.clearRect(0, 0, W, H);
     g.drawImage(motor.tuval, 0, 0);                        // aynı görevde: tampon henüz temizlenmedi
+    return;
+  }
+  // 8 Eki (Sabri: "ilk animasyon eski çizimle geliyor, sonra yeni sporcu yükleniyor"): yükleme sürerken eski
+  // (SVG) çizim gösterilmez — alan bir an boş kalır, manken hazır olunca doğrudan belirir. SVG yalnız WebGL hiç
+  // açılamadıysa ya da GPU bağlamı kaybolduysa çizer.
+  if (durum === 'yukleniyor' && !kayip) {
+    if (el.firstElementChild?.tagName.toLowerCase() === 'svg') el.innerHTML = '';
+    else if (el.firstElementChild?.tagName === 'CANVAS') el.firstElementChild.getContext('2d')?.clearRect(0, 0, el.firstElementChild.width, el.firstElementChild.height);
     return;
   }
   let sv = el.firstElementChild;
