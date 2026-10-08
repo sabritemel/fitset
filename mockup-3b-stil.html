@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FitSet — 3B stil prototipi</title>
+<!-- KIYAS ARACI (5 Eki 2026; 8 Eki: A emekli, C uygulamaya taşındı — docs/2026-10-08-c-manken-uygulamaya-PLAN.md).
+     Aynı hareket motoru (js/anim3d/manken3d.js + hareketler3d.js, fizik denetimli) iki çiziciyle:
+       BUGÜN  — kapsül manken (js/anim3d/webgl.js, three.js alt kümesi) — uygulamada yedek
+       C      — MakeHuman gövdesi (js/anim3d/c/, three.js C alt kümesi js/vendor/three-c.min.js)
+     three.js r186 MIT: js/vendor/three-LICENSE.txt -->
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+<script>if (/[?&]karanlik=1/.test(location.search)) globalThis.__karanlik = true;   // modüllerden ÖNCE (motor.js yüklenirken okunur)</script>
+<script type="importmap">
+{ "imports": { "three": "./js/vendor/three-c.min.js" } }
+</script>
+<style>
+  body { display: block; padding: 18px var(--gutter) 48px; background: var(--bg); }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: var(--f-xl); font-weight: var(--w-bold); color: var(--t1); margin: 0 0 4px; }
+  .proto-not { color: var(--t2); font-size: var(--f-sm); line-height: 1.5; margin: 0 0 14px; max-width: 760px; }
+  .sira { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
+  .sira .et { color: var(--t3); font-size: var(--f-xs); font-weight: var(--w-med); letter-spacing: .04em; margin-right: 2px; }
+  .cip { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 0; background: var(--s2); color: var(--t1);
+         font: inherit; font-size: var(--f-sm); font-weight: var(--w-med); cursor: pointer; }
+  .cip[aria-pressed="true"] { background: var(--btn); color: var(--on-btn); }
+  select.cip { appearance: none; padding-right: 28px; background-image: linear-gradient(45deg, transparent 50%, var(--t2) 50%), linear-gradient(-45deg, transparent 50%, var(--t2) 50%);
+               background-position: right 14px top 18px, right 9px top 18px; background-size: 5px 5px; background-repeat: no-repeat; }
+  .paneller { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 980px) { .paneller { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sekme { display: none !important; } }
+  @media (max-width: 979px) { .panel:not(.secili) { display: none; } }
+  .panel { background: var(--s1); border-radius: var(--r-l); padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .panel h2 { margin: 0; font-size: var(--f-md); font-weight: var(--w-bold); color: var(--t1); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .panel h2 small { font-size: var(--f-xs); font-weight: var(--w-med); color: var(--t3); }
+  .sahne { position: relative; aspect-ratio: 4 / 5; border-radius: var(--r-m); overflow: hidden; cursor: grab; touch-action: none;
+           background: radial-gradient(120% 90% at 50% 35%, #3b4149 0%, #2a2e34 55%, #1d2024 100%); }
+  .karanlik .sahne { background: radial-gradient(120% 90% at 50% 35%, #1d2126 0%, #111316 55%, #0b0c0e 100%); }
+  .sahne.duz { background: transparent; }
+  .sahne canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .bos { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--t2); font-size: var(--f-sm); line-height: 1.55; }
+  .bos b { color: var(--t1); font-weight: var(--w-med); }
+  .acik { color: var(--t2); font-size: var(--f-sm); line-height: 1.5; margin: 0; }
+  .kaslar { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--f-xs); color: var(--t2); min-height: 18px; }
+  .kaslar i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  .kaslar .b i { background: var(--acc); } .kaslar .k i { background: var(--acc-line); }
+  .durum { color: var(--t3); font-size: var(--f-xs); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>3B stil prototipi</h1>
+  <p class="proto-not">Aynı hareket motoru, üç görünüm. <b>Sürükleyerek döndür</b> (paneller birlikte döner), çift tıkla ilk açıya dön.
+    Kas vurgusu: <span style="color:var(--acc)">mercan</span> birincil, sönük mercan ikincil. Telefonda üstteki sekmelerle geçiş yap.</p>
+
+  <div class="sira" role="group" aria-label="Hareket">
+    <span class="et">HAREKET</span>
+    <button class="cip" data-h="cable_close_pulldown" aria-pressed="true">Lat çekişi</button>
+    <button class="cip" data-h="bb_bench_press" aria-pressed="false">Bench press</button>
+    <select class="cip" id="diger" aria-label="Diğer hareketler"><option value="">Diğer…</option></select>
+  </div>
+  <div class="sira" role="group" aria-label="Ayarlar">
+    <span class="et">GÖSTER</span>
+    <button class="cip" id="kasD" aria-pressed="true">Kas vurgusu</button>
+    <button class="cip" id="izD" aria-pressed="true">Yörünge izi</button>
+    <button class="cip" id="oynatD" aria-pressed="true">Oynat</button>
+  </div>
+  <div class="sira sekme" role="tablist" aria-label="Görünüm">
+    <span class="et">GÖRÜNÜM</span>
+    <button class="cip" data-p="0" aria-pressed="false">Bugün</button>
+    <button class="cip" data-p="3" aria-pressed="true">C · MakeHuman</button>
+  </div>
+
+  <div class="paneller">
+    <section class="panel" data-i="0">
+      <h2>Bugün <small>uygulamadaki çizici</small></h2>
+      <div class="sahne duz" id="s0"></div>
+      <p class="acik">Parçalı çizim mankeni, düz gri malzeme, basit ışık. Kas bilgisi yok.</p>
+    </section>
+    <section class="panel secili" data-i="3">
+      <h2>C · MakeHuman <small>MPFB2 · CC0 (lisansı kesin)</small></h2>
+      <div class="sahne" id="s3"><div class="bos"><span><b>Gövde yükleniyor…</b></span></div></div>
+      <div class="kaslar" id="k3"></div>
+      <p class="acik">MakeHuman/MPFB2 ile Blender'da üretildi (atletik, 178 cm, game_engine iskeleti). Aynı hareket motoru ve kas vurgusu. Lisansı kesin CC0 — ürün adayı.</p>
+    </section>
+  </div>
+  <p class="durum" id="durum"></p>
+</div>
+
+<script type="module">
+import * as M from './js/anim3d/manken3d.js';
+import { KUTUPHANE, KUTUPHANE_ORJ } from './tools/proto-stil/hareket-ayar.js';
+import { EX } from './js/data/exercises.js';
+import * as T0 from './js/vendor/three.min.js';
+import * as W from './js/anim3d/webgl.js';
+import * as T from 'three';
+import * as P from './js/anim3d/c/motor.js';
+
+const $ = s => document.querySelector(s);
+const adlar = Object.fromEntries(EX.flat().map(e => [e.id, e]));
+const dpr = Math.min(2, devicePixelRatio || 1);
+const durum = [];
+
+// "Diğer" listesi: ısınma dışındaki her hareket
+for (const [id, h] of Object.entries(KUTUPHANE)) if (!h.isinma && !['cable_close_pulldown', 'bb_bench_press'].includes(id))
+  $('#diger').insertAdjacentHTML('beforeend', `<option value="${id}">${adlar[id] ? `${adlar[id].en} — ${adlar[id].tr}` : h.ad}</option>`);   // 8 Eki: özgün İngilizce ad + Türkçesi
+
+/* ── Paneller: her biri kendi WebGL bağlamı (üç bağlam; sınır ~16) ── */
+const panel = (i, kur) => {
+  const kap = $('#s' + i), cv = document.createElement('canvas');
+  kap.prepend(cv);
+  try { const p = kur(cv); return { i, kap, cv, ...p, w: 0, h: 0 }; }
+  catch (e) { durum.push(`Panel ${i}: ${e.message}`); return null; }
+};
+const P0 = panel(0, cv => {
+  const r = new T0.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+  r.setClearColor(0x000000, 0);
+  return { r, m: W.motorKur(r) };
+});
+const paneller = [P0].filter(Boolean);
+
+/* ── Durum ── */
+const q = new URLSearchParams(location.search);
+if (q.get('golge')) globalThis.__golge = q.get('golge');
+if (q.get('karanlik')) { globalThis.__karanlik = true; document.body.classList.add('karanlik'); }
+if (q.get('mushyok')) globalThis.__mushYok = true;
+const S = { id: KUTUPHANE[q.get('h')] ? q.get('h') : 'cable_close_pulldown', teta: 0, fi: 0, oynat: true, kas: true, iz: true, t0: performance.now(), dur: 0 };
+const hareket = () => KUTUPHANE[S.id];
+const kamerayiSifirla = () => { [S.teta, S.fi] = hareket().kamera; };
+kamerayiSifirla();
+if (q.get('t')) { S.tSabit = +q.get('t'); S.oynat = false; }
+
+const kasEtiketi = () => {
+  const k = P.HAREKET_KAS[S.id];
+  const html = !k || !S.kas ? '' : [
+    ...k[0].map(x => `<span class="b"><i></i>${P.KAS_AD[x]}</span>`),
+    ...k[1].map(x => `<span class="k"><i></i>${P.KAS_AD[x]}</span>`)].join('');
+  if ($('#k3')) $('#k3').innerHTML = html;
+};
+const harekeSec = id => {
+  S.id = id; kamerayiSifirla();
+  document.querySelectorAll('[data-h]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.h === id)));
+  $('#diger').value = KUTUPHANE[id] && !document.querySelector(`[data-h="${id}"]`) ? id : '';
+  kasEtiketi();
+};
+document.querySelectorAll('[data-h]').forEach(b => b.addEventListener('click', () => harekeSec(b.dataset.h)));
+$('#diger').addEventListener('change', e => { if (e.target.value) harekeSec(e.target.value); });
+const anahtar = (sel, k, sonra) => $(sel).addEventListener('click', e => {
+  S[k] = !S[k]; e.currentTarget.setAttribute('aria-pressed', String(S[k])); sonra?.();
+});
+anahtar('#kasD', 'kas', kasEtiketi);
+anahtar('#izD', 'iz');
+anahtar('#oynatD', 'oynat', () => { if (S.oynat) S.t0 = performance.now() - S.dur; });
+document.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-p]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('secili', p.dataset.i === b.dataset.p));
+}));
+
+/* ── Döndürme: üç panel birlikte ── */
+for (const kap of document.querySelectorAll('.sahne')) {
+  let s = null;
+  kap.addEventListener('pointerdown', e => { s = [e.clientX, e.clientY, S.teta, S.fi]; kap.setPointerCapture(e.pointerId); });
+  kap.addEventListener('pointermove', e => { if (!s) return;
+    S.teta = s[2] - (e.clientX - s[0]) * 0.6; S.fi = Math.max(-5, Math.min(75, s[3] + (e.clientY - s[1]) * 0.4)); });
+  kap.addEventListener('pointerup', () => { s = null; });
+  kap.addEventListener('dblclick', kamerayiSifirla);
+}
+
+/* ── Kare döngüsü — uygulamanın zaman kuralı (sahne.animT): 3 sn/tekrar, başlangıç pozundan ── */
+const zaman = (h, ms) => { const e = (ms / (3000 * (h.donguTekrar ?? 1))) % 1; return h.dongu ? e : (1 - Math.cos(2 * Math.PI * e)) / 2; };
+const boyutla = p => {
+  const w = p.kap.clientWidth, hh = p.kap.clientHeight;
+  if (!w || !hh) return false;
+  const W2 = Math.round(w * dpr), H2 = Math.round(hh * dpr);
+  if (p.w !== W2 || p.h !== H2) { p.r.setPixelRatio(1); p.r.setSize(W2, H2, false); p.w = W2; p.h = H2; }
+  return true;
+};
+// TELEFON ÖLÇÜMÜ (8 Eki): ?fps=1 → sağ üstte kare hızı + çizim süresi (işlemci) · ?golge=vsm|pcf · ?mushyok=1
+const fpsKutu = q.get('fps') ? Object.assign(document.body.appendChild(document.createElement('div')),
+  { style: 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;z-index:9;padding:6px 8px;border-radius:8px;background:#000c;color:#fff;font:12px/1.35 monospace;white-space:pre' }) : null;
+const olcum = { kareler: [], ciz: [] };
+const kare = now => {
+  if (fpsKutu) {
+    olcum.kareler.push(now); while (olcum.kareler.length > 61) olcum.kareler.shift();
+    if (olcum.kareler.length > 10 && olcum.kareler.length % 10 === 1) {
+      const n = olcum.kareler.length - 1, fps = n * 1000 / (olcum.kareler[n] - olcum.kareler[0]);
+      const ort = olcum.ciz.reduce((a, b) => a + b, 0) / Math.max(1, olcum.ciz.length);
+      fpsKutu.textContent = `${fps.toFixed(0)} fps · çizim ${ort.toFixed(1)} ms
+dpr ${dpr.toFixed(2)} · gölge ${globalThis.__golge ?? 'pcf'}${globalThis.__mushYok ? ' · mush yok' : ''}`;
+    }
+  }
+  const tc0 = performance.now();
+  if (S.oynat) S.dur = now - S.t0;
+  const h = hareket(), t = S.tSabit ?? zaman(h, S.dur);
+  const c = M.sigdir(M.cerceve(h, S.teta, S.fi, 'donen'), 4 / 5);
+  for (const p of [...paneller, ...govdeler]) {
+    if (!boyutla(p)) continue;
+    if (p.m.ayar) Object.assign(p.m.ayar, { id: S.id, kas: S.kas, iz: S.iz });
+    p.m.ciz(p === P0 ? KUTUPHANE_ORJ[S.id] : h, t, S.teta, S.fi, c, now);   // Bugün = uygulamanın KENDİ verisi
+  }
+  if (fpsKutu) { olcum.ciz.push(performance.now() - tc0); while (olcum.ciz.length > 60) olcum.ciz.shift(); }
+  requestAnimationFrame(kare);
+};
+harekeSec(S.id);
+if (q.get('aci')) { const [te, fi] = q.get('aci').split(',').map(Number); S.teta = te; S.fi = fi; }
+if (q.get("p")) document.querySelector(`[data-p="${q.get("p")}"]`)?.click();
+requestAnimationFrame(kare);
+
+/* ── C (MakeHuman). 7 Eki: B (Quaternius) kaldırıldı ── */
+const govdeler = [];
+const G = await import('./js/anim3d/c/govde.js').catch(e => { durum.push('gövde: ' + e.message); return null; });
+for (const [tur, i] of [['C', 3]]) {
+  if (!G) break;
+  try {
+    const kap = $('#s' + i), cv = document.createElement('canvas');
+    const r = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+    r.setClearColor(0x000000, 0);
+    const m = await G.motorKur(r, { tur });
+    kap.querySelector('.bos')?.remove(); kap.prepend(cv);
+    govdeler.push({ i, kap, cv, r, m, w: 0, h: 0 });
+  } catch (e) { durum.push(tur + ': ' + e.message); }
+}
+$('#durum').textContent = durum.join(' · ');
+window.__stil = { S, paneller, govdeler, M, P };
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitSet — B gövde paftası</title>
+<!-- PROTOTİP DENETİM PAFTASI (6 Eki 2026): C gövdesiyle (js/anim3d/c/govde.js) TÜM hareketler,
+     üç anda (başı · ortası · sonu) ve iki açıdan (hareketin kendi açısı · arkadan). Altta ölçüm tablosu:
+     dirsek gövde itmesi · el-el aralığı · bilek açısı · avucun hedef yöne uyumu · kavradı mı.
+     Amaç: kusuru GÖZLE ve SAYIYLA aynı yerde görmek. Uygulama koduna dokunmaz. -->
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "./js/vendor/three-c.min.js" } }
+</script>
+<style>
+  body { display: block; padding: 12px; background: var(--bg); }
+  .satir { display: grid; grid-template-columns: 150px repeat(12, 220px); gap: 6px; margin-bottom: 6px; align-items: center; }
+  .ad { color: var(--t1); font-size: var(--f-sm); font-weight: var(--w-med); }
+  .ad small { display: block; color: var(--t3); font-size: var(--f-xs); }
+  canvas { width: 220px; height: 275px; background: radial-gradient(120% 90% at 50% 35%, #1d2126 0%, #0b0c0e 100%); border-radius: 8px; }
+  table { color: var(--t2); font-size: var(--f-xs); border-collapse: collapse; margin-top: 16px; }
+  td, th { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: right; }
+  th { color: var(--t1); } td:first-child, th:first-child { text-align: left; }
+  .kotu { color: var(--acc); font-weight: var(--w-bold); }
+</style>
+</head>
+<body>
+<div id="pafta"></div>
+<table id="olcu"><thead><tr><th>hareket · an</th><th>dirsek itme A/B (cm)</th><th>el-el (cm)</th><th>bilek açısı A/B (°)</th><th>avuç·hedef A/B</th><th>kavradı A/B</th></tr></thead><tbody></tbody></table>
+<p id="durum" style="color:var(--t3)"></p>
+<script type="module">
+import * as M from './js/anim3d/manken3d.js';
+import { KUTUPHANE, KUTUPHANE_ORJ } from './tools/proto-stil/hareket-ayar.js';
+import { EX } from './js/data/exercises.js';
+import * as T from 'three';
+import * as G from './js/anim3d/c/govde.js';
+
+const adlar = Object.fromEntries(EX.flat().map(e => [e.id, e]));
+const W = 440, H = 550;
+const r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(W, H, false); r.setClearColor(0x000000, 0);
+const motor = await G.motorKur(r, { tur: new URLSearchParams(location.search).get('govde') ?? 'C' });
+const q = new URLSearchParams(location.search);
+const secim = q.get('h') ? q.get('h').split(',') : Object.keys(KUTUPHANE).filter(id => !KUTUPHANE[id].isinma);
+const satirlar = [];
+for (const id of secim) {
+  const h = KUTUPHANE[id]; if (!h) continue;
+  const anlar = h.dongu ? [0, 0.33, 0.66] : [0, 0.5, 1];
+  const el = document.createElement('div'); el.className = 'satir';
+  el.innerHTML = `<div class="ad">${adlar[id]?.tr ?? h.ad}<small>${id}</small></div>`;
+  const ACILAR = (q.get('acilar') ?? '0,180').split(',').map(Number);
+  for (const dTeta of ACILAR) for (const t of anlar) { const aciAd = dTeta;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.title = `${aciAd} · t=${t}`;
+    el.append(cv);
+    const teta = h.kamera[0] + dTeta, fi = q.get('fi') != null ? +q.get('fi') : h.kamera[1];   // ?fi=70 → üstten
+    Object.assign(motor.ayar, { id, kas: q.get('kas') !== '0', iz: false });
+    // aynı karede iki kez çiz: kavrama sürekliliği (önceki kare) ilk çizimde boş — ikinci çizim kararlı hâli gösterir
+    for (const tt of [Math.max(0, t - 0.02), t]) motor.ciz(h, tt, teta, fi, M.sigdir(M.cerceve(h, teta, fi, 'donen'), W / H), 0);
+    cv.getContext('2d').drawImage(r.domElement, 0, 0);
+    if (dTeta === 0) satirlar.push({ id, t, ...motor.govde.sonTani, kavrama: motor.govde.kavramaOlc() });
+  }
+  document.getElementById('pafta').append(el);
+}
+const tb = document.querySelector('#olcu tbody');
+const f = (o, esik, ters = false) => ['A', 'B'].map(k => o?.[k] === undefined ? '–'
+  : `<span class="${(ters ? o[k] < esik : o[k] > esik) ? 'kotu' : ''}">${o[k]}</span>`).join(' / ');
+for (const s of satirlar) tb.insertAdjacentHTML('beforeend', `<tr><td>${s.id} · ${s.t}</td><td>${f(s.dirsekItme, 3)}</td>
+  <td class="${s.elEl < 9 ? 'kotu' : ''}">${s.elEl?.toFixed(1)}</td><td>${f(s.bilekAci, 70)}</td><td>${f(s.avucD, 0.5, true)}</td>
+  <td>${['A', 'B'].map(k => s.kavradi?.[k] ? '✓' : '–').join(' / ')}</td></tr>`);
+window.__pafta = satirlar;
+document.getElementById('durum').textContent = 'hazır';
+</script>
+</body>
+</html>

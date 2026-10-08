@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>FitSet — el yakın çekim denetimi</title>
+<!-- PROTOTİP DENETİM SAYFASI (6 Eki 2026): her hareketin A elini çok yakından, 4 açıdan çizer + kavrama ölçümü.
+     ?govde=C · ?h=id,id · ?t=0.5 · ?el=A|B · ?cevir=1 (C avuç yönü deneyi) -->
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "./js/vendor/three-c.min.js" } }
+</script>
+<style>
+  body { display: block; padding: 8px; background: var(--bg); }
+  .satir { display: grid; grid-template-columns: 130px repeat(4, 260px); gap: 6px; margin-bottom: 6px; align-items: center; }
+  .ad { color: var(--t1); font-size: var(--f-xs); }
+  .ad small { display: block; color: var(--t3); }
+  canvas { width: 260px; height: 260px; background: #15181c; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div id="sayfa"></div>
+<p id="durum" style="color:var(--t3)"></p>
+<script type="module">
+import * as M from './js/anim3d/manken3d.js';
+import { KUTUPHANE, KUTUPHANE_ORJ } from './tools/proto-stil/hareket-ayar.js';
+import * as T from 'three';
+const q = new URLSearchParams(location.search);
+if (q.get('cevir')) globalThis.__avucCevir = true;
+if (q.get('kavramayok')) globalThis.__kavramaYok = true;
+if (q.get('omuzyumyok')) globalThis.__omuzYumYok = true;
+if (q.get('gogusyok')) globalThis.__gogusYok = true;
+if (q.get('dqyok')) globalThis.__dqKapali = true;
+if (q.get('golge')) globalThis.__golge = q.get('golge');
+if (q.get('atletyok')) globalThis.__atletYok = true;
+if (q.get('atletkenar')) globalThis.__atletKenarRenk = true;
+if (q.get('kastam')) globalThis.__kasTam = true;
+if (q.get('atletgorunmez')) globalThis.__atletGorunmez = true;
+if (q.get('gizligoster')) globalThis.__gizliGoster = true;
+if (q.get('kopyayok')) globalThis.__atletKopyaYok = true; if (q.get('mushyok')) globalThis.__mushYok = true;
+if (q.get('derigizle')) globalThis.__deriGizle = true;
+if (q.get('ritimtavan')) globalThis.__ritimTavan = +q.get('ritimtavan');
+if (q.get('burulmaref')) globalThis.__burulmaRef = true;
+if (q.get('burulmatavan')) globalThis.__burulmaTavan = +q.get('burulmatavan');
+if (q.get('deltyok')) globalThis.__deltYok = true;
+if (q.get('ritimyok')) globalThis.__ritimYok = true;
+if (q.get('mushyok')) globalThis.__mushYok = true;
+if (q.get('parmaksinir')) globalThis.__parmakSinir = +q.get('parmaksinir');
+if (q.get('gizlipay')) globalThis.__gizliPay = +q.get('gizlipay');
+if (q.get('kendigolge')) globalThis.__kendiGolge = true;
+if (q.get('ten')) globalThis.__tenRenk = parseInt(q.get('ten'), 16);
+if (q.get('dirsekyok')) globalThis.__dirsekSinirYok = true;
+if (q.get('dirsekyukyok')) globalThis.__dirsekYukYok = true;
+const G = await import('./js/anim3d/c/govde.js');
+const W = 520;
+const r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(W, W, false); r.setClearColor(0x000000, 0);
+const motor = await G.motorKur(r, { tur: q.get('govde') ?? 'C' });
+if (q.get('golgeyok')) r.shadowMap.enabled = false;
+const t = +(q.get('t') ?? 0.5), el = q.get('el') ?? 'A';
+const ids = q.get('h') ? q.get('h').split(',') : Object.keys(KUTUPHANE).filter(id => !KUTUPHANE[id].isinma && !['plank', 'lunge'].includes(id));
+const out = [];
+for (const id of ids) {
+  const h = KUTUPHANE[id]; if (!h) continue;
+  const s = M.an(h, t), odak = q.get('odak') ?? ('e' + el);
+  const e = odak === 'kalca' ? s.P : odak === 'gogus' ? s.gogusAlt : s[odak];
+  const satir = document.createElement('div'); satir.className = 'satir';
+  satir.innerHTML = `<div class="ad">${h.ad}<small>${id} · t=${t}</small></div>`;
+  Object.assign(motor.ayar, { id, kas: !!q.get('kas'), iz: false });   // ?kas=1 → kas vurgusu
+  const tAnlar = q.get('t') ? [t] : [t];
+  for (const dt of (q.get('acilar') ?? '0,90,180,270').split(',').map(Number)) {
+    const teta = h.kamera[0] + dt, fi = +(q.get('fi') ?? 25), pr = M.kamera(teta, fi), R = +(q.get('r') ?? 16);
+    // ?odak=kemik:lowerarm_l → modelin KENDİ kemiğine odaklan (veri noktası, modelin oranlarıyla kurulan kolda aynı yerde değil)
+    let ee = e;
+    if (odak.startsWith('kemik:')) {
+      motor.ciz(h, t, teta, fi, { sol: -100, sag: 100, ust: 100, alt: -100 }, 0);
+      const g = motor.govde, b = g.mesh.skeleton.bones[g.kemikler.indexOf(odak.slice(6))];
+      ee = new T.Vector3().setFromMatrixPosition(b.matrixWorld).toArray();
+    }
+    const P = pr(ee), x = P[0], y = -P[1];
+    const c = { sol: x - R, sag: x + R, ust: y + R, alt: y - R };
+    motor.ciz(h, Math.max(0, t - 0.02), teta, fi, c, 0); motor.ciz(h, t, teta, fi, c, 0);
+    const cv = document.createElement('canvas'); cv.width = cv.height = W; cv.getContext('2d').drawImage(r.domElement, 0, 0);
+    satir.append(cv);
+  }
+  out.push({ id, kavrama: motor.govde.kavramaOlc()[el], bilekFl: motor.govde.sonTani.bilekFl?.[el], bilekSp: motor.govde.sonTani.bilekSp?.[el] });
+  document.getElementById('sayfa').append(satir);
+}
+window.__el = out;
+document.getElementById('durum').textContent = 'hazır';
+</script>
+</body>
+</html>

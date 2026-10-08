@@ -2,7 +2,7 @@
 
 Salon antrenman defteri. Çevrimdışı çalışır, veri telefonda kalır.
 
-> **Son güncelleme: 27 Eylül 2026** (tasarım dili 3). Bu belge `tools/check-docs.js` ile koda bağlıdır:
+> **Son güncelleme: 8 Ekim 2026** (C manken, kas vurgusu, hareket çizimi ayarı). Bu belge `tools/check-docs.js` ile koda bağlıdır:
 > uygulamaya yeni bir ekran ya da test betiği eklenip burada anlatılmazsa `npm test` kırmızı yanar.
 > (28 Temmuz sürümü iki ay boyunca "Ayarlar ekranı yok" demeye devam etmişti.)
 
@@ -64,7 +64,8 @@ götürür. Isınma sete ve hacme sayılmaz.
 Bir harekete dokununca açılır. Tek hareket, tam ekran, **kaymaz** — her şey tek bakışta görünür.
 
 - Üstte `hareket / toplam` ve ilerleme şeridi, solda geri, sağda **?** paneli.
-- Ortada hareketin **3B animasyonu** — ışıklı, yüzsüz bir çizim mankeni. Harekete girince **6 tekrar**
+- Ortada hareketin **3B animasyonu** — gerçekçi oranlarda, sporcu atleti ve şort giymiş bir manken; çalışan kaslar
+  vurgulanır. Harekete girince **6 tekrar**
   oynar ve **başladığı pozda durur**; duran figüre **dokununca ya da döndürünce 6 tekrar daha** oynar.
   Set kaydetmek oynayan animasyonu baştan başlatmaz. **Parmakla sürükleyerek döndür**, hareketi her
   açıdan gör; **çift dokunuş** ilk açıya döndürür. Plank gibi süreli
@@ -152,12 +153,15 @@ kaldırır ve sırayı yeniden hesaplar (o da geri getirilebilir). Son set silin
 - **Setler arası dinlenme:** 30 / 45 / 60 / 90 / 120 sn (varsayılan 60).
 - **Dambıl adımı:** 2 kg ya da 2,5 kg (varsayılan 2,5). Salonundaki dambıl setine göre seç; odak
   ekranındaki `+ / −` ve ağırlık önerisi bu adımı kullanır.
+- **Hareket çizimi:** Tam (varsayılan, ayrıntılı manken) ya da Basit (daha hafif manken, pili korur).
+  Telefon ayrıntılı mankeni yavaş çiziyorsa Basit **kendiliğinden** açılır ve bu satırda söylenir; geri alınabilir.
+  Bu ayar telefona özgüdür, yedekle başka telefona taşınmaz.
 - **Boy** (bir kez girilir; kilo takibi Geçmiş'te).
 - **Uygulama:** Chrome kuruluma hazırsa **Telefona yükle** düğmesi (bkz. 1. Telefona kurulum).
   Düğme yoksa menü yolu yazar; yüklüyse "Telefona yüklü" der.
 - **Yedek al / Geri yükle** (aşağıda).
 - **Bugünü sıfırla:** bugün girilen setleri siler; hemen ardından **Geri getir** ile geri alınır.
-- En altta sağlık notu ve three.js lisans bağlantısı.
+- En altta sağlık notu, three.js lisans bağlantısı ve mankenin kaynağı (MakeHuman, CC0).
 
 ---
 
@@ -220,7 +224,9 @@ ailesi, tek vurgu rengi yalnız canlı olana, kart yerine tonlu gruplar; ayrınt
 
 **3B çizim telefonun grafik birimini (WebGL) kullanır.** Açılışı yavaşlatmasın diye ilk kez gerektiğinde
 yüklenir; o arada ve WebGL'i olmayan cihazda aynı hareket **bağımsız bir yedek çizimle** (SVG) görünür —
-ekran hiçbir durumda boş kalmaz. three.js (MIT lisansı) kullanılır; lisans metni Ayarlar'ın altında.
+ekran hiçbir durumda boş kalmaz. Ayrıntılı manken açılamazsa ya da telefon onu yavaş çizerse daha hafif
+manken kendiliğinden devreye girer. three.js (MIT lisansı) kullanılır; lisans metni Ayarlar'ın altında.
+Uygulama kurulurken mankenin dosyaları da (~0,7 MB) önbelleğe alınır; internetsiz de çalışır.
 
 **Bu bir egzersiz yardımcısıdır, tıbbi tavsiye değildir.** Ağrı hissettiğin bir harekette dur.
 
@@ -248,6 +254,7 @@ node tools/serve.js          # http://localhost:5099
 | `test-store.js` | Depolama, "geçen sefer", hacim, kilo, dışa/içe aktarım, **yedek şema doğrulaması** |
 | `test-session.js` | Takvim, sıra, seans yaşam döngüsü, yarım gün, gün seçici, geçmiş düzenleme, **işlemsel kayıt**, **güncelleme kararı**, **sayı biçimi**, **ağırlık adımı**, **devam hedefi**, **seans özeti**, **yeniden açma**, ekran şablonları |
 | `test-timer.js` | Sayaç: duvar saati, **ekran kilidinin dönüşte yeniden alınması** |
+| `glb-incelt.mjs --denetle` | Uygulamadaki manken gövdesi (`js/anim3d/c/govde.glb`) kaynaktan (`tools/proto-stil/govde-mh/govde.glb`) türetilmiş mi — yalnız kullanılmayan doku koordinatları atılır |
 | `check-docs.js` | Bu belgenin koda bağlılığı: her ekran ve her test betiği burada anlatılıyor mu |
 
 **Yeni egzersiz eklemek** — metin ve hedefler `js/data/exercises.js`'te, **hareketin kendisi**

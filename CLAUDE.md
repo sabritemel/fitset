@@ -2,7 +2,8 @@
 
 > **Salon antrenman defteri.** Çevrimdışı çalışan PWA; veri telefonda kalır.
 > Saf HTML/CSS/JS, IndexedDB, derleme yok. Çalışma-zamanı bağımlılığı **tek ve bilinçli**:
-> hareket çizimi için **three.js** alt kümesi (MIT), depoda paketli — bkz. "3B çizim" aşağıda.
+> hareket çizimi için **three.js** alt kümeleri (MIT), depoda paketli; manken gövdesi MakeHuman/MPFB2 (**CC0**) —
+> bkz. "3B çizim" aşağıda.
 
 ## ⚠️ EN ÖNEMLİ KISIT: bu proje SmartVisor suite'inin PARÇASI DEĞİL
 
@@ -20,23 +21,29 @@ FinLens ve SmartCRM gibi ayrı bir üründür. Bunun somut karşılıkları:
 ⚠️ Suite'in kök `CLAUDE.md`'sindeki uygulama/port/altın-kural tablosu **bu
 projeyi kapsamaz**. Buradaki tek üst kural şudur: *kök depoya sızma.*
 
-## Yapı (ölçüldü, 27 Eyl 2026 — telefon turundan sonra, `d1b8e1b`)
+## Yapı (ölçüldü, 8 Eki 2026 — C manken uygulamada)
 
 ```
-js/        15 dosya · 5 464 satır (vendor hariç)   app · store · session · schedule · timer
+js/        18 dosya · 7 739 satır (vendor hariç)   app · store · session · schedule · timer
                                                    ui · ilerleme · data/ · anim/ · anim3d/
-js/anim3d/ 4 dosya · 1 585 satır   manken3d (iskelet+IK, SVG çizim, çerçeve) · hareketler3d
-                                   (22 hareket, kısıtlarıyla) · webgl (three.js çizici) · sahne (giriş)
-js/vendor/ three.min.js (530 KB · 135 KB gzip, MIT) + three-LICENSE.txt
-tools/     22 betik · 3 743 satır  doğrulayıcılar + üreticiler (+ three-giris.js: paketi yeniden üretir)
-css/       style.css (530 satır) — tasarım dili 3 "Grafit"
-sw.js      120 satır — service worker · CACHE sürümü İÇERİKTEN türetilir
+js/anim3d/ 5 dosya · 1 888 satır   manken3d (iskelet+IK, SVG çizim, çerçeve) · hareketler3d
+                                   (22 hareket, kısıtlarıyla) · olcu (C gövdesinin ölçüleri, üretilir) ·
+                                   webgl (kapsül manken — yedek) · sahne (giriş: C → kapsül → SVG)
+js/anim3d/c/ motor.js + govde.js (1 948 satır) · govde.glb (817 KB · 489 KB gzip, CC0)
+js/vendor/ three.min.js (530 KB · 135 KB gzip) + three-c.min.js (610 KB · 154 KB gzip) + three-LICENSE.txt (MIT)
+tools/     27 betik · 4 220 satır  doğrulayıcılar + üreticiler (+ three-giris.js / three-c-giris.js: paketleri
+           yeniden üretir · govde-uret/: Blender'da gövde üretimi, ölçüler, uygulama kopyası)
+css/       style.css (532 satır) — tasarım dili 3 "Grafit"
+sw.js      125 satır — service worker · CACHE sürümü İÇERİKTEN türetilir
 icons/     Grafit + mercan (`make-icons.js`) · ayrı maskable 512 (Android kırpar)
 screenshots/ 3 WebP — yalnız Chrome'un kurulum penceresi için (SENTETİK veri; SW önbelleğine girmez)
-8 HTML     index.html (+ çizgisel ikon sprite'ı) + 7 mokap (cizimler · isinma · izometrik · genel ·
-           3b · 3b-figur · tasarim-v3)
+11 HTML    index.html (+ çizgisel ikon sprite'ı) + 7 mokap (cizimler · isinma · izometrik · genel ·
+           3b · 3b-figur · tasarim-v3) + 3 3B araç sayfası (3b-stil: Bugün ↔ C kıyası · 3b-el: çok açılı
+           denetim ve tanı bayrakları · 3b-pafta)
 docs/      2026-09-24-bas-tasarimci-raporu.md · 2026-09-27-tasarim-dili-analizi.md (+ ekran görüntüleri)
            · 2026-09-27-akilli-saat-onerisi.md (bekliyor: yeni saat gelince test sayfası)
+           · 2026-10-05-urun-evrimi-analizi.md (3B evrimin tamamı, §1–§26) · 2026-10-06-arastirma-1/2/3
+           · 2026-10-07-b1-veri-modeli-v2-PLAN.md · 2026-10-08-c-manken-uygulamaya-PLAN.md
 ```
 
 ### Tasarım dili 3 "Grafit" (27 Eyl 2026 — Sabri: *"premium, sade ama şık, sezgisel"*)
@@ -80,8 +87,14 @@ Analiz, ölçümler, mokap ve kararlar: `docs/2026-09-27-tasarim-dili-analizi.md
   tur sonunu başlangıç pozuyla karşılaştırır (mutasyon 5/5). ⚠️ Son kareyi TAM süre anında ölçmek
   sıfırlamanın yokluğunu gizler (o anda dalga zaten 0) — gerçek son kare bir kare geç gelir.
 
-### 3B çizim (24 Eyl 2026)
+### 3B çizim (24 Eyl 2026; 8 Eki: C manken)
 
+- **8 Eki: C (MakeHuman) varsayılan ve tek görünüm** (`js/anim3d/c/`: `motor.js` sahne + `govde.js` gövde +
+  `govde.glb`; three.js C alt kümesi `js/vendor/three-c.min.js`, tarifi `tools/three-c-giris.js`). Kapsül manken
+  (`webgl.js`) seçenek değil YEDEK: C açılamazsa, ilk oynatmada kare aralığı ortancası > 50 ms ise (karar
+  `settings.basitGorunum/basitOto`, cihaza özgü, yedekle taşınmaz) ya da Ayarlar "Basit". Gövde kaynaktan
+  `tools/govde-uret/glb-incelt.mjs` ile türetilir (`--denetle` npm test'te). Prototip sayfaları (`mockup-3b-*`)
+  aynı modülleri kullanır. Plan: `docs/2026-10-08-c-manken-uygulamaya-PLAN.md`.
 - **Tek giriş `js/anim3d/sahne.js`.** WebGL (three.js) varsa ışıklı manken, yoksa aynı motorun
   **SVG** çizimi. three.js açılışı yavaşlatmasın diye **ilk kullanımda** dinamik yüklenir; o arada
   SVG çizer. GPU bağlamı kaybolursa (telefon arka plan) yine SVG. Tek paylaşılan WebGL bağlamı,
