@@ -263,8 +263,14 @@ const EKRAN = {
 function ucBoyutHazirla() {
   A3.webglHazirla(yenidenÇiz, {
     basit: !!ctx.settings?.basitGorunum,
-    // C manken bu cihazda yavaş kaldı → basit görünüm; karar cihazda saklanır, Ayarlar'da görünür ve geri alınabilir
-    yedegeGecti: async () => { ctx.settings = await S.saveSettings({ basitGorunum: true, basitOto: true }); render(); },
+    // 'yavas': C manken bu cihazda yavaş kaldı → basit görünüm; karar cihazda saklanır, Ayarlar'da görünür ve geri alınabilir.
+    // 'acilamadi' (10 Eki): C bu cihazda açılamadı (gölgelendirici derlenmedi) → kapsül zaten çiziyor. Karar SAKLANMAZ
+    // (bir güncelleme sorunu giderebilir; her açılışta yeniden denenir) ve ekran yeniden çizilmez (açılışta, listede
+    // olur — kullanıcının işini bölmesin); yalnız Ayarlar notu için bellekte tutulur.
+    yedegeGecti: async neden => {
+      if (neden === 'acilamadi') { ctx.cAcilamadi = true; return; }
+      ctx.settings = await S.saveSettings({ basitGorunum: true, basitOto: true }); render();
+    },
   });
 }
 

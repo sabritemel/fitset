@@ -53,7 +53,9 @@ let motor = null;                 // { r, tuval, ciz, w, h, tur } — WebGL haz�
 let kayip = false;                // GPU bağlamı kayıp (geri gelene kadar SVG)
 let yukleme = null, istenen = null, nesil = 0;
 let durum = 'svg';                // 'svg' | 'yukleniyor' | 'webgl' | 'yok' — tanı ve test için
-let yedekBildir = null;           // (neden) => void — çağıran kararı saklar (Ayarlar'da görünür)
+let yedekBildir = null;           // (neden) => void — 'yavas' | 'acilamadi'; çağıran kararı saklar (Ayarlar'da görünür)
+// Isınma (gölgelendirici derlemesi) masaüstünde ~0,5 sn; telefonda birkaç katı. Bu sınırı aşarsa beklemeden devam edilir.
+const ISINMA_SINIRI_MS = 10000;
 export const cizici = () => (motor && !kayip ? (motor.tur === 'c' ? 'webgl (C)' : 'webgl (kapsül)')
   : durum === 'yukleniyor' ? 'svg (webgl yükleniyor)' : 'svg');
 
@@ -84,7 +86,18 @@ async function cKur(hazir) {
   try {
     const m = await G.motorKur(r, { tur: 'C' });
     Object.assign(m.ayar, { kas: true, iz: true });
-    try { await m.isit?.(KUTUPHANE.bb_bench_press); } catch (e) { console.warn('[3b] ısınma atlandı:', e?.message ?? e); }
+    // Isınma sonsuza dek beklerse alan boş kalırdı (yükleme sürerken çizim yok) → süre sınırı; ısınma şart değil
+    const sinir = new Promise(ok => setTimeout(() => ok('süre'), ISINMA_SINIRI_MS));
+    try { if (await Promise.race([m.isit?.(KUTUPHANE.bb_bench_press), sinir]) === 'süre') console.warn('[3b] ısınma süre sınırını aştı, atlandı'); }
+    catch (e) { console.warn('[3b] ısınma atlandı:', e?.message ?? e); }
+    // SİGORTA (10 Eki, Sabri'nin ikinci telefonu): gölgelendirici o cihazda derlenemezse three.js hata FIRLATMAZ —
+    // yalnız konsola yazar ve gövdeyi çizmez; alet görünür, manken görünmez, yedeğe de geçilmezdi. Isınma çizimi
+    // programları kullandığı için tanılar artık dolu: çalışamayan program varsa kapsül mankene geçilir.
+    const bozuk = (r.info.programs ?? []).find(p => p.diagnostics && p.diagnostics.runnable === false);
+    if (bozuk) {
+      const d = bozuk.diagnostics;
+      throw new Error(`gölgelendirici bu cihazda çalışmıyor: ${(d.programLog || d.vertexShader?.log || d.fragmentShader?.log || '').trim().slice(0, 300)}`);
+    }
     return { tur: 'c', r, tuval, w: 0, h: 0,
       ciz(h, t, teta, fi, c, { kas = true } = {}) { m.ayar.id = kimlik(h); m.ayar.kas = kas; m.ciz(h, t, teta, fi, c, performance.now()); } };
   } catch (e) { r.dispose(); r.forceContextLoss(); throw e; }
@@ -114,6 +127,8 @@ export function webglHazirla(hazir, { basit = false, yedegeGecti = null } = {}) 
     catch (e) {
       console.warn(`[3b] ${hedef === 'c' ? 'C manken' : 'WebGL çizici'} açılamadı:`, e?.message ?? e);
       if (hedef === 'c') try { m = await kapsulKur(hazir); } catch (e2) { console.warn('[3b] kapsül de açılamadı, SVG:', e2?.message ?? e2); }
+      // C açılamadı ama kapsül açıldı → çağırana söyle (Ayarlar'da "Tam" seçiliyken neden basit manken göründüğü yazılsın)
+      if (hedef === 'c' && m && benim === nesil) yedekBildir?.('acilamadi');
     }
     if (benim !== nesil) { if (m) { m.r.dispose(); m.r.forceContextLoss(); } return; }   // bu arada başka istek geldi
     motor = m; durum = m ? 'webgl' : 'yok';

@@ -787,6 +787,7 @@ export function settingsHTML(ctx) {
     <div class="grup"><h2 class="etiket">Hareket çizimi</h2><div class="ic">
       <div class="segment" role="group" aria-label="Hareket çizimi">${gorunum}</div>
       <p>${basit && settings.basitOto ? 'Bu telefonda ayrıntılı manken yavaş çizildiği için basit görünüm kendiliğinden açıldı. '
+        : !basit && ctx.cAcilamadi ? 'Ayrıntılı manken bu telefonda açılamadı; yerine basit manken çiziliyor. '
         : ''}Basit görünüm daha hafif bir manken çizer, pili korur.</p>
     </div></div>
 

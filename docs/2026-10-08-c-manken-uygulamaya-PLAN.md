@@ -76,3 +76,18 @@
 - **Isınma:** ilk çizimdeki gölgelendirici derlemesi hareket ekranına geçişi ~1,2 sn donduruyordu → yüklemede bir hareketin
   sahnesi `compileAsync` ile derlenir + 1×1 piksellik çizim gölge programlarını ısıtır. Geçiş **1 228 → 53–198 ms**;
   bedeli liste ekranındayken arka planda tek seferlik ~0,5 sn'lik duraklama (masaüstü ölçümü).
+
+### Bazı telefonlarda manken görünmüyordu (10 Eki, Sabri'nin ikinci telefonu)
+
+- **Belirti:** uygulama açılıyor, aletler çiziliyor, manken yok. Ayarlar ▸ Basit seçilince kapsül manken görünüyor → sorun C'ye özgü.
+- **Kök (ölçüldü, masaüstünde):** C'nin köşe gölgelendiricisi kemik başına beş dizi taşıyordu (53 × uDqR, uDqD, uDqMaske,
+  uKasK, uKasB = 265 yuva; programın tamamı 338). WebGL2'nin garanti ettiği köşe tekdüze sınırı **256**; bu sınırı bildiren
+  grafik işlemcilerde program derlenmez. three.js bunu yalnız konsola yazar, hata fırlatmaz → manken sessizce çizilmez,
+  yedeğe de geçilmez. ⚠️ O telefonun kendi sınırı ölçülemedi (tanı sayfası sonucu gelmedi); kök masaüstü ölçümü + belirti uyumuna dayanıyor.
+- **Düzeltme:** (1) beş dizi 53×4 float **kemik dokusuna** taşındı (`govde.js` `kemikDokusuDoldur`, her karede); program
+  338 → **73**, gölge programı 184 → **25** yuva. Dört hareket, kas vurgusu tam açıkken de önce/sonra **piksel farkı 0**.
+  (2) **Sigorta** (`sahne.js`): ısınma çiziminden sonra çalışamayan program varsa kapsüle geçilir, Ayarlar'da
+  "Ayrıntılı manken bu telefonda açılamadı" yazar (karar saklanmaz, her açılışta yeniden denenir); ısınmaya 10 sn sınır.
+  Taklit edilen derleme hatasında kapsüle geçiş ve not doğrulandı; normal yolda C açılıyor, not yok. `npm test` yeşil.
+- **Ders:** *Yedek, yalnız hata FIRLATILINCA devreye giriyorsa, sessiz başarısızlık yedeği atlar.* Derlenemeyen program
+  bir istisna değil, boş bir çizimdir; yedeğe geçiş kararı sonucu (çalışabilir program) ölçmeli.

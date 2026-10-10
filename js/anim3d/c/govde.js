@@ -77,6 +77,25 @@ const MUSH_W = 1024;
 const BANT_CM = 3.5;   // bel lastiği yüksekliği (şort)
 const dikBilesen = (v, eksen) => v.clone().sub(eksen.clone().multiplyScalar(v.dot(eksen)));
 
+/* ── Kemik dokusu: kemik başına DQS + kas verisi (bkz. govdeMalzemesi uKemikTex) ── */
+function kemikDokusuKur(kemikSayisi) {
+  const doku = new T.DataTexture(new Float32Array(kemikSayisi * 4 * 4), kemikSayisi, 4, T.RGBAFormat, T.FloatType);
+  doku.needsUpdate = true;   // varsayılan: en yakın komşu süzgeci, mipmap yok — texelFetch tam değeri okur
+  return doku;
+}
+/** İşlemci dizilerini (uDqR, uDqD, uKasK, uKasB, uDqMaske) dokuya kopyalar. Her karede, çizimden önce. */
+export function kemikDokusuDoldur(u) {
+  const doku = u.uKemikTex.value, v = doku.image.data, n = doku.image.width;
+  for (let j = 0; j < n; j++) {
+    const r = u.uDqR.value[j], d = u.uDqD.value[j], k = u.uKasK.value[j], b = u.uKasB.value[j];
+    let o = j * 4;              v[o] = r.x; v[o + 1] = r.y; v[o + 2] = r.z; v[o + 3] = r.w;
+    o = (n + j) * 4;            v[o] = d.x; v[o + 1] = d.y; v[o + 2] = d.z; v[o + 3] = d.w;
+    o = (2 * n + j) * 4;        v[o] = k.x; v[o + 1] = k.y; v[o + 2] = k.z; v[o + 3] = k.w;
+    o = (3 * n + j) * 4;        v[o] = b.x; v[o + 1] = b.y; v[o + 2] = u.uDqMaske.value[j]; v[o + 3] = 0;
+  }
+  doku.needsUpdate = true;
+}
+
 /* ── Kas vurgulu, deri bağlı kil malzeme ── */
 function govdeMalzemesi(normalMap, normalScale, kemikSayisi, { renk = globalThis.__tenRenk ?? 0xd4c3b2, kumas = false, u: paylasilan = null } = {}) {
   // Aksesuar (şort) gövdenin tekdüzenlerini PAYLAŞIR → kas vurgusu kumaşın üstünde de görünür
@@ -94,6 +113,11 @@ function govdeMalzemesi(normalMap, normalScale, kemikSayisi, { renk = globalThis
     uDeltMiktar: { value: [0, 0] },
     // Delta Mush (omuz bölgesi): satır 2k = konum ofseti, 2k+1 = normal + ağırlık
     uMushTex: { value: null }, uMushAcik: { value: 0 },
+    // KEMİK DOKUSU (10 Eki): yukarıdaki beş kemik dizisi gölgelendiriciye tekdüze olarak DEĞİL, bu dokuyla gider.
+    // Diziler 53 kemikte 265 köşe tekdüze yuvası yiyordu (+ matrisler ≈ 300); WebGL2'nin garanti ettiği sınır 256 →
+    // o sınırı bildiren telefonlarda program derlenmiyor, manken hiç çizilmiyordu (Sabri'nin ikinci telefonu).
+    // Diziler işlemci tarafında kaynak olarak kalır (Delta Mush, testler onları okur); kemikDokusuDoldur kopyalar.
+    uKemikTex: { value: kemikDokusuKur(kemikSayisi) },
   };
   // Sabri: "çok kaslı, kaba, korkutucu" → kas kabartması (normal haritası) %18'e, yüzey A ile aynı mat kil
   const m = new T.MeshPhysicalMaterial(kumas
@@ -105,7 +129,10 @@ function govdeMalzemesi(normalMap, normalScale, kemikSayisi, { renk = globalThis
   // (7 Eki: gölge three'nin standart derinlik malzemesiyle çiziliyordu; DQS/deltoid/Delta Mush'ı bilmediği için
   //  gölgeyi düzeltilmemiş deri atıyor, omuzda kendi üstüne keskin kenarlı gölge lekeleri çıkıyordu.)
   const DERI_DEKL = `
-        uniform vec4 uDqR[${kemikSayisi}]; uniform vec4 uDqD[${kemikSayisi}]; uniform float uDqMaske[${kemikSayisi}];
+        // Kemik dokusu: sütun = kemik; satır 0 dqR · 1 dqD · 2 kasK · 3 (kasB.xy, dqMaske, 0) — bkz. kemikDokusuDoldur
+        uniform highp sampler2D uKemikTex;
+        vec4 kemikSatir(int b, int satir) { return texelFetch(uKemikTex, ivec2(b, satir), 0); }
+        float dqMaskeK(int b) { return kemikSatir(b, 3).z; }
         uniform float uDqK; uniform float uDqAcik;
         uniform vec3 uDeltOmuz[2]; uniform vec3 uDeltDirsek[2]; uniform float uDeltMiktar[2];
         attribute vec2 aDelt; attribute float aMushI; uniform sampler2D uMushTex; uniform float uMushAcik;
@@ -113,14 +140,14 @@ function govdeMalzemesi(normalMap, normalScale, kemikSayisi, { renk = globalThis
         #ifdef USE_SKINNING
         float dqKarisim(out vec4 br, out vec4 bd) {
           ivec4 ix = ivec4(skinIndex + 0.5);
-          float w0 = (skinWeight.x * uDqMaske[ix.x] + skinWeight.y * uDqMaske[ix.y] + skinWeight.z * uDqMaske[ix.z] + skinWeight.w * uDqMaske[ix.w]) * uDqAcik;
+          float w0 = (skinWeight.x * dqMaskeK(ix.x) + skinWeight.y * dqMaskeK(ix.y) + skinWeight.z * dqMaskeK(ix.z) + skinWeight.w * dqMaskeK(ix.w)) * uDqAcik;
           br = vec4(0.0); bd = vec4(0.0);
           if (w0 <= 0.001) return 0.0;
-          vec4 r0 = uDqR[ix.x];
+          vec4 r0 = kemikSatir(ix.x, 0);
           for (int c = 0; c < 4; c++) {
             int b = c == 0 ? ix.x : c == 1 ? ix.y : c == 2 ? ix.z : ix.w;
             float w = c == 0 ? skinWeight.x : c == 1 ? skinWeight.y : c == 2 ? skinWeight.z : skinWeight.w;
-            vec4 r = uDqR[b], d = uDqD[b];
+            vec4 r = kemikSatir(b, 0), d = kemikSatir(b, 1);
             if (dot(r, r0) < 0.0) { r = -r; d = -d; }
             br += w * r; bd += w * d;
           }
@@ -181,14 +208,14 @@ function govdeMalzemesi(normalMap, normalScale, kemikSayisi, { renk = globalThis
       .replace('#include <skinnormal_vertex>', DERI_NORMAL)
       .replace('#include <skinning_vertex>', DERI_KONUM)
       .replace('#include <common>', `#include <common>
-        uniform vec4 uKasK[${kemikSayisi}]; uniform vec2 uKasB[${kemikSayisi}]; uniform vec2 uKasEsik; varying float vKas;
+        uniform vec2 uKasEsik; varying float vKas;
         attribute float aKolU;
         ${DERI_DEKL}
         attribute float aGizli; varying float vGizli; attribute float aBelY; varying float vBelY;
         float kasKemik(float i, vec3 n) {
-          vec4 k = uKasK[int(i + 0.5)];
+          vec4 k = kemikSatir(int(i + 0.5), 2);
           if (k.w <= 0.0) return 0.0;
-          vec2 b = uKasB[int(i + 0.5)];
+          vec2 b = kemikSatir(int(i + 0.5), 3).xy;
           k.w *= smoothstep(b.x - 0.08, b.x + 0.08, aKolU) * (1.0 - smoothstep(b.y - 0.08, b.y + 0.08, aKolU));
           if (dot(k.xyz, k.xyz) < 0.01) return k.w;
           return k.w * smoothstep(uKasEsik.x, uKasEsik.y, dot(n, normalize(k.xyz)));
@@ -1658,7 +1685,10 @@ export async function govdeYukle(url = new URL('./govde-mh/govde.glb', import.me
     MUSH.doku.needsUpdate = true;
     MUSH.sure = { deri: +(t1 - t0).toFixed(2), toplam: +(performance.now() - t0).toFixed(2), G };
   }
-  const sonuc = { nesne, guncelle, mesh, kemikler: adlar, GOVDE_KESIT, EL_OFSET, sonTani: null, kavramaOlc, deriKonum, dqGuncelle, MUSH, elTemas, tutulanEksen };
+  // Dışarıya verilen güncellemeler kemik dokusunu da tazeler: çizimden önce çağrılan son iş budur
+  const sonuc = { nesne, mesh, kemikler: adlar, GOVDE_KESIT, EL_OFSET, sonTani: null, kavramaOlc, deriKonum, MUSH, elTemas, tutulanEksen,
+    guncelle: (s, ayar) => { guncelle(s, ayar); kemikDokusuDoldur(DQU); },
+    dqGuncelle: () => { dqGuncelle(); kemikDokusuDoldur(DQU); } };
   return sonuc;
 }
 
