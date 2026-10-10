@@ -7,7 +7,7 @@
   "scripts": {
     "test": "node tools/bump-sw.js && node tools/check-contrast.js && node tools/check-tasarim.js && node tools/fizik-denetimi.js && node tools/govde-uret/glb-incelt.mjs --denetle && node tools/test-store.js && node tools/test-session.js && node tools/test-timer.js && node tools/check-docs.js",
     "verify": "node tools/fizik-denetimi.js",
-    "icons": "node tools/make-icons.js",
+    "icons": "python tools/logo/logo-uret.py",
     "fonts": "node tools/fetch-fonts.js",
     "bump": "node tools/bump-sw.js"
   }

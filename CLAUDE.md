@@ -31,11 +31,14 @@ js/anim3d/ 5 dosya · 1 888 satır   manken3d (iskelet+IK, SVG çizim, çerçeve
                                    webgl (kapsül manken — yedek) · sahne (giriş: C → kapsül → SVG)
 js/anim3d/c/ motor.js + govde.js (1 948 satır) · govde.glb (817 KB · 489 KB gzip, CC0)
 js/vendor/ three.min.js (530 KB · 135 KB gzip) + three-c.min.js (610 KB · 154 KB gzip) + three-LICENSE.txt (MIT)
-tools/     27 betik · 4 220 satır  doğrulayıcılar + üreticiler (+ three-giris.js / three-c-giris.js: paketleri
+tools/     27 betik · 4 283 satır  doğrulayıcılar + üreticiler (+ three-giris.js / three-c-giris.js: paketleri
            yeniden üretir · govde-uret/: Blender'da gövde üretimi, ölçüler, uygulama kopyası)
 css/       style.css (532 satır) — tasarım dili 3 "Grafit"
 sw.js      125 satır — service worker · CACHE sürümü İÇERİKTEN türetilir
-icons/     Grafit + mercan (`make-icons.js`) · ayrı maskable 512 (Android kırpar)
+icons/     FS işareti (9 Eki logo) — `tools/logo/logo-uret.py` kaynak görselden üretir; köşeler saydam,
+           zemin --s2 · ayrı maskable 512 (tam kare, içerik ≤ 0,40·S — betik denetler)
+tools/logo/ kaynak-logo.png (Sabri) → fitset-isaret.svg · fitset-logo.svg · fitset-logo-acik.svg
+           (slogan BETTER EVERY SET, Archivo harfleri çizgiye çevrili) + Launcher kutusu fit_harf.png
 screenshots/ 3 WebP — yalnız Chrome'un kurulum penceresi için (SENTETİK veri; SW önbelleğine girmez)
 11 HTML    index.html (+ çizgisel ikon sprite'ı) + 7 mokap (cizimler · isinma · izometrik · genel ·
            3b · 3b-figur · tasarim-v3) + 3 3B araç sayfası (3b-stil: Bugün ↔ C kıyası · 3b-el: çok açılı
@@ -128,7 +131,7 @@ npm test      # bump-sw (+ çevrimdışı kapısı) + check-contrast + check-tas
               # + test-store + test-session + test-timer + check-docs   ← tam kapı
 npm run verify   # yalnız 3B fizik denetimi
 npm run bump     # sw.js CACHE sürümünü artır
-npm run icons    # ikon üretimi
+npm run icons    # logo SVG'leri + uygulama simgeleri + Launcher kutusu (python, opencv + fonttools)
 npm run fonts    # font indirme
 ```
 
