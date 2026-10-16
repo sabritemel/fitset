@@ -1,0 +1,468 @@
+/**
+ * DEPOLAMA KATMANI — IndexedDB + dışa/içe aktarım.
+ *
+ * ┌─ NEDEN IndexedDB, localStorage DEĞİL ───────────────────────────────────┐
+ * │ Yaygın gerekçe "localStorage dolar" yanlıştır: seans başına ~27 set,    │
+ * │ haftada 3 seans ≈ 200 KB/yıl; 5 MB kotası 25 yıl yeter.                 │
+ * │ Gerçek gerekçeler:                                                       │
+ * │  1. localStorage SENKRONDUR ve ana thread'i bloklar. Salonda her set    │
+ * │     kaydında arayüz donar — tek başına yeterli sebep.                   │
+ * │  2. Sorgulanabilirlik: "bu egzersizin son kaydı" için tüm JSON'u parse  │
+ * │     etmen gerekmez, indeksten çekersin.                                  │
+ * │  3. navigator.storage.persist() ile kalıcılık talep edilebilir.         │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * ⚠️ DÜRÜST SINIR: veri YALNIZCA bu cihazda. Sunucu yok (bilinçli karar:
+ *    gizlilik + basitlik). Bunun bedeli: tarayıcı verisi silinirse ya da
+ *    telefon kaybolursa veri gider. Bu yüzden dışa aktarım bir süs değil,
+ *    tek yedekleme yoludur — UI kullanıcıyı düzenli olarak dürtmelidir.
+ *
+ * Mimari not: sorgu mantığı sürücüden (driver) ayrıldı. Böylece IndexedDB
+ * olmayan ortamda (Node testleri) aynı mantık bellek sürücüsüyle sınanabilir.
+ */
+
+import { gecersizProgram, gecersizOzel, ozelTemizle } from './program.js';
+import { temizAvatar, temizProfil } from './avatar.js';
+
+export const SCHEMA_VERSION = 1;
+const DB_NAME = 'fitset';
+const DB_VERSION = 3;                                   // v2: 'body' (kilo) · v3: 'programs' + 'ozel' (Faz 1A)
+// ⚠️ Yeni tablo eklerken MemoryDriver, exportData ve importData'ya da ekle (yedek sessizce eksik kalmasın)
+const STORES = { sessions: 'id', settings: 'key', body: 'd', programs: 'id', ozel: 'id' };
+
+export const DEFAULT_SETTINGS = {
+  key: 'config',
+  restSeconds: 60,
+  unit: 'kg',
+  theme: 'auto',
+  trainingDays: [2, 4, 6],       // 0=Pazar … 2=Salı, 4=Perşembe, 6=Cumartesi
+  heightCm: null,                // bir kez girilir; kilo takibi ayrı tabloda
+  backupNagEvery: 8,             // kaç seansta bir yedek hatırlatması
+  dambilAdimi: 2.5,              // dambıl setinin artışı (2 ya da 2,5) — ilerleme.agirlikAdimi okur
+  // Hareket çizimi (8 Eki): false = C manken; true = basit (kapsül) manken. basitOto: cihaz yavaş kaldığı için
+  // kendiliğinden açıldı. CİHAZA ÖZGÜ — yedekten geri yüklenmez (temizAyar almaz): başka telefonun hızı burada geçmez.
+  basitGorunum: false,
+  rirSor: false,                 // G1 (17 Eki): ağırlıklı setten sonra RIR sorusu (hedef RIR'lı harekette her zaman)
+  hazirlikSor: true,             // G4 (17 Eki): seans başında "Bugün nasılsın?" (isteğe bağlı; Ayarlar'dan kapanır)
+  hazirlikGunu: null,            // G4: o gün kart cevaplandı ya da geçildi → { d: 'YYYY-MM-DD' } (aynı gün yeniden sorulmaz)
+  basitOto: false,
+  // Egzersiz bazında kullanıcı hedefleri: { [exerciseId]: {sets, reps, seconds, weight} }
+  // Program dosyasına dokunmadan üzerine yazmayı sağlar; yedeğe de dahildir.
+  overrides: {},
+  // Faz 1A: hangi program kullanılıyor (program.js). Hedefler artık programın içinde; `overrides`
+  // yalnız eski yedeklerden gelir ve açılışta "Benim programım"a katılıp boşaltılır (session.programlariYukle).
+  aktifProgram: 'benim',
+  // Faz 1C (14 Eki): ilk açılış geçildi mi ('tamam') — bir kez geçilince bir daha sorulmaz
+  ilkAcilis: null,
+  // 14 Eki: Bugün ekranındaki "Telefona yükle" bandı kapatıldı mı ('kapali')
+  kurulumBant: null,
+  // Avatar ve profil (13 Eki, js/avatar.js): renk ANAHTARLARI saklanır; boş alanlar bölge/profil varsayılanından çözülür.
+  // Profil (ad · yaş · cinsiyet) isteğe bağlı, YALNIZ bu telefonda (gizlilik politikası sürüm 2).
+  avatar: {},
+  profil: { ad: '', yas: null, cinsiyet: null },
+};
+
+/* ── Sürücüler ─────────────────────────────────────────────────────────── */
+
+class IDBDriver {
+  #db = null;
+  async open() {
+    if (this.#db) return this.#db;
+    this.#db = await new Promise((res, rej) => {
+      const rq = indexedDB.open(DB_NAME, DB_VERSION);
+      rq.onupgradeneeded = () => {
+        const d = rq.result;
+        for (const [name, keyPath] of Object.entries(STORES))
+          if (!d.objectStoreNames.contains(name)) {
+            const s = d.createObjectStore(name, { keyPath });
+            if (name === 'sessions') { s.createIndex('startedAt', 'startedAt'); s.createIndex('status', 'status'); }
+          }
+      };
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    });
+    return this.#db;
+  }
+  async #tx(store, mode, fn) {
+    const d = await this.open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, mode);
+      const rq = fn(t.objectStore(store));
+      t.oncomplete = () => res(rq?.result);
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error);
+    });
+  }
+  get(store, key) { return this.#tx(store, 'readonly', s => s.get(key)); }
+  getAll(store) { return this.#tx(store, 'readonly', s => s.getAll()); }
+  put(store, val) { return this.#tx(store, 'readwrite', s => s.put(val)); }
+  del(store, key) { return this.#tx(store, 'readwrite', s => s.delete(key)); }
+  clear(store) { return this.#tx(store, 'readwrite', s => s.clear()); }
+}
+
+/** IndexedDB yoksa (Node testleri, gizli sekme kısıtları) aynı arayüz, bellekte. */
+class MemoryDriver {
+  #m = Object.fromEntries(Object.keys(STORES).map(t => [t, new Map()]));
+  async open() { return this; }
+  async get(store, key) { return structuredClone(this.#m[store].get(key)); }
+  // .map(structuredClone) YAZMA: map ikinci argüman olarak index geçirir ve
+  // structuredClone onu "options" sanıp TypeError atar. Ok fonksiyonu şart.
+  async getAll(store) { return [...this.#m[store].values()].map(v => structuredClone(v)); }
+  async put(store, val) { this.#m[store].set(val[STORES[store]], structuredClone(val)); }
+  async del(store, key) { this.#m[store].delete(key); }
+  async clear(store) { this.#m[store].clear(); }
+}
+
+export const driver = typeof indexedDB !== 'undefined' ? new IDBDriver() : new MemoryDriver();
+
+/* ── Ayarlar ───────────────────────────────────────────────────────────── */
+
+export async function getSettings() {
+  const kayitli = await driver.get('settings', 'config') || {};
+  // 90 sn yalnizca ESKI VARSAYILANDI ve degistirilecek bir arayuz hic olmadi;
+  // yani 90 goren herkes varsayilani goruyor. Yeni varsayilana tasi.
+  if (kayitli.restSeconds === 90) kayitli.restSeconds = 60;
+  return { ...DEFAULT_SETTINGS, ...kayitli };
+}
+export async function saveSettings(patch) {
+  const next = { ...(await getSettings()), ...patch, key: 'config' };
+  await driver.put('settings', next);
+  return next;
+}
+
+/* ── Seanslar ──────────────────────────────────────────────────────────── */
+
+/**
+ * Seans kaydı:
+ *   { id, schemaVersion, dayIndex, startedAt, finishedAt, status, entries[] }
+ *   entries: [{ exerciseId, note, sets: [set] }]
+ *   set    : { type:'weight_reps', weight, reps, warmup, ts }
+ *          | { type:'time',        seconds, warmup, ts }
+ *          | { type:'cardio',      minutes, km?, mode?, ts }
+ */
+export const newSession = dayIndex => ({
+  id: `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+  schemaVersion: SCHEMA_VERSION,
+  dayIndex,
+  startedAt: Date.now(),
+  finishedAt: null,
+  status: 'active',
+  entries: [],
+  // Isinma KAYDEDILEN bir hareket degil: tek bayrak. Agirlik/tekrar/hacim
+  // tutulmuyor, set sayimina girmiyor — grafikler ve 'gecen sefer' temiz kaliyor.
+  warmupDone: false,
+});
+
+export const saveSession = s => driver.put('sessions', s);
+
+/* ── Programlar ve özel hareketler (Faz 1A) ─────────────────────────────── */
+/** Tüm programlar (silinmiş olanlar da: geçmişteki seanslar adlarını onlardan okur) */
+export const programlar = () => driver.getAll('programs');
+export const programKaydet = p => driver.put('programs', p);
+export const ozelHareketler = () => driver.getAll('ozel');
+export const ozelKaydet = h => driver.put('ozel', h);
+export const getSession = id => driver.get('sessions', id);
+
+/** Eşit zaman damgalarında sıralamanın rastgeleleşmemesi için son çare ayracı */
+const tieBreak = (a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+
+/** Tüm seanslar, BAŞLAMA zamanına göre yeniden eskiye */
+export async function allSessions() {
+  return (await driver.getAll('sessions')).sort((a, b) => (b.startedAt - a.startedAt) || tieBreak(a, b));
+}
+
+/**
+ * Bitmiş seanslar, EN SON BİTENDEN eskiye.
+ *
+ * ⚠️ Sıralama finishedAt'e göre, startedAt'e göre DEĞİL. Fark gerçek bir
+ * senaryoda ortaya çıkıyor: A seansını başlat, yarıda bırak → B seansını
+ * başlat ve bitir → sonra A'ya dönüp onu bitir. A daha ERKEN başladı ama
+ * daha GEÇ bitti; "son yapılan antrenman" A'dır. startedAt'e göre sıralarsak
+ * B seçilir ve kullanıcıya YANLIŞ gün gösterilir — A/B sırasının tamamı bu
+ * sorguya bağlı olduğu için bu sessiz ama can yakıcı bir hata olurdu.
+ */
+export async function doneSessions() {
+  return (await driver.getAll('sessions'))
+    .filter(s => s.status === 'done')
+    .sort((a, b) => ((b.finishedAt ?? b.startedAt) - (a.finishedAt ?? a.startedAt))
+      || (b.startedAt - a.startedAt) || tieBreak(a, b));
+}
+
+/** Yarıda kalmış seans (varsa) — uygulama açılışında "devam et" için */
+export async function activeSession() {
+  return (await allSessions()).find(s => s.status === 'active') || null;
+}
+
+/** En son TAMAMLANMIŞ seans — A/B sırası bundan türetilir (takvimden değil) */
+export async function lastDoneSession() {
+  return (await doneSessions())[0] || null;
+}
+
+/**
+ * "Geçen sefer: 40kg × 12" — bir egzersizin en son kaydı.
+ * Yalnız ısınma OLMAYAN setlere bakar; ısınma seti referans değildir.
+ * @returns {{sets:Array, at:number, session:string}|null}
+ */
+export async function lastPerformance(exerciseId, excludeSessionId = null) {
+  const bul = s => {
+    if (s.id === excludeSessionId) return null;
+    const e = s.entries.find(x => x.exerciseId === exerciseId);
+    const sets = e?.sets.filter(x => !x.warmup) ?? [];
+    return sets.length ? { sets, at: s.finishedAt ?? s.startedAt, session: s.id, note: e.note || '' } : null;
+  };
+  // G4: "geçen seferki notun" — o hareketin en son boş olmayan notu (makine ayarı gibi notlar seanslar boyunca geçerli)
+  const sonNot = async () => { for (const s of await doneSessions()) { if (s.id === excludeSessionId) continue;
+    const n = s.entries.find(x => x.exerciseId === exerciseId)?.note; if (n) return { not: n, notAt: s.finishedAt ?? s.startedAt }; } return {}; };
+  // 1) Bitmiş seanslar — bitiş zamanına göre yeniden eskiye
+  for (const s of await doneSessions()) { const r = bul(s); if (r) return { ...r, ...(await sonNot()) }; }
+  // 2) Bulunamadıysa yarım kalmış eski seanslara da bak. Kullanıcı "bitir"e
+  //    basmayı unutmuş olabilir; girdiği ağırlık yine de geçerli bir referanstır.
+  //    (Bu olmadan, bir kez bile "bitir"e basılmamışsa kutular hep boş gelirdi.)
+  for (const s of await allSessions()) {
+    // ⚠️ Eskiden "done olmayan" deniyordu; yumuşak silinen seans (status
+    // 'deleted') bu delikten geçip silinmiş ağırlığı "geçen sefer" diye geri
+    // getiriyordu. Yalnız GERÇEKTEN yarım kalmış (active) seansa bakılır.
+    if (s.status !== 'active') continue;
+    const r = bul(s); if (r) return r;
+  }
+  return null;
+}
+
+/** Hacim: yalnız ağırlık×tekrar setleri sayılır; süre/kardiyo ayrı raporlanır */
+export function sessionVolume(session, exercisesById) {
+  let kg = 0, sets = 0, seconds = 0, minutes = 0;
+  for (const e of session.entries) for (const s of e.sets) {
+    if (s.warmup) { sets++; continue; }
+    sets++;
+    if (s.type === 'weight_reps') {
+      // Dambılda girilen değer TEK dambılın ağırlığıdır → hacimde iki kol sayılır
+      const mult = exercisesById?.[e.exerciseId]?.equipment === 'dumbbell' ? 2 : 1;
+      kg += (s.weight || 0) * (s.reps || 0) * mult;
+    } else if (s.type === 'time') seconds += s.seconds || 0;
+    else if (s.type === 'cardio') minutes += s.minutes || 0;
+  }
+  return { kg: Math.round(kg), sets, seconds, minutes };
+}
+
+/* ── Dışa / içe aktarım ────────────────────────────────────────────────── */
+
+/* ── Vücut ölçüsü ──────────────────────────────────────────────────────────
+ * Anahtar YEREL GÜN (YYYY-AA-GG): günde iki kez tartıya çıkmak iki nokta
+ * üretmemeli, aynı günün ikinci ölçümü birincinin ÜSTÜNE yazar. Zaman damgası
+ * ayrıca tutulur (ne zaman tartıldığı bilgisi kaybolmasın).
+ *
+ * Neden ayrı tablo: kilo seansa bağlı değil. Antrenman yapmadığın gün de
+ * tartılırsın, seans içine gömülse o günler kaydedilemezdi.
+ */
+export const dayKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Kilo yaz — aynı gün varsa üstüne. kg null/0 ise kayıt SİLİNİR. */
+export async function saveWeight(kg, d = new Date()) {
+  const key = dayKey(d);
+  if (kg == null || !(kg > 0)) { await driver.del('body', key); return null; }
+  const kayit = { d: key, kg: Math.round(kg * 10) / 10, ts: d.getTime() };
+  await driver.put('body', kayit);
+  return kayit;
+}
+
+/** Tüm kilo kayıtları, ESKİDEN YENİYE (grafik soldan sağa çizilir) */
+export async function weights() {
+  return (await driver.getAll('body')).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+}
+
+/** En son kilo kaydı */
+export async function lastWeight() {
+  const w = await weights();
+  return w.at(-1) ?? null;
+}
+
+export async function exportData() {
+  return {
+    app: 'fitset',
+    schemaVersion: SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    settings: await getSettings(),
+    // Silinen seans yedeğe girmez — yoksa geri yüklemede sessizce geri gelirdi
+    sessions: (await allSessions()).filter(s => s.status !== 'deleted'),
+    // ⚠️ Yeni tablo eklerken BURAYA da eklenmeli — yoksa yedek sessizce eksik
+    // kalır ve kullanıcı kaybettiğini ancak geri yüklerken fark eder.
+    body: await weights(),
+    programs: await programlar(),
+    ozel: await ozelHareketler(),
+  };
+}
+
+export async function exportBlob() {
+  const json = JSON.stringify(await exportData(), null, 2);
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  return { blob: new Blob([json], { type: 'application/json' }), filename: `fitset-yedek-${stamp}.json` };
+}
+
+/* ── İçe aktarım doğrulaması ──────────────────────────────────────────────
+ * ⚠️ Eskiden yalnız `app` ve `schemaVersion` bakılıyordu; içerik olduğu gibi
+ * diske iniyordu. 24 Eyl'de tarayıcıda ölçüldü: programda olmayan bir gün
+ * (dayIndex 7) Geçmiş ekranını çökertiyor, seans kimliğine gömülü HTML
+ * sayfaya KAÇIŞSIZ basılıyordu. app.js zaten "düşmanca yedek dosyası" tehdidini
+ * tanıyıp toast'ı korumuştu — ama asıl kapı burasıydı.
+ *
+ * Kural: yalnız ÇİZİMİ ve HESABI etkileyen alanlar sınanır; bilinmeyen ek
+ * alanlar (carriedFrom, dayChosen…) korunur. Geçersiz kayıt ATLANIR ve
+ * SAYILIR — sessiz kayıp yok, sessiz kabul de yok.
+ */
+const KIMLIK = /^[A-Za-z0-9_-]{1,80}$/;
+const DURUMLAR = new Set(['active', 'done', 'deleted']);
+const sayiMi = (v, alt = 0) => typeof v === 'number' && Number.isFinite(v) && v >= alt;
+
+function gecerliSet(x) {
+  if (!x || typeof x !== 'object') return false;
+  if (x.type === 'weight_reps') return (x.weight === null || x.weight === undefined || sayiMi(x.weight)) && sayiMi(x.reps)
+    && (x.rir == null || (Number.isInteger(x.rir) && x.rir >= 0 && x.rir <= 5));   // G1: isteğe bağlı RIR
+  if (x.type === 'time') return sayiMi(x.seconds);
+  if (x.type === 'cardio') return sayiMi(x.minutes) && (x.km == null || sayiMi(x.km));
+  return false;
+}
+
+/** Seans geçerliyse null, değilse SEBEBİ döner (test ve tanı için) */
+export function gecersizSeans(s, { gunSayisi = Infinity } = {}) {
+  if (!s || typeof s !== 'object') return 'nesne değil';
+  if (typeof s.id !== 'string' || !KIMLIK.test(s.id)) return 'kimlik';
+  if (!Number.isInteger(s.dayIndex) || s.dayIndex < 0 || s.dayIndex >= gunSayisi) return 'gün';
+  if (s.programId != null && !KIMLIK.test(String(s.programId))) return 'program';
+  if (!DURUMLAR.has(s.status)) return 'durum';
+  if (!sayiMi(s.startedAt)) return 'başlangıç';
+  if (s.finishedAt != null && !sayiMi(s.finishedAt)) return 'bitiş';
+  if (!Array.isArray(s.entries)) return 'kayıtlar';
+  // Bugünkü set sayısı (11 Eki): { hareketId: 1-10 tam sayı }
+  if (s.setHedefi != null && (typeof s.setHedefi !== 'object' || Array.isArray(s.setHedefi)
+      || !Object.entries(s.setHedefi).every(([k, v]) => KIMLIK.test(k) && Number.isInteger(v) && v >= 1 && v <= 10))) return 'set hedefi';
+  for (const e of s.entries) {
+    if (typeof e?.exerciseId !== 'string' || !KIMLIK.test(e.exerciseId)) return 'hareket kimliği';
+    if (!Array.isArray(e.sets) || !e.sets.every(gecerliSet)) return 'set';
+    if (e.note != null && (typeof e.note !== 'string' || e.note.length > 500)) return 'not';   // G4
+  }
+  // G4 toparlanma kontrolü: { uyku?, sertlik?, agri?, duzey, azalan? }
+  if (s.hazirlik != null && (typeof s.hazirlik !== 'object' || Array.isArray(s.hazirlik)
+      || (s.hazirlik.duzey != null && !['uy', 'hafif', 'dinlen'].includes(s.hazirlik.duzey))
+      || (s.hazirlik.azalan != null && !(Array.isArray(s.hazirlik.azalan) && s.hazirlik.azalan.every(k => typeof k === 'string' && KIMLIK.test(k)))))) return 'hazırlık';
+  return null;
+}
+
+const gecerliKilo = b => typeof b?.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.d)
+  && sayiMi(b.kg) && b.kg > 0 && (b.ts == null || sayiMi(b.ts));
+
+/** Ayarlardan yalnız TANINAN ve DOĞRU TİPTE alanları al */
+function temizAyar(a) {
+  if (!a || typeof a !== 'object') return null;
+  const o = {};
+  if (sayiMi(a.restSeconds) && a.restSeconds <= 600) o.restSeconds = a.restSeconds;
+  if (Array.isArray(a.trainingDays) && a.trainingDays.length
+      && a.trainingDays.every(g => Number.isInteger(g) && g >= 0 && g <= 6))
+    o.trainingDays = [...new Set(a.trainingDays)].sort((x, y) => x - y);
+  if (a.heightCm === null || (sayiMi(a.heightCm) && a.heightCm >= 100 && a.heightCm <= 250)) o.heightCm = a.heightCm;
+  if (Number.isInteger(a.backupNagEvery) && a.backupNagEvery > 0) o.backupNagEvery = a.backupNagEvery;
+  if (a.dambilAdimi === 2 || a.dambilAdimi === 2.5) o.dambilAdimi = a.dambilAdimi;
+  if (typeof a.rirSor === 'boolean') o.rirSor = a.rirSor;
+  if (typeof a.hazirlikSor === 'boolean') o.hazirlikSor = a.hazirlikSor;   // G4
+  if (a.hazirlikGunu && typeof a.hazirlikGunu.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(a.hazirlikGunu.d))
+    o.hazirlikGunu = { d: a.hazirlikGunu.d };
+  if (typeof a.aktifProgram === 'string' && KIMLIK.test(a.aktifProgram)) o.aktifProgram = a.aktifProgram;
+  if (a.ilkAcilis === 'tamam') o.ilkAcilis = 'tamam';
+  if (a.kurulumBant === 'kapali') o.kurulumBant = 'kapali';
+  if (a.overrides && typeof a.overrides === 'object' && !Array.isArray(a.overrides)) {
+    o.overrides = {};
+    for (const [id, v] of Object.entries(a.overrides)) {
+      if (!KIMLIK.test(id) || !v || typeof v !== 'object') continue;
+      const temiz = {};
+      for (const k of ['sets', 'reps', 'seconds', 'minutes', 'weight']) if (sayiMi(v[k])) temiz[k] = v[k];
+      o.overrides[id] = temiz;
+    }
+  }
+  // avatar + profil: bilinmeyen anahtar/değer atılır (yedek dosyası kullanıcı elinden geçebilir)
+  { const av = temizAvatar(a.avatar); if (av) o.avatar = av; const pr = temizProfil(a.profil); if (pr) o.profil = { ...DEFAULT_SETTINGS.profil, ...pr }; }
+  return o;
+}
+
+/**
+ * İçe aktarım. Varsayılan 'merge': aynı id'li seansta DAHA YENİ olan kazanır,
+ * bilinmeyen id eklenir. 'replace' her şeyi siler — çağıran onay almalı.
+ * Sessizce veri kaybettirmemek için ne yapıldığını sayarak döner.
+ *
+ * Dönüş: { eklendi, güncellendi, atlandı, geçersiz, kilo:{eklendi,güncellendi,atlandı} }
+ * — üst düzey sayaçlar SEANS içindir; kilo kayıtları ayrı sayılır ("28 yeni"
+ * eskiden 14 seans + 14 kilo demekti).
+ *
+ * @param {{gunSayisi?:number}} [secenek] programdaki gün sayısı — bundan
+ *        büyük dayIndex taşıyan seans, onu çizemeyecek ekranlara girmesin diye atlanır
+ */
+export async function importData(raw, mode = 'merge', secenek = {}) {
+  const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  if (data?.app !== 'fitset') throw new Error('Bu dosya bir FitSet yedeği değil.');
+  if (typeof data.schemaVersion !== 'number') throw new Error('Yedek sürümsüz — okunamıyor.');
+  if (data.schemaVersion > SCHEMA_VERSION)
+    throw new Error(`Yedek daha yeni bir sürümden (v${data.schemaVersion}). Önce uygulamayı güncelle.`);
+
+  if (mode === 'replace') {
+    for (const t of Object.keys(STORES)) await driver.clear(t);
+  }
+
+  const stat = { eklendi: 0, güncellendi: 0, atlandı: 0, geçersiz: 0, kilo: { eklendi: 0, güncellendi: 0, atlandı: 0 },
+    program: { eklendi: 0, güncellendi: 0, atlandı: 0 }, ozel: { eklendi: 0, güncellendi: 0, atlandı: 0 } };
+  // Önce özel hareketler ve programlar: seanslar onlara atıf yapar
+  for (const ham of Array.isArray(data.ozel) ? data.ozel : []) {
+    if (gecersizOzel(ham)) { stat.geçersiz++; continue; }
+    const h = ozelTemizle(ham);                      // yalnız bilinen alanlar saklanır
+    const cur = await driver.get('ozel', h.id);
+    if (!cur) { await driver.put('ozel', h); stat.ozel.eklendi++; }
+    else if ((h.olusturuldu ?? 0) > (cur.olusturuldu ?? 0)) { await driver.put('ozel', h); stat.ozel.güncellendi++; }
+    else stat.ozel.atlandı++;
+  }
+  for (const p of Array.isArray(data.programs) ? data.programs : []) {
+    if (gecersizProgram(p)) { stat.geçersiz++; continue; }
+    const cur = await driver.get('programs', p.id);
+    if (!cur) { await driver.put('programs', p); stat.program.eklendi++; }
+    else if ((p.guncellendi ?? 0) > (cur.guncellendi ?? 0)) { await driver.put('programs', p); stat.program.güncellendi++; }
+    else stat.program.atlandı++;
+  }
+  for (const ham of Array.isArray(data.sessions) ? data.sessions : []) {
+    const s = migrate(ham);
+    // Gün sınırı seansın KENDİ programından (Faz 1A): 3 günlük programın 3. günü "Benim programım"ın 2 gününe takılmasın
+    const prg = s?.programId != null ? await driver.get('programs', String(s.programId)) : null;
+    const sinir = prg ? { gunSayisi: prg.gunler.length } : secenek;
+    if (gecersizSeans(s, sinir)) { stat.geçersiz++; continue; }
+    const cur = await getSession(s.id);
+    if (!cur) { await saveSession(s); stat.eklendi++; }
+    else if ((s.finishedAt ?? s.startedAt) > (cur.finishedAt ?? cur.startedAt)) { await saveSession(s); stat.güncellendi++; }
+    else stat.atlandı++;
+  }
+  // Kilo kayıtları: gün anahtarı benzersiz, YENİ ölçüm eskinin üstüne yazar
+  for (const b of Array.isArray(data.body) ? data.body : []) {
+    if (!gecerliKilo(b)) { stat.geçersiz++; continue; }
+    const cur = await driver.get('body', b.d);
+    if (!cur) { await driver.put('body', b); stat.kilo.eklendi++; }
+    else if ((b.ts ?? 0) > (cur.ts ?? 0)) { await driver.put('body', b); stat.kilo.güncellendi++; }
+    else stat.kilo.atlandı++;
+  }
+  const ayar = temizAyar(data.settings);
+  if (ayar) await saveSettings(ayar);
+  return stat;
+}
+
+/** Eski şemadan yeniye taşıma. Şimdilik v1 tek sürüm; ileride buraya eklenecek. */
+function migrate(session) {
+  if (session && typeof session === 'object' && !session.schemaVersion) session.schemaVersion = 1;
+  return session;
+}
+
+/**
+ * Tarayıcıdan verinin otomatik temizlenmemesini ister (garanti değil).
+ * ⚠️ 27 Eyl'e kadar `persisted() ? true : persist()` yazıyordu: persisted() bir PROMISE döndürür,
+ * Promise her zaman doğrudur → persist() HİÇ çağrılmadı ve veri "en iyi çaba" deposunda kaldı
+ * (canlıda ölçüldü: persisted false). Android depolama sıkışınca böyle veriyi silebilir.
+ */
+export async function requestPersistence() {
+  if (!navigator.storage?.persist) return null;
+  if (await navigator.storage.persisted()) return true;
+  return navigator.storage.persist();
+}

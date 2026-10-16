@@ -1,0 +1,33 @@
+FullSet (FitSet adıyla da görünür) — antrenman defteri
+Telif Hakkı (c) 2026 Sabri Temel. Tüm hakları saklıdır.
+
+Bu uygulamanın kaynak kodu, hareket verileri, 3B poz ve animasyon tanımları, denetim ve üretim
+araçları, görsel tasarımı ve metinleri Sabri Temel'in eseridir ve 5846 sayılı Fikir ve Sanat
+Eserleri Kanunu ile korunur.
+
+Uygulamayı kişisel antrenman takibi amacıyla kullanmak serbesttir. Bunun dışında, yazılı izin
+olmadan uygulamanın ya da herhangi bir parçasının (kod, hareket verileri, çizimler, metinler)
+kopyalanması, değiştirilmesi, dağıtılması, yeniden yayımlanması, satılması, kiralanması, tersine
+mühendisliğe konu edilmesi ya da başka bir ürünün parçası olarak kullanılması yasaktır; yasaların açıkça
+izin verdiği kullanımlar saklıdır.
+
+Üçüncü taraf bileşenler bu bildirimin kapsamı dışındadır ve kendi lisanslarına tabidir:
+  - three.js — MIT lisansı (js/vendor/three-LICENSE.txt)
+  - Archivo yazı tipi — SIL Open Font License 1.1 (fonts/OFL.txt)
+  - Manken gövdesinin kaynak varlıkları — MakeHuman topluluk varlıkları (MPFB2 ile dışa aktarıldı), CC0 1.0
+
+İzin ve iletişim: sbrtemel@gmail.com
+
+---
+
+FullSet (also shown as FitSet) — workout log
+Copyright (c) 2026 Sabri Temel. All rights reserved.
+
+The source code, exercise data, 3D pose and animation definitions, verification and production
+tools, visual design and texts of this application are the work of Sabri Temel. Personal use of
+the application for tracking your own training is permitted. Any other copying, modification,
+distribution, republication, sale, rental, reverse engineering or use as part of another product,
+in whole or in part, requires prior written permission, except where permitted by law.
+
+Third-party components are excluded from this notice and remain under their own licenses
+(three.js — MIT; Archivo font — SIL OFL 1.1; MakeHuman community assets exported with MPFB2 — CC0 1.0).

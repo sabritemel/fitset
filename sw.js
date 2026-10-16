@@ -1,0 +1,142 @@
+/**
+ * SERVICE WORKER — çevrimdışı çalışma + kontrollü güncelleme.
+ *
+ * ⚠️ İKİ KURAL, ikisi de gerçek acılardan geliyor:
+ *
+ * 1) CACHE SÜRÜMÜ ELLE YAZILMAZ. `tools/bump-sw.js` onu ASSETS listesindeki
+ *    dosyaların İÇERİĞİNDEN türetir (npm test ilk iş onu koşar). Dosya
+ *    değişince hash değişir, önbellek adı değişir, güncelleme kendiliğinden
+ *    tetiklenir. (Bu satır eskiden "sürümü artırmayı unutma" diyordu — araçtan
+ *    önceki insan kuralıydı ve aracın kaldırdığı işi öğretmeye devam ediyordu.)
+ *    Yeni bir dosya eklersen ASSETS'e de ekle; araç yalnız listedekileri okur.
+ *
+ * 2) sw.js NO-CACHE İLE SERVİS EDİLMELİ. Tarayıcı sw.js'in kendisini önbelleğe
+ *    alırsa yeni sürümü hiç göremez. GitHub Pages bunu doğru yapar; başka bir
+ *    yere taşırsan kontrol et.
+ *
+ * Güncelleme akışı: yeni SW kurulur → BEKLER (otomatik devralmaz) → sayfa
+ * "yeni sürüm var" şeridi gösterir → kullanıcı dokununca SKIP_WAITING mesajı
+ * gelir → devralır → sayfa yenilenir. Kullanıcı antrenman ortasında sürüm
+ * değiştirmez; kararı o verir.
+ */
+const CACHE = 'fitset-d44504aad9';
+
+const ASSETS = [
+  './',
+  './index.html',
+  './gizlilik.html',                // gizlilik politikası — mağaza şartı, Ayarlar › Hakkında'dan (13 Eki)
+  './kosullar.html',                // kullanım koşulları — Ayarlar › Hakkında'dan (16 Eki)
+  './manifest.json',
+  './css/style.css',
+  './fonts/fonts.css',
+  './fonts/OFL.txt',                 // Archivo yazı tipinin lisansı (SIL OFL 1.1 — yazı tipiyle birlikte dağıtılmalı)
+  './js/app.js',
+  './js/ui.js',
+  './js/store.js',
+  './js/schedule.js',
+  './js/session.js',
+  './js/program.js',                 // programlar: göç, düzenleme, doğrulama (Faz 1A)
+  './js/marka.js',                   // uygulamanın adı ve sloganı — tek yer (açılış)
+  './js/avatar.js',                  // avatar: gövdeler (Leo · Mia · Max · Nora), paletler, bölge/profil varsayılanı
+  './js/timer.js',
+  './js/ilerleme.js',
+  './js/anim/equipment.js',          // hareket verisi hâlâ içe aktarıyor (2B çizim emekli, bkz. CLAUDE.md)
+  './js/anim3d/olcu.js',
+  './js/anim3d/manken3d.js',
+  './js/anim3d/hareketler3d.js',
+  './js/anim3d/sahne.js',
+  './js/anim3d/webgl.js',             // kapsül manken — C açılamazsa/yavaşsa ya da "basit görünüm"de
+  './js/anim3d/c/motor.js',           // C manken (8 Eki, varsayılan): sahne + alet malzemeleri
+  './js/anim3d/c/govde.js',           //   gövde: deri bağlama, IK, giysiler
+  './js/anim3d/c/govde.glb',          //   MakeHuman/MPFB2 gövdesi (CC0) — kurulumda önbelleğe: çevrimdışı ilk açılışta da C
+  './js/anim3d/c/govde-kadin.glb',    //   avatar gövdeleri (13 Eki, aynı iskelet) — dördü de önbellekte: çevrimdışı da değişir (K5)
+  './js/anim3d/c/govde-yasli_erkek.glb',
+  './js/anim3d/c/govde-yasli_kadin.glb',
+  './js/vendor/three-c.min.js',       // three.js r186 C alt kümesi (MIT)
+  './js/vendor/three.min.js',         // three.js r186 alt kümesi (MIT) — kapsül manken
+  './js/vendor/three-LICENSE.txt',
+  './js/data/exercises.js',
+  './js/data/hazir.js',
+  './js/kurulum.js',
+  './js/rekorlar.js',
+  './js/hazirlik.js',
+  './js/data/warmup.js',
+  './icons/isaret.svg',              // açılış ekranının FS işareti
+  './icons/fs-180.png',
+  './icons/fs-192.png',
+  './icons/fs-512.png',
+  './icons/fs-maskable-512.png',
+];
+
+/** ASSETS'in mutlak yolları — yayında kök '/fitset/', yerelde '/' (scope'tan çözülür) */
+const UYGULAMA_YOLLARI = new Set(ASSETS.map(a => new URL(a, self.registration.scope).pathname));
+
+self.addEventListener('install', e => {
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    // Tek tek ekliyoruz: addAll biri 404 verirse HEPSİNİ iptal eder ve
+    // uygulama sessizce çevrimdışı çalışmaz hale gelir. Eksiği görmek isteriz.
+    // 16 Eki: istek HTTP önbelleğini ATLAR (cache: 'reload'). GitHub Pages dosyaları 10 dk önbellekte tutar; yeni sürüm o
+    // sürede kurulursa eski dosya (ör. PerspectiveCamera'sız three.js paketi) yeni sürümün önbelleğine girip sürümleri karıştırıyordu
+    // (yerelde ölçüldü: tarayıcı eski paketi "cache" teslimiyle verdi, 3B motor açılamadı).
+    await Promise.all(ASSETS.map(u =>
+      c.add(new Request(u, { cache: 'reload' })).catch(err => console.warn('[sw] önbelleğe alınamadı:', u, err.message))
+    ));
+    // Fontlar fonts.css içinde; onları ilk kullanımda runtime önbelleğe alıyoruz.
+  })());
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil((async () => {
+    for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k);
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+
+  // Gezinme (sayfa açılışı): önce İSTENEN sayfa, sonra ağ, en son index.html.
+  //
+  // ⚠️ Eskiden burada koşulsuz index.html dönülüyordu. Sonuç: /mockup.html
+  // istendiğinde de uygulama açılıyordu — yedek, kendisi olmayan her sayfayı
+  // yutuyordu. Yedek YALNIZ gerçekten bulunamadığında devreye girmeli.
+  if (req.mode === 'navigate') {
+    e.respondWith((async () => {
+      const hit = await caches.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      try { const res = await fetch(req); if (res.ok) return res; } catch { /* çevrimdışı */ }
+      return (await caches.match('./index.html')) || new Response(
+        '<meta charset=utf-8><p style="font:16px system-ui;padding:24px">FitSet çevrimdışı açılamadı. Bir kez internete bağlıyken açman gerekiyor.</p>',
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    })());
+    return;
+  }
+
+  // Önbellek YALNIZ uygulamanın kendi dosyaları (ASSETS) ve fontlar içindir.
+  // ⚠️ Eskiden aynı kökenden gelen HER dosya önbelleğe alınıp önbellekten
+  // sunuluyordu — mokaplar ve araç betikleri dahil. Sürüm adı yalnız ASSETS'in
+  // içeriğinden türediği için bu dosyalar değişince önbellek YENİLENMİYOR ve
+  // tarayıcı bayat mokabı gösteriyordu (24 Eyl, iki kez: düzeltilmiş 3B mokap
+  // yerine eskisi çalıştı). Uygulamaya ait olmayan istek SW'den hiç geçmez.
+  const yol = new URL(req.url).pathname;
+  if (!UYGULAMA_YOLLARI.has(yol) && !yol.includes('/fonts/')) return;
+
+  // Uygulama varlıkları: önbellek öncelikli, kaçanlar (fontlar) ağdan gelip önbelleğe eklenir
+  e.respondWith((async () => {
+    const hit = await caches.match(req);
+    if (hit) return hit;
+    try {
+      const res = await fetch(req);
+      if (res.ok) (await caches.open(CACHE)).put(req, res.clone());
+      return res;
+    } catch (err) {
+      return new Response('', { status: 504, statusText: 'çevrimdışı' });
+    }
+  })());
+});

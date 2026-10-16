@@ -1,0 +1,874 @@
+/**
+ * 3B KAPSÜL MANKEN — MOKAP MOTORU (uygulama koduna BAĞLI DEĞİL)
+ *
+ * ── ÇİZİM ────────────────────────────────────────────────────────────────
+ * Ağustos'taki izometrik prototip (tools/proto-izometrik.mjs) 3B iskeleti
+ * doğru hesaplıyordu ama ÇİZGİ çiziyordu; çizgi figürde göz derinliği okuyamaz.
+ * Burada üç derinlik ipucu var, hepsi SVG, bağımlılıksız:
+ *   1. HACİM  — her uzuv bir KAPSÜL; kapsülün dik izdüşümü tam olarak
+ *               yuvarlak uçlu kalın çizgidir → hacim bedava.
+ *   2. ÖRTME  — kapsüller uzaktan yakına sıralanır, altlarında zemin renginde kontur.
+ *   3. ZEMİN  — disk + gölge; yakın uzuv açık, uzak uzuv koyu.
+ *
+ * ── HAREKET: "EKİPMAN SÜRER, BEDEN TAKİP EDER" (24 Eyl, 2. tur) ──────────
+ * ⚠️ İlk mokapta kollar İKİ ANAHTAR KAREDE eklem açısıyla yazılıp açılar ayrı
+ * ayrı ara değerleniyordu. Sabri gözle yakaladı: bench press'te aynı barı
+ * tutan iki elin arası 49,2 ↔ 88,0 oynuyordu. Ölçülünce aynı SINIFTAN ikinci
+ * kusur çıktı: reverse fly'da makine kolunun boyu 32,4 ↔ 78,0 (demir kol uzuyordu).
+ * Kök: elleri bara / kolu makineye bağlayan HİÇBİR ŞEY yoktu; kısıt yalnız
+ * çizimde "var gibi" duruyordu.
+ *
+ * Çözüm yapısal: hareketin kendisi EKİPMANIN yolu olarak yazılır (bar şu
+ * yoldan gider, tutamak şu eksen etrafında döner). Eller o noktalara
+ * bağlanır, kol İKİ KEMİKLİ TERS KİNEMATİKLE (IK) çözülür. Böylece:
+ *   · iki el arası = barın tutuş genişliği → TANIM GEREĞİ sabit
+ *   · kaldıraç boyu = tutamağın dönme yarıçapı → TANIM GEREĞİ sabit
+ *   · uzuv boyu = IK'nın girdisi → sabit
+ * Yine de "tanım gereği" bir iddiadır; fizik-denetimi.mjs her kareyi ölçer.
+ */
+import { OLCU } from './olcu.js';
+export const rd = d => d * Math.PI / 180;
+export const yon = (yaw, pitch) => [Math.cos(rd(pitch)) * Math.cos(rd(yaw)), Math.sin(rd(pitch)), -Math.cos(rd(pitch)) * Math.sin(rd(yaw))];
+export const ekle = (p, v, k = 1) => [p[0] + v[0] * k, p[1] + v[1] * k, p[2] + v[2] * k];
+export const fark = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+export const nokta = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const boy = v => Math.hypot(v[0], v[1], v[2]);
+export const birim = v => { const m = boy(v) || 1; return [v[0] / m, v[1] / m, v[2] / m]; };
+export const ara = (a, b, t) => a + (b - a) * t;
+export const mesafe = (a, b) => boy(fark(a, b));
+
+/** Segment uzunlukları — B1 (7 Eki 2026): ürün mankeni C'nin (MakeHuman) KENDİ ölçüleri (olcu.js, üretilmiş).
+ *  ⚠️ Eskiden 2B motorla aynı elle yazılmış sayılardı (omuz yarı eni 14, üst kol 31, ön kol 29, uyluk 39, baldır 37);
+ *  C ile oranlar çok farklıydı ve çizici bunu her karede yamayla kapatıyordu (docs/2026-10-07-b1-veri-modeli-v2-PLAN.md).
+ *  fa = dirsek → avuçtaki kavrama noktası (ön kol + bilekten kavramaya). head yalnız çizim içindir. */
+export const L = { torso: OLCU.torso, head: 13, ua: OLCU.ua, fa: OLCU.fa + OLCU.elKavrama, th: OLCU.th, sh: OLCU.sh };
+/** Bilekten kavrama noktasına (cm) — L.fa bunu içerir; düz avuçlu hareketler (şınav) bileği ayrıca kurar */
+export const KAVRAMA = OLCU.elKavrama;
+/** Omuz eklemi boyuna göre (yan · aşağı · ön), kalça eklemi yarı eni, ayak bileği yüksekliği ve ayak boyu (bilek → parmak kökü) */
+export { OLCU };
+export const OMUZ = OLCU.omuz, KALCA_YAN = OLCU.kalcaYan, AYAK_Y = OLCU.ayakBilek, AYAK_BOY = OLCU.ayakBoy, TOP_Y = OLCU.topYuk;
+/** C'nin başı (8 Eki): merkez boyundan yuk yukarı + on öne; çarpışma denetimleri yarı derinliği yarıçap alır (yüz → ense) */
+export const KAFA = OLCU.kafa, KAFA_R = OLCU.kafa.yariDerin;
+/** C'nin sırt derinliği (gövde ekseninden sırt derisine) ve kalça arkası — sırtüstü/sırt pedi temasları (eskiden kapsül yarıçapı 12,5) */
+export const SIRT = OLCU.sirt, KALCA_ARKA = OLCU.kalcaArka;
+/** Sırtüstü yatay gövdede başın arkası `ust` yüzeyine değsin diye boyun eğimi (°, + = başı geriye; pivot boyun) */
+export function basYaslanmaEgimi(Py, ust) {
+  let b = 0; for (let i = 0; i < 40; i++) { const f = Py - KAFA.yuk * Math.sin(b) + KAFA.on * Math.cos(b) - KAFA_R - ust;
+    b += f / (KAFA.yuk * Math.cos(b) + KAFA.on * Math.sin(b)); }
+  return Math.max(0, b * 180 / Math.PI);
+}
+/** Kapsül yarıçapları (çizim + çarpışma). ayak = ayak kapsülü (parmak ucu yerdeyken yüksekliği de bu) */
+export const R = { karin: 10.5, gogus: 12.5, kafa: 10, ua: 5.6, fa: 4.6, el: 4.2, th: 7.8, sh: 5.8, ayak: 3.6, omuz: 6.2, kalca: 8 };
+
+/**
+ * İKİ KEMİKLİ TERS KİNEMATİK — omuzdan (S) hedefe (T) üst kol a, ön kol b.
+ * `kutup`: dirseğin bakacağı yön (ör. dışarı-aşağı). Hedef ulaşılamazsa el
+ * erişebildiği en yakın noktada kalır ve `ulasti: false` döner — denetim bunu
+ * "el ekipmanda değil" diye YAKALAR (sessizce uzatmaz).
+ */
+export function ik2(S, T, a, b, kutup) {
+  const v = fark(T, S), d0 = boy(v), u = birim(v);
+  const d = Math.min(Math.max(d0, Math.abs(a - b) + 1e-3), a + b - 1e-3);
+  const cosA = (a * a + d * d - b * b) / (2 * a * d), sinA = Math.sqrt(Math.max(0, 1 - cosA * cosA));
+  // kutbun u'ya dik bileşeni dirseğin açılacağı yönü verir
+  const w = birim(fark(kutup, ekle([0, 0, 0], u, nokta(kutup, u))));
+  const dirsek = ekle(ekle(S, u, a * cosA), w, a * sinA);
+  return { dirsek, el: ekle(S, u, d), ulasti: Math.abs(d - d0) < 0.05 };
+}
+
+/* ── Poz → iskelet ────────────────────────────────────────────────────────
+ * Beden (gövde, bacaklar) açılarla: P [x,y,z] kalça merkezi · g [yaw,pitch]
+ * gövde yönü · yan [yaw,pitch] omuz ekseni · thA shA thB shB [yaw,pitch].
+ * Kollar: `eller(govde)` verilirse IK ile (ekipmana bağlı), yoksa açıyla.
+ */
+export function iskelet(p, uclar) {
+  const P = p.P, g = yon(...p.g), yan = yon(...p.yan);
+  const boyun = ekle(P, g, L.torso);
+  const gogusAlt = ekle(P, g, 24);
+  const capraz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const yuz = p.yuz ? yon(...p.yuz) : birim(capraz(g, yan));        // yüzün baktığı yön
+  // 8 Eki: C'nin baş merkezi (eskiden boyundan düz 14 yukarı — yüz 17,8 cm öndeydi). `bas` = boyun eğimi (° + geriye),
+  // pivot boyun: sırtüstünde başın arkası sehpaya iner (C'nin dinlenme duruşunda baş öne eğik, sırtüstünde 7 cm havadaydı)
+  const bE = rd(p.bas ?? 0), gBas = birim(ekle(g.map(v => v * Math.cos(bE)), yuz, -Math.sin(bE))), yuzBas = birim(ekle(yuz.map(v => v * Math.cos(bE)), g, Math.sin(bE)));
+  const kafa = ekle(ekle(boyun, gBas, KAFA.yuk), yuzBas, KAFA.on);
+  // omuzKalk (2. tur, Sabri: asılırken omuz "aktif ile pasif asılmanın arası, hafifçe kalksın"): kürek kemiği yükselmesi —
+  // omuzlar gövde ekseninde yukarı (cm). Asılı harekette gövde bu kadar aşağıda asılır, kollar düz kalır.
+  const omuzNok = i => ekle(ekle(ekle(boyun, yan, i * OMUZ.yan), g, (p.omuzKalk ?? 0) - OMUZ.asagi), yuz, OMUZ.on);
+  const omA = omuzNok(1), omB = omuzNok(-1);
+  const kaA = ekle(P, yan, KALCA_YAN), kaB = ekle(P, yan, -KALCA_YAN);
+  const s = { P, g, yan, yuz, boyun, kafa, gBas, yuzBas, gogusAlt, omA, omB, kaA, kaB, ulasti: true };
+  const h = uclar ? uclar(s) : {};
+  // Uç (el/ayak) hedefe bağlıysa IK, değilse açıyla (FK)
+  const uzuv = (kok, hedef, a, b, ust, alt, ad1, ad2) => {
+    if (hedef) {
+      const r = ik2(kok, hedef.hedef, a, b, hedef.kutup);
+      s[ad1] = r.dirsek; s[ad2] = r.el; s.ulasti &&= r.ulasti;
+    } else { s[ad1] = ekle(kok, yon(...ust), a); s[ad2] = ekle(s[ad1], yon(...alt), b); }
+  };
+  uzuv(omA, h.A, L.ua, L.fa, p.uaA, p.faA, 'dA', 'eA');
+  uzuv(omB, h.B, L.ua, L.fa, p.uaB, p.faB, 'dB', 'eB');
+  uzuv(kaA, h.ayakA, L.th, L.sh, p.thA, p.shA, 'zA', 'aA');
+  uzuv(kaB, h.ayakB, L.th, L.sh, p.thB, p.shB, 'zB', 'aB');
+  // Ayak (bilek → parmak kökü): her ayak kendi yönünde; [yaw,pitch] TABANIN açısı (0 = düz basar).
+  // Bilek tabandan AYAK_Y yukarıda, parmak kökü (ball eklemi) TOP_Y yukarıda → u, taban yönünde AYAK_BOY ileri ve
+  // tabana dik (AYAK_Y − TOP_Y) aşağı. Düz basan ayakta u.y = TOP_Y (C bedeninin parmak eklemi, olcu.js · topYuk).
+  const ayakYon = v => Array.isArray(v) ? v : [v ?? 0, 0];
+  const ayakUc = (a, v) => { const [yw, pt] = ayakYon(v); return ekle(ekle(a, yon(yw, pt), AYAK_BOY), yon(yw, pt - 90), AYAK_Y - TOP_Y); };
+  // Kapsül çizimi için ayak ucu: kapsül yarıçapı R.ayak > TOP_Y; uç tabandan R.ayak yukarıda (eski u) ama hiçbir
+  // zaman parmak ekleminin (R.ayak − TOP_Y) altında değil — plankta kapsül zemine gömülmesin
+  const kapsulUc = (u, v) => { const [yw, pt] = ayakYon(v), d = R.ayak - TOP_Y, k = ekle(u, yon(yw, pt - 90), -d);
+    return k[1] < u[1] + d ? [k[0], u[1] + d, k[2]] : k; };
+  s.uA = ayakUc(s.aA, p.ayakA ?? p.ayak);
+  s.uB = ayakUc(s.aB, p.ayakB ?? p.ayak);
+  s.ukA = kapsulUc(s.uA, p.ayakA ?? p.ayak); s.ukB = kapsulUc(s.uB, p.ayakB ?? p.ayak);
+  // tabanın ileri yönü (birim) — çizici ayağı buna hizalar (a→u değil: u tabanın altına doğru kaydırılmış nokta)
+  s.tabA = yon(...ayakYon(p.ayakA ?? p.ayak)); s.tabB = yon(...ayakYon(p.ayakB ?? p.ayak));
+  s.hedef = h;
+  s.zeminY = p.zeminY ?? 0;                                           // basılan yüzey (koşu bandı, basamak) — motorun 'ayak yerde' kararı
+  // 17 Eki: leğenin yönü (verilirse) — mekik türü harekette gövde belden kıvrılır, leğen oturakta/yerde kalır. Veri iskeleti
+  // tek parça (gövde = g); motor leğenden göğse kademeli döndürür (yalnız deri). Verilmezse leğen gövdeyle aynı.
+  s.gKalca = p.gKalca ? yon(...p.gKalca) : null;
+  return s;
+}
+
+/** İki poz arası: [yaw,pitch] çiftleri ve koordinatlar doğrusal */
+export function pozAra(A, B, t) {
+  const o = {};
+  for (const k in A) o[k] = Array.isArray(A[k]) ? A[k].map((v, i) => ara(v, B[k]?.[i] ?? v, t)) : A[k];
+  return o;
+}
+
+/** Bir hareketin t anındaki iskeleti — `poz(t)` ya da a/b ara değeri + `uclar(t)` (IK hedefleri) */
+export const an = (h, t) => Object.assign(iskelet(h.poz ? h.poz(t) : pozAra(h.a, h.b ?? h.a, t), h.uclar?.(t)), { t });
+
+/* ── Kamera ──────────────────────────────────────────────────────────────── */
+export function kamera(teta, fi) {
+  const cT = Math.cos(rd(teta)), sT = Math.sin(rd(teta)), cF = Math.cos(rd(fi)), sF = Math.sin(rd(fi));
+  const f = ([x, y, z]) => {
+    const x1 = x * cT - z * sT, z1 = x * sT + z * cT;
+    return [x1, -(y * cF - z1 * sF), y * sF + z1 * cF];      // [ekranX, ekranY, derinlik (büyük = yakın)]
+  };
+  f.yon = [sT * cF, sF, cT * cF];                             // derinliğin arttığı yön = kameraya doğru
+  return f;
+}
+
+/* ── Sahne öğeleri: { d: derinlik, svg } — sonunda derinliğe göre sıralanır ── */
+const f1 = n => n.toFixed(1);
+export function kapsul(pr, a, b, r, renk, kontur = '#0A0B0D') {
+  const A = pr(a), B = pr(b);
+  const cizgi = (w, c) => `<line x1="${f1(A[0])}" y1="${f1(A[1])}" x2="${f1(B[0])}" y2="${f1(B[1])}" stroke="${c}" stroke-width="${f1(w)}" stroke-linecap="round"/>`;
+  return { d: (A[2] + B[2]) / 2, svg: cizgi(2 * r + 3, kontur) + cizgi(2 * r, renk),
+           geo: { tur: 'k', a2: [A[0], A[1]], b2: [B[0], B[1]], a3: a, b3: b, r, minY: Math.min(a[1], b[1]) - r, maxY: Math.max(a[1], b[1]) + r } };
+}
+export function kure(pr, c, r, renk, kontur = '#0A0B0D') {
+  const C = pr(c);
+  return { d: C[2], svg: `<circle cx="${f1(C[0])}" cy="${f1(C[1])}" r="${f1(r + 1.5)}" fill="${kontur}"/><circle cx="${f1(C[0])}" cy="${f1(C[1])}" r="${f1(r)}" fill="${renk}"/>`,
+           geo: { tur: 's', c2: [C[0], C[1]], c3: c, r, minY: c[1] - r, maxY: c[1] + r } };
+}
+export function cokgen(pr, noktalar, dolgu, kontur = '#0A0B0D') {
+  const P = noktalar.map(pr);
+  return { d: P.reduce((s, p) => s + p[2], 0) / P.length, dMin: Math.min(...P.map(p => p[2])),
+           svg: `<polygon points="${P.map(p => f1(p[0]) + ',' + f1(p[1])).join(' ')}" fill="${dolgu}" stroke="${kontur}" stroke-width="1.5" stroke-linejoin="round"/>`,
+           geo: { tur: 'p', P2: P.map(p => [p[0], p[1]]), P3: noktalar } };
+}
+/** Kutu: yalnız kameraya bakan yüzler; üst yüz daha açık (ışık yukarıdan) */
+export function kutu(pr, [x0, x1], [y0, y1], [z0, z1], ton = { ust: '#343a42', yan: '#23282e' }) {
+  const V = (x, y, z) => [x, y, z];
+  const yuzler = [
+    { n: [0, 1, 0], p: [V(x0, y1, z0), V(x1, y1, z0), V(x1, y1, z1), V(x0, y1, z1)], c: ton.ust },
+    { n: [0, -1, 0], p: [V(x0, y0, z0), V(x1, y0, z0), V(x1, y0, z1), V(x0, y0, z1)], c: ton.yan },
+    { n: [1, 0, 0], p: [V(x1, y0, z0), V(x1, y1, z0), V(x1, y1, z1), V(x1, y0, z1)], c: ton.yan },
+    { n: [-1, 0, 0], p: [V(x0, y0, z0), V(x0, y1, z0), V(x0, y1, z1), V(x0, y0, z1)], c: ton.yan },
+    { n: [0, 0, 1], p: [V(x0, y0, z1), V(x1, y0, z1), V(x1, y1, z1), V(x0, y1, z1)], c: ton.yan },
+    { n: [0, 0, -1], p: [V(x0, y0, z0), V(x1, y0, z0), V(x1, y1, z0), V(x0, y1, z0)], c: ton.yan },
+  ];
+  const o = pr([0, 0, 0]);
+  return yuzler.filter(y => pr(y.n)[2] - o[2] > 1e-6).map(y => ({ ...cokgen(pr, y.p, y.c, '#0A0B0D'),
+    ...(y.n[1] > 0.7 && { ustYuz: true, Y: y1 }) }));
+}
+/**
+ * YUVARLATILMIŞ MİNDER (2. tur, Sabri: "mat en az 1 cm, köşeleri radiuslu · makinelerin oturma/yaslanma yerlerinde 2 cm deri
+ * minder, köşeleri yuvarlak"): YALNIZ 3B çizimde — köşeleri `r` yarıçaplı, kenarları `pah` ile yuvarlatılmış kalın levha.
+ * Yerini tutan kutu yüzleri (SVG yedek + denetimler: taşıyıcı yüzey, gömülme) `gizle3B` ile 3B'de gizlenir, denetime kalır.
+ * Eksenler: u (en, w) · v (KALINLIK, h — üst yüz +v) · n (boy, d); merkez etrafında.
+ */
+export const gizle3B = yuzler => yuzler.map(y => (y.geo ? { ...y, geo: { ...y.geo, gizli3B: true } } : y));
+export const yastik3B = (merkez, [u, v, n], [w, h, d], { r = 3, pah = 0.8, malzeme = 'deri', renk = '#3a4149' } = {}) =>
+  ({ d: -Infinity, svg: '', geo: { tur: 'y', merkez, u, v, n, w, h, d, r: Math.min(r, w / 2 - 0.01, d / 2 - 0.01), pah: Math.min(pah, h / 2 - 0.01), malzeme, renk } });
+/**
+ * YÖNLÜ KUTU — eğik sırt minderi, 45° kızak gibi eksene paralel OLMAYAN parçalar.
+ * `eksen` = [u, v, n] birim vektörleri, `boyut` = [w, h, d]; merkez etrafında.
+ */
+export function kutuY(pr, merkez, [u, v, n], [w, h, d], ton = { ust: '#343a42', yan: '#23282e' }) {
+  const K = (a, b, c) => ekle(ekle(ekle(merkez, u, a * w / 2), v, b * h / 2), n, c * d / 2);
+  const yuzler = [
+    { nrm: v, p: [K(-1, 1, -1), K(1, 1, -1), K(1, 1, 1), K(-1, 1, 1)], c: ton.ust },
+    { nrm: v.map(x => -x), p: [K(-1, -1, -1), K(1, -1, -1), K(1, -1, 1), K(-1, -1, 1)], c: ton.yan },
+    { nrm: u, p: [K(1, -1, -1), K(1, 1, -1), K(1, 1, 1), K(1, -1, 1)], c: ton.yan },
+    { nrm: u.map(x => -x), p: [K(-1, -1, -1), K(-1, 1, -1), K(-1, 1, 1), K(-1, -1, 1)], c: ton.yan },
+    { nrm: n, p: [K(-1, -1, 1), K(1, -1, 1), K(1, 1, 1), K(-1, 1, 1)], c: ton.ust },
+    { nrm: n.map(x => -x), p: [K(-1, -1, -1), K(1, -1, -1), K(1, 1, -1), K(-1, 1, -1)], c: ton.yan },
+  ];
+  const o = pr([0, 0, 0]);
+  return yuzler.filter(y => pr(y.nrm)[2] - o[2] > 1e-6).map(y => ({ ...cokgen(pr, y.p, y.c),
+    ...(y.nrm[1] > 0.9 && { ustYuz: true, Y: y.p.reduce((a, q) => a + q[1], 0) / 4 }) }));   // yalnız YATAYA yakın yüz taşıyıcıdır (0,7 iken 45° kızak kenarı da sayılıyordu)
+}
+/* ── KALIN SİLİNDİR PARÇA — plaka, dambıl başı, makara tekeri ─────────────────────────────
+ * ⚠️ 27 Eyl (Sabri): "dambıl ve halterlerin hiç kalınlığı yok, karşıdan bakınca tek piksellik çizgi".
+ * Plakalar düz tek bir çokgendi (disk): kenardan bakınca sıfır kalınlık. Artık gerçek bir silindir:
+ * WebGL kapaklı silindir çizer; SVG yedek iki yüzün izdüşümlerinin DIŞBÜKEY ZARFINI çizer — her açıdan
+ * doğru dış hat. geo kapsülle UYUMLU alanlar taşır (a2/b2/a3/b3/r): kapsül bekleyen kod kırılmaz. */
+const capraz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+/** 2B dışbükey zarf (monoton zincir) */
+function zarf(P) {
+  const p = [...P].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const alt = [], ust = [];
+  for (const q of p) { while (alt.length > 1 && cr(alt.at(-2), alt.at(-1), q) <= 0) alt.pop(); alt.push(q); }
+  for (const q of p.reverse()) { while (ust.length > 1 && cr(ust.at(-2), ust.at(-1), q) <= 0) ust.pop(); ust.push(q); }
+  return [...alt.slice(0, -1), ...ust.slice(0, -1)];
+}
+/**
+ * @param c        merkez   @param eksen  silindir ekseni   @param r  yarıçap (çokgende köşe yarıçapı)
+ * @param kalinlik eksen boyunca boy   @param kenar  24 = yuvarlak, 6 = altıgen (kauçuk dambıl başı)
+ */
+export function silindirParca(pr, c, eksen, r, kalinlik, renk, { kenar = 24, metal = false, kontur = '#0A0B0D' } = {}) {
+  const e = birim(eksen), a = ekle(c, e, -kalinlik / 2), b = ekle(c, e, kalinlik / 2);
+  const u = Math.abs(e[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0], v1 = birim(capraz(e, u)), v2 = capraz(e, v1);
+  const faz = kenar === 6 ? Math.PI / 6 : 0;
+  const cember = m => Array.from({ length: kenar }, (_, i) => { const q = i / kenar * 2 * Math.PI + faz;
+    return ekle(ekle(m, v1, r * Math.cos(q)), v2, r * Math.sin(q)); });
+  const P3 = [...cember(a), ...cember(b)], P2 = zarf(P3.map(q => { const p = pr(q); return [p[0], p[1]]; }));
+  const A = pr(a), B = pr(b), Y = P3.map(q => q[1]);
+  return { d: (A[2] + B[2]) / 2,
+    svg: `<polygon points="${P2.map(p => f1(p[0]) + ',' + f1(p[1])).join(' ')}" fill="${renk}" stroke="${kontur}" stroke-width="1.5" stroke-linejoin="round"/>`,
+    geo: { tur: 'c', a2: [A[0], A[1]], b2: [B[0], B[1]], a3: a, b3: b, r, kenar, metal, P3, minY: Math.min(...Y), maxY: Math.max(...Y) } };
+}
+
+/* ── GERÇEKÇİ ÖLÇÜLER (cm; motor birimi ≈ cm, bkz. L) ─────────────────────────────────────
+ * Dambıl: kauçuk kaplı ALTIGEN başlar (salonların çoğunda), sap 13 · baş Ø ~14 · baş boyu 6 → toplam 25.
+ *   Eskiden 18 cm'lik düz plakalar (Ø11) — oyuncak gibi duruyordu.
+ * Halter: olimpik bar Ø2,8 gövde + Ø5 kovan; 1,6 m (gerçeği 2,2 m — kadraj için kısaltıldı, oranlar
+ *   korundu). Plakalar Ø32 (10 kg) + Ø21 (2,5 kg), kalınlıklarıyla; yaka ve kilit. Eskiden 1 m'lik çubuğa
+ *   iki düz Ø28 daire. */
+export const DAMBIL = { sap: 13, r: 7, bas: 6 };
+/** Dambıl: sap `eksen` boyunca, iki uçta altıgen baş */
+export function dambil(pr, el, eksen) {
+  const { sap, r, bas } = DAMBIL, e = birim(eksen), a = ekle(el, e, -sap / 2), b = ekle(el, e, sap / 2);
+  return [kapsul(pr, a, b, 1.6, '#8a929c'),
+          silindirParca(pr, ekle(a, e, -bas / 2), e, r, bas, '#353a41', { kenar: 6 }),
+          silindirParca(pr, ekle(b, e, bas / 2), e, r, bas, '#353a41', { kenar: 6 })];
+}
+/** Dambılın çarpışma kapsülü (fizik denetimi: beden içinden geçmiyor) — başların dış ucunu ve çapını kapsar */
+export const dambilCismi = (el, eksen) => {
+  const e = birim(eksen), k = DAMBIL.sap / 2 + DAMBIL.bas - DAMBIL.r;
+  return [ekle(el, e, -k), ekle(el, e, k), DAMBIL.r];
+};
+/** Halter: bar ekseni `eksen` (varsayılan sağ-sol), merkez m */
+/**
+ * SEHPA / OTURAK (8 Eki, Sabri: "aletler gerçek şekillere kabaca benzesin"): kalın minder + altında çerçeve kirişi +
+ * iki uçta geniş tabanlı bacak (eskiden minder tek dikmeli kutuydu). Minder üstü `ust`, x aralığı [x0, x1], eni `en`.
+ */
+export const SEHPA_TON = { minder: { ust: '#3a4149', yan: '#272c33' }, cerceve: { ust: '#4a525c', yan: '#363c44' } };
+export function sehpaCiz(pr, [x0, x1], ust, en = 26) {
+  // 2. tur: 3B'de 5 cm taşıyıcı levha + üstünde 2 cm DERİ minder, ikisi de köşeleri yuvarlak (kutu yüzleri SVG + denetim için)
+  const o = [...gizle3B(kutu(pr, [x0, x1], [ust - 7, ust], [-en / 2, en / 2], SEHPA_TON.minder)),
+    yastik3B([(x0 + x1) / 2, ust - 4.5, 0], [[1, 0, 0], [0, 1, 0], [0, 0, 1]], [x1 - x0, 5, en], { r: 3, pah: 0.4, malzeme: 'govde', renk: SEHPA_TON.minder.yan }),
+    yastik3B([(x0 + x1) / 2, ust - 1, 0], [[1, 0, 0], [0, 1, 0], [0, 0, 1]], [x1 - x0, 2, en], { r: 3, pah: 0.9, malzeme: 'deri', renk: SEHPA_TON.minder.ust }),
+    ...kutu(pr, [x0 + 3, x1 - 3], [ust - 10, ust - 7], [-en / 2 + 3, en / 2 - 3], SEHPA_TON.cerceve)];
+  for (const xb of [x0 + 7, x1 - 7]) o.push(...kutu(pr, [xb - 2.5, xb + 2.5], [4, ust - 10], [-2.5, 2.5], SEHPA_TON.cerceve),
+    ...kutu(pr, [xb - 3, xb + 3], [0, 4], [-Math.max(20, en / 2 + 6), Math.max(20, en / 2 + 6)], SEHPA_TON.cerceve));
+  return o;
+}
+/** Bench dikmeleri + J kancaları: bar kilitli kolun hemen başa yakın tarafında, iki el ile plakalar arasında */
+export function benchDikmeleri(pr, x, kancaY) {
+  const o = [];
+  for (const z of [-48, 48]) o.push(...kutu(pr, [x - 2.5, x + 2.5], [0, kancaY + 14], [z - 2.5, z + 2.5], SEHPA_TON.cerceve),
+    ...kutu(pr, [x - 2.5, x + 6], [kancaY - 3, kancaY], [z - 2.5, z + 2.5], SEHPA_TON.cerceve),
+    ...kutu(pr, [x + 4, x + 6], [kancaY, kancaY + 4], [z - 2.5, z + 2.5], SEHPA_TON.cerceve),
+    ...kutu(pr, [x - 22, x + 22], [0, 4], [z - 3, z + 3], SEHPA_TON.cerceve));
+  return o;
+}
+/** Halter. `buyuk`: yerden kalkan hareketler (deadlift, RDL, kürek) için 20 kg Ø45 plaka — bar merkezi yerden 22,5 cm
+ *  (IWF/IPF standart çap); varsayılan 10 + 2,5 kg (bench, squat, pres). */
+export const PLAKA_R_BUYUK = 22.5;
+export function halter(pr, m, eksen = [0, 0, 1], { buyuk = false } = {}) {
+  const e = birim(eksen), P = k => ekle(m, e, k), o = [kapsul(pr, P(-56), P(56), 1.4, '#9aa2ac')];
+  for (const i of [-1, 1]) {
+    o.push(silindirParca(pr, P(i * 56.8), e, 3.4, 1.6, '#8a929c', { metal: true }),      // yaka
+           kapsul(pr, P(i * 58), P(i * 80), 2.5, '#9aa2ac'));                            // kovan
+    if (buyuk) o.push(silindirParca(pr, P(i * 61.5), e, PLAKA_R_BUYUK, 6, '#2f343a'),   // 20 kg plaka Ø45
+                      silindirParca(pr, P(i * 65.6), e, 3.6, 2.2, '#8a929c', { metal: true }));
+    else o.push(silindirParca(pr, P(i * 60.5), e, 16, 4, '#2f343a'),                    // 10 kg plaka Ø32
+           silindirParca(pr, P(i * 63.8), e, 10.5, 2.6, '#2f343a'),                      // 2,5 kg plaka Ø21
+           silindirParca(pr, P(i * 66.2), e, 3.6, 2.2, '#8a929c', { metal: true }));     // kilit
+  }
+  return o;
+}
+/** Kablo: ince çelik halat (makaradan tutamağa) */
+export const kablo = (pr, a, b) => kapsul(pr, a, b, 0.6, '#8a929c', '#0A0B0D');
+/** Makara: metal teker (kalınlığıyla) + göbek */
+export const makara = (pr, c, eksen = [0, 0, 1]) => [
+  silindirParca(pr, c, eksen, 4.5, 2.4, '#5d646d', { metal: true }),
+  silindirParca(pr, c, eksen, 1.6, 4, '#8a929c', { metal: true })];
+
+/** Disk (halter plakası): eksenine dik düzlemde daire */
+export function disk(pr, c, eksen, r, dolgu = '#4b525b') {
+  const e = eksen, u = Math.abs(e[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const cr = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const v1 = cr(e, u), v2 = cr(e, v1);
+  const P = Array.from({ length: 24 }, (_, i) => { const a = i / 24 * 2 * Math.PI; return ekle(ekle(c, v1, r * Math.cos(a)), v2, r * Math.sin(a)); });
+  return cokgen(pr, P, dolgu, '#0A0B0D');
+}
+
+/* ── Figür ──────────────────────────────────────────────────────────────── */
+const YAKIN = [205, 209, 215], UZAK = [78, 85, 94];
+const ton = k => `rgb(${YAKIN.map((v, i) => Math.round(ara(UZAK[i], v, k))).join(',')})`;
+
+/**
+ * Figürün sahne öğeleri.
+ *
+ * ⚠️ EKLEM ATLAMASI (24 Eyl, Sabri gözle buldu): her parça ayrı kapsül + ayrı
+ * kontur olarak çiziliyor ve her karede derinliğe göre YENİDEN sıralanıyordu.
+ * Bacak önden arkaya geçerken uyluk ile baldırın sırası yer değiştiriyor, dizdeki
+ * koyu ek yeri uyluğun ucundan baldırın ucuna ATLIYORDU (ölçüldü: t=0,05 uyluk
+ * üstte, t=0,95 baldır üstte). Parça başına derinlik tonu da eklemde ton sınırı
+ * yaratıp aynı anda atlıyordu. Fizik değil, çizim kusuru.
+ *
+ * Standart çözümler: 3B'de sürekli (deri geçirilmiş) yüzey + piksel başına
+ * görünürlük; 2B parça animasyonunda sabit katman sırası + eklem örtüsü. Burada:
+ *   1. ZİNCİR TONU — bir uzuv (uyluk-baldır-ayak) boyunca TEK ton
+ *   2. EKLEM ÖRTÜSÜ — iki komşu parça çizildikten sonra eklemin üstünden
+ *      KONTURSUZ dolgu geçer: hangi parça üstte olursa olsun ek yeri görünmez.
+ * Parçalar ARASI derinlik sıralaması korunur (gövdenin önüne geçen ön kol için gerekli).
+ */
+export function figurOgeleri(pr, s) {
+  // AVUÇ BİR YÜZEYDE (zemin: şınav, mekik, tek kol kürekte destek eli — 17 Eki): iskeletin "eli" bileğin KAVRAMA cm ilerisinde,
+  // ön kolun uzantısında (bar tutan el için) — düz avuçta o nokta yüzeyin İÇİNE düşer (tek kol kürekte sehpaya 9 cm). WebGL
+  // motoru avucu yüzeye yatırır; bu yedek çizim de öyle: ön kol bileğe kadar, el küresi avucun üstünde.
+  const elUcu = y => { const z = s.hedef?.[y]?.zemin, e = s[`e${y}`], d = s[`d${y}`]; if (!z) return [e, e];
+    const L = Math.hypot(e[0] - d[0], e[1] - d[1], e[2] - d[2]) || 1, w = e.map((v, i) => v + (d[i] - v) * KAVRAMA / L), n = z.n ?? [0, 1, 0];
+    return [w, z.avuc.map((v, i) => v + n[i] * R.el * 0.8)]; };
+  const [wA, pA] = elUcu('A'), [wB, pB] = elUcu('B');
+  const parca = [                                                     // [zincir, tür, a, b, r]
+    ['govde', 'k', s.P, s.gogusAlt, R.karin], ['govde', 'k', s.gogusAlt, s.boyun, R.gogus],       // 0 1
+    ['govde', 'k', s.omA, s.omB, R.omuz], ['govde', 'k', s.kaA, s.kaB, R.kalca],                  // 2 3
+    ['govde', 'k', s.boyun, s.kafa, 4.5], ['govde', 's', s.kafa, null, R.kafa],                   // 4 5
+    ['kolA', 'k', s.omA, s.dA, R.ua], ['kolA', 'k', s.dA, wA, R.fa], ['kolA', 's', pA, null, R.el],   // 6 7 8
+    ['kolB', 'k', s.omB, s.dB, R.ua], ['kolB', 'k', s.dB, wB, R.fa], ['kolB', 's', pB, null, R.el],   // 9 10 11
+    ['bacakA', 'k', s.kaA, s.zA, R.th], ['bacakA', 'k', s.zA, s.aA, R.sh], ['bacakA', 'k', s.aA, s.ukA, R.ayak], // 12 13 14
+    ['bacakB', 'k', s.kaB, s.zB, R.th], ['bacakB', 'k', s.zB, s.aB, R.sh], ['bacakB', 'k', s.aB, s.ukB, R.ayak], // 15 16 17
+  ];
+  const d = parca.map(p => p[1] === 'k' ? (pr(p[2])[2] + pr(p[3])[2]) / 2 : pr(p[2])[2]);
+  const mn = Math.min(...d), mx = Math.max(...d), k = v => mx - mn < 1e-6 ? 1 : 0.15 + 0.85 * (v - mn) / (mx - mn);
+  const zton = {};
+  for (const z of new Set(parca.map(p => p[0]))) {
+    const ix = parca.map((p, i) => (p[0] === z ? i : -1)).filter(i => i >= 0);
+    zton[z] = ton(k(ix.reduce((a, i) => a + d[i], 0) / ix.length));
+  }
+  const og = parca.map(p => (p[1] === 'k' ? kapsul(pr, p[2], p[3], p[4], zton[p[0]]) : kure(pr, p[2], p[4], zton[p[0]])));
+  og[5] = { ...og[5], svg: kafaSvg(pr, s, zton.govde) };            // kafa: yön taşıyan yumurta biçimi
+
+  // Eklem örtüsü: J'den her komşu parça yönünde kontursuz dolgu; iki parçadan SONRA çizilir
+  const ortu = (J, kollar, zincir, parcalar, disk = 0) => {
+    const L = Math.max(...kollar.map(x => x[1])) + 2.5, A = pr(J), renk = zton[zincir];
+    let svg = disk ? `<circle cx="${f1(A[0])}" cy="${f1(A[1])}" r="${f1(disk)}" fill="${renk}"/>` : '';
+    for (const [u, r] of kollar) {
+      const v = birim(fark(u, J)), B = pr(ekle(J, v, Math.min(L, mesafe(u, J))));
+      svg += `<line x1="${f1(A[0])}" y1="${f1(A[1])}" x2="${f1(B[0])}" y2="${f1(B[1])}" stroke="${renk}" stroke-width="${f1(2 * r)}" stroke-linecap="round"/>`;
+    }
+    return { d: Math.max(...parcalar.map(i => d[i])) + 0.01, svg };
+  };
+  og.push(
+    ortu(s.gogusAlt, [[s.P, R.karin], [s.boyun, R.gogus]], 'govde', [0, 1]),
+    ortu(s.boyun, [[s.gogusAlt, R.gogus], [s.kafa, 4.5]], 'govde', [1, 4]),
+    ortu(s.dA, [[s.omA, R.ua], [s.eA, R.fa]], 'kolA', [6, 7]), ortu(s.dB, [[s.omB, R.ua], [s.eB, R.fa]], 'kolB', [9, 10]),
+    ortu(s.zA, [[s.kaA, R.th], [s.aA, R.sh]], 'bacakA', [12, 13]), ortu(s.zB, [[s.kaB, R.th], [s.aB, R.sh]], 'bacakB', [15, 16]),
+    ortu(s.aA, [[s.zA, R.sh], [s.ukA, R.ayak]], 'bacakA', [13, 14]), ortu(s.aB, [[s.zB, R.sh], [s.ukB, R.ayak]], 'bacakB', [16, 17]),
+    // Uzuv kökleri (omuz, kalça): uzuv, gövde çubuğunun ÜSTÜNDE yuvarlak biter — sıra ne olursa olsun
+    ortu(s.omA, [[s.dA, R.ua]], 'kolA', [2, 6], R.ua), ortu(s.omB, [[s.dB, R.ua]], 'kolB', [2, 9], R.ua),
+    ortu(s.kaA, [[s.zA, R.th]], 'bacakA', [3, 12], R.th), ortu(s.kaB, [[s.zB, R.th]], 'bacakB', [3, 15], R.th),
+  );
+  return og.map(o => ({ ...o, figur: true }));
+}
+
+/**
+ * KAFA — ⚠️ tam küre her açıdan AYNI göründüğü için yön taşımıyordu (24 Eyl, Sabri).
+ * İlk çare (kafatası dairesi + çene dairesi + burun çubuğu) de REDDEDİLDİ — "mutasyon gibi"
+ * (24 Eyl, Sabri). Kök geometrik: iki kesişen dairenin birleşimi iki İÇBÜKEY ÇENTİK üretir
+ * ve öndeki çentik tam yüz hizasına düşer; burun çubuğu o çentikten çıkıyordu.
+ * Çözüm çizim mankeni geleneği (Loomis / lay figure): YÜZSÜZ tek siluet — iki dairenin
+ * DIŞ TEĞETLERLE dışbükey zarfı. Öne-aşağı sivrilen yumurta, yönü çene çıkıntısı taşır;
+ * yüz ayrıntısı YOK (düşük çözünürlükte yüz ayrıntısı en çok bozulan şeydir).
+ */
+function kafaSvg(pr, s, renk) {
+  const f = s.yuz, g = s.g;
+  const K = pr(ekle(ekle(s.kafa, g, 1.2), f, -1.2)), C = pr(ekle(ekle(s.kafa, f, 3.4), g, -4.4));
+  const yol = kafaZarfi([K[0], K[1]], 9.6, [C[0], C[1]], 6.4, 1.5);
+  return `<path d="${yol.dis}" fill="#0A0B0D"/><path d="${yol.ic}" fill="${renk}"/>`;
+}
+
+/**
+ * İki dairenin dışbükey zarfı (SVG yolu) — `pay` kadar büyütülmüş hâli kontur olur.
+ * d ≤ |r1−r2| ise küçük daire büyüğün içindedir → yalnız büyük daire.
+ */
+export function kafaZarfi(c1, r1, c2, r2, pay = 0) {
+  const tek = (c, r) => `M${f1(c[0] - r)},${f1(c[1])}a${f1(r)},${f1(r)} 0 1,0 ${f1(2 * r)},0a${f1(r)},${f1(r)} 0 1,0 ${f1(-2 * r)},0Z`;
+  const cz = (a, b) => {
+    const dx = c2[0] - c1[0], dy = c2[1] - c1[1], d = Math.hypot(dx, dy);
+    if (d <= Math.abs(a - b) + 1e-6) return a >= b ? tek(c1, a) : tek(c2, b);
+    const ux = dx / d, uy = dy / d, sa = (a - b) / d, ca = Math.sqrt(1 - sa * sa);
+    const n = k => [sa * ux - k * ca * uy, sa * uy + k * ca * ux];      // teğet normali (u⊥ = [−uy, ux])
+    const [np, nm] = [n(1), n(-1)];
+    const T = (c, r, m) => `${f1(c[0] + r * m[0])},${f1(c[1] + r * m[1])}`;
+    // c2 tarafındaki yay kısa (≤180°), c1 tarafındaki uzun; ikisi de açıyı AZALTAN yönde (sweep 0)
+    return `M${T(c1, a, np)}L${T(c2, b, np)}A${f1(b)},${f1(b)} 0 0,0 ${T(c2, b, nm)}L${T(c1, a, nm)}A${f1(a)},${f1(a)} 0 1,0 ${T(c1, a, np)}Z`;
+  };
+  return { dis: cz(r1 + pay, r2 + pay), ic: cz(r1, r2) };
+}
+
+/** Zemin diskinin yarıçapı — SVG (zemin) ve WebGL (webgl.js) aynı değeri kullanır; sabit kadraj da */
+export const ZEMIN_R = 78;
+export function zemin(pr, merkez, r = ZEMIN_R) {
+  const P = Array.from({ length: 40 }, (_, i) => { const a = i / 40 * 2 * Math.PI; return pr([merkez[0] + r * Math.cos(a), 0, merkez[2] + r * Math.sin(a)]); });
+  return `<polygon points="${P.map(p => f1(p[0]) + ',' + f1(p[1])).join(' ')}" fill="#13161a"/>`;
+}
+export function golge(pr, noktalar) {
+  const bas = Math.max(0.15, Math.abs(pr([0, 0, 1])[1] - pr([0, 0, 0])[1]));
+  return noktalar.map(n => { const C = pr([n[0], 0, n[2]]); return `<ellipse cx="${f1(C[0])}" cy="${f1(C[1])}" rx="16" ry="${f1(16 * bas)}" fill="#050607" opacity=".55"/>`; }).join('');
+}
+export function iz(pr, yol, renk = '#7a4a52') {
+  const P = yol.map(pr);
+  const son = P.at(-1), onc = P.at(-3);
+  const vx = son[0] - onc[0], vy = son[1] - onc[1], m = Math.hypot(vx, vy) || 1, ux = vx / m, uy = vy / m;
+  const ok = `${f1(son[0] - 8 * ux + 4 * uy)},${f1(son[1] - 8 * uy - 4 * ux)} ${f1(son[0])},${f1(son[1])} ${f1(son[0] - 8 * ux - 4 * uy)},${f1(son[1] - 8 * uy + 4 * ux)}`;
+  return `<polyline points="${P.map(p => f1(p[0]) + ',' + f1(p[1])).join(' ')}" fill="none" stroke="${renk}" stroke-width="2.2" stroke-dasharray="4 4"/><polyline points="${ok}" fill="none" stroke="${renk}" stroke-width="2.2" stroke-linejoin="round"/>`;
+}
+
+/* ══ HAREKETLER ══════════════════════════════════════════════════════════
+ * `kisit` alanı fizik-denetimi.mjs'nin neyi sınayacağını söyler. Kısıt,
+ * HAREKETİN KENDİSİNE yazılır — denetim onu tahmin etmez. */
+const ease = t => t * t * (3 - 2 * t);
+
+/* BENCH PRESS — bar sehpaya dik düzlemde hafif J yolu çizer (altta göğsün alt
+   kısmında, üstte omuzların üstünde). Eller barda SABİT genişlikte. */
+/* B1: tutuş ve bar yolu OMUZA göre (eski sabitler: tutuş 26, sehpa 38,5, bar x −35…−45, y 65,5…106) */
+export const BENCH_UST = 43;                   // sehpa üst yüzü (IPF: 42–45 cm)
+const BENCH_P = [8, BENCH_UST + SIRT, 0];      // sırtüstü kalça merkezi — gövde ekseni sırt derinliği kadar yukarıda (8 Eki: eskiden 11,5)
+const BENCH_OM_X = BENCH_P[0] - L.torso + OMUZ.asagi;   // sırtüstü omuz eklemi x (baş −x yönünde)
+const BENCH_TUTUS = OMUZ.yan + 11;             // yarım tutuş: omuzdan 11 cm dışarıda (≈ 1,5× omuz genişliği)
+const BENCH_UST_Y = BENCH_P[1] + 0.952 * Math.sqrt((L.ua + L.fa) ** 2 - (BENCH_TUTUS - OMUZ.yan) ** 2);   // dirsek hafif bükük
+const benchBar = t => [ara(BENCH_OM_X + 14, BENCH_OM_X + 2, 1 - (1 - t) ** 2), ara(BENCH_P[1] + 17, BENCH_UST_Y, ease(t)), 0];   // altta göğüs ucu (C: göğüs önü ekseninden 14,6), dirsek ≤ 140°
+
+/* REVERSE PEC FLY — makinenin her kolu omuz ekleminin DÜŞEY EKSENİ etrafında
+   döner (makine ayarının kuralı: "omzu dönme ekseniyle hizala"). Tutamak o
+   eksenden sabit yarıçapta; el tutamakta. Göğüs pede yaslı, ayaklar yerde. */
+const FLY_R = (L.ua + L.fa) * 0.978;          // tutamağın eksene uzaklığı → dirsek ~25° bükük (eski 58,5 / kol 60)
+const FLY_OTURAK = Math.round(AYAK_Y + L.sh - R.kalca);   // oturak: kaval dik, uyluk yatay (eski 36)
+const FLY_DY = FLY_OTURAK - 36;                // makine (ped, kiriş) oturakla birlikte yükselir
+export const FLY_UST = 132 + FLY_DY;                  // makine üst kirişi
+const flyAci = t => ara(-8, 92, ease(t));      // -8 = eller önde yakın (−12 iken eller İÇ İÇE girdi, ölçüldü), 92 = yana açık
+
+export const HAREKETLER = {
+  bench: {
+    ad: 'Barbell Bench Press', ref: 'bb_bench_press',
+    kamera: [28, 22], seritKameralar: [[0, 0], [28, 22], [72, 34]],
+    merkez: [-20, 0, 0],
+    a: (() => { const th = -Math.asin((BENCH_P[1] - AYAK_Y - L.sh * Math.sin(rd(85))) / L.th) * 180 / Math.PI;   // bilek yerde
+      return { P: BENCH_P, g: [180, 0], yan: [90, 0], yuz: [0, 90], ayak: 0, bas: basYaslanmaEgimi(BENCH_P[1], BENCH_UST),
+         thA: [25, th], shA: [25, -85], thB: [-25, th], shB: [-25, -85] }; })(),
+    // ⚠️ Zaman TERS: t=0 kollar düz (bar yukarıda) → t=1 bar göğüste. Gerçek bench press yukarıda başlar
+    // ve yukarıda biter; eskiden başlangıç (ve duran görüntü) bar göğüsteydi (27 Eyl denetimi).
+    uclar: t => {
+      const b = benchBar(1 - t);
+      return () => ({
+        A: { hedef: [b[0], b[1], -BENCH_TUTUS], kutup: [0.4, -0.6, -0.7], tutamak: { eksen: [0, 0, 1], r: 1.4, avuc: 'ayak' } },   // dirsek dışarı-aşağı, hafif ayağa doğru (45°)
+        B: { hedef: [b[0], b[1], BENCH_TUTUS], kutup: [0.4, -0.6, 0.7], tutamak: { eksen: [0, 0, 1], r: 1.4, avuc: 'ayak' } },
+      });
+    },
+    ekipman(pr, s, t) {
+      const b = benchBar(1 - t), o = [];
+      o.push(...sehpaCiz(pr, [-80, 18], BENCH_UST, 28), ...benchDikmeleri(pr, BENCH_OM_X - 10, BENCH_UST_Y - 6));   // 8 Eki: bacaklı sehpa + bar dikmeleri
+      o.push(...halter(pr, b));                                        // gerçekçi olimpik tip bar (27 Eyl)
+      return o;
+    },
+    izlenen: 'eB',
+    kisit: {
+      ortakBar: true,                                                  // iki el aynı barda
+      ayaklar: 'yerde',
+      temas: [
+        { ad: 'sırt sehpada', f: s => (s.gogusAlt[1] - SIRT) - BENCH_UST, aralik: [-2, 2] },     // C'nin sırt derinliği (8 Eki)
+        { ad: 'baş sehpada', f: s => (s.kafa[1] - KAFA_R) - BENCH_UST, aralik: [-2, 3] },
+      ],
+    },
+  },
+  reverseFly: {
+    ad: 'Reverse Pec Fly', ref: 'machine_reverse_fly',
+    kamera: [-40, 34], seritKameralar: [[-90, 4], [-40, 34], [55, 30]],
+    merkez: [8, 0, 0],
+    a: (() => { const P = [0, FLY_OTURAK + R.kalca, 0], th = -Math.asin((P[1] - AYAK_Y - L.sh * Math.sin(rd(88))) / L.th) * 180 / Math.PI;
+      return { P, g: [0, 84], yan: [-90, 0], ayak: 0, thA: [-8, th], shA: [-8, -88], thB: [8, th], shB: [8, -88] }; })(),
+    uclar: t => {
+      const f = rd(flyAci(t));
+      return s => ({
+        // B1 (Sabri, 7 Eki): dirsek omuz hizasını GEÇMEZ — tutamak omzun 4 cm altında, dirsek yatay düzlemde açılır
+        A: { hedef: [s.omA[0] + FLY_R * Math.cos(f), s.omA[1] - 4, s.omA[2] + FLY_R * Math.sin(f)], kutup: [-0.4, 0, 0.8], tutamak: { eksen: [0, 1, 0], r: 2.6, avuc: 'ic' } },
+        B: { hedef: [s.omB[0] + FLY_R * Math.cos(f), s.omB[1] - 4, s.omB[2] - FLY_R * Math.sin(f)], kutup: [-0.4, 0, -0.8], tutamak: { eksen: [0, 1, 0], r: 2.6, avuc: 'ic' } },
+      });
+    },
+    eksenler: s => [[s.omA[0], FLY_UST, s.omA[2]], [s.omB[0], FLY_UST, s.omB[2]]],
+    ekipman(pr, s) {
+      const o = [];
+      o.push(...sehpaCiz(pr, [-20, 16], FLY_OTURAK, 28));                                                            // oturak (8 Eki: bacaklı)
+      o.push(...kutu(pr, [16.5, 22.5], [55 + FLY_DY, 88 + FLY_DY], [-11, 11], { ust: '#3a4149', yan: '#2c323a' })); // göğüs pedi
+      o.push(...kutu(pr, [22.5, 28], [70 + FLY_DY, 75 + FLY_DY], [-3, 3], SEHPA_TON.cerceve));                         // 3. tur: ped kolona bağlı (havadaydı)
+      o.push(...kutu(pr, [28, 36], [0, FLY_UST + 4], [-4, 4], SEHPA_TON.cerceve), ...kutu(pr, [-4, 36], [0, 4], [-6, 6], SEHPA_TON.cerceve));   // kolon + taban kirişi
+      const [pA, pB] = this.eksenler(s);
+      o.push(kapsul(pr, [31, FLY_UST, 0], pA, 2.4, '#5d646d', '#0A0B0D'));                      // üst kiriş → eksenler
+      o.push(kapsul(pr, [31, FLY_UST, 0], pB, 2.4, '#5d646d', '#0A0B0D'));
+      for (const [eks, el] of [[pA, s.eA], [pB, s.eB]]) {
+        const ust = [el[0], FLY_UST, el[2]];
+        o.push(kapsul(pr, eks, ust, 2.2, '#5d646d', '#0A0B0D'));                                // kaldıraç (sabit boy)
+        o.push(kapsul(pr, ust, [el[0], el[1] + 7, el[2]], 1.8, '#5d646d', '#0A0B0D'));          // iniş
+        o.push(kapsul(pr, [el[0], el[1] - 7, el[2]], [el[0], el[1] + 7, el[2]], 2.6, '#8a929c', '#0A0B0D')); // tutamak
+      }
+      return o;
+    },
+    izlenen: 'eA',
+    kisit: {
+      kaldirac: true,                                                  // tutamak eksenden sabit yarıçapta
+      dirsek: { aralik: [10, 35], sabit: true },                       // fly'ın tanımı: dirsek hafif bükük ve DEĞİŞMEZ
+      ayaklar: 'yerde',
+      temas: [
+        { ad: 'kalça oturakta', f: s => (s.P[1] - R.kalca) - FLY_OTURAK, aralik: [-1.5, 1.5] },
+        { ad: 'göğüs pedde', f: s => {                                  // pedin yüksekliğinin ortasında göğüs yüzeyi ↔ ped arka yüzü
+            const y = 72 + FLY_DY, k = (y - s.gogusAlt[1]) / (s.boyun[1] - s.gogusAlt[1]);
+            return 16.5 - (ara(s.gogusAlt[0], s.boyun[0], k) + R.gogus);
+          }, aralik: [-2, 2] },
+      ],
+    },
+  },
+};
+
+/** Bir kareyi çiz — öğe sayısını ve süreyi de döndürür (ölçüm) */
+/** Sahnenin çizim sırası — sahne() ile görünürlük denetimi AYNI fonksiyonu kullanır */
+/* ── GÖRÜNÜRLÜK DÜZELTMESİ ────────────────────────────────────────────────
+ * ⚠️ Ressam sıralaması (orta noktanın derinliği) büyük yatay yüzeylerde yanılır:
+ * sehpanın üst yüzü bazı açılarda üstünde yatan başı ÖRTÜYORDU (24 Eyl, Sabri
+ * gördü; ölçüldü: 7 harekette 317 ihlal). İlk deneme — üst yüzü en uzak köşesiyle
+ * sıralamak — 317'yi 6'ya indirdi ama diz pedinde ters hata üretti: ped uyluğun
+ * ÜSTÜNE bastırır, erken çizilince altındaki uyluk pedin üstüne çıktı.
+ * Kalıcı çözüm kısayol değil İKİ FİZİKSEL KURAL:
+ *   (a) yatay yüzey, düzleminin ÜSTÜNDEKİ bir parçayı örtemez → ondan ÖNCE çizilir
+ *   (b) kameradan parçaya giden ışın yüzeyin İÇİNDEN geçiyorsa yüzey parçayı ÖRTER → ondan SONRA
+ * Önce derinlik sırası, sonra her yatay yüzey bu iki kuralın izin verdiği yere taşınır. */
+export const icinde = (p, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+  if (((P[i][1] > p[1]) !== (P[j][1] > p[1])) && (p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0])) c = !c; } return c; };
+const kenaraUzaklik = (p, P) => Math.min(...P.map((a, i) => { const b = P[(i + 1) % P.length], dx = b[0] - a[0], dy = b[1] - a[1];
+  const u = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(p[0] - a[0] - u * dx, p[1] - a[1] - u * dy); }));
+/** Beden parçası ekranda yüzeyle gerçekten üst üste biniyor mu (kenar teması sayılmaz) */
+export function ustUsteMi(E, P2) {
+  const noktalar = E.tur === 's' ? [E.c2] : Array.from({ length: 7 }, (_, i) => [E.a2[0] + (E.b2[0] - E.a2[0]) * i / 6, E.a2[1] + (E.b2[1] - E.a2[1]) * i / 6]);
+  return noktalar.some(p => icinde(p, P2) && kenaraUzaklik(p, P2) > 1.5);
+}
+/** Kameradan parçaya giden ışın yatay yüzeyin içinden geçiyor mu (parça yüzeyin ALTINDA) */
+export function isinYuzeydenGeciyor(E, F, V) {
+  if (!(V[1] > 1e-6) || !(E.maxY < F.Y)) return false;
+  const orn = E.tur === 's' ? [E.c3] : [0, 0.25, 0.5, 0.75, 1].map(u => E.a3.map((v, k) => v + (E.b3[k] - v) * u));
+  const XZ = F.geo.P3.map(q => [q[0], q[2]]);
+  return orn.some(X => { const l = (F.Y - X[1]) / V[1]; return icinde([X[0] + l * V[0], X[2] + l * V[2]], XZ); });
+}
+function gorunurlukDuzelt(ogeler, V) {
+  for (const F of ogeler.filter(o => o.ustYuz)) {
+    let i = ogeler.indexOf(F);
+    const ust = [], alt = [];
+    ogeler.forEach((E, k) => {
+      if (!E.figur || !E.geo) return;
+      if (E.geo.minY >= F.Y - 0.5 && ustUsteMi(E.geo, F.geo.P2)) ust.push(k);        // (a) üstündeki: F ondan ÖNCE
+      else if (isinYuzeydenGeciyor(E.geo, F, V)) alt.push(k);                          // (b) altındaki: F ondan SONRA
+    });
+    const enErkenUst = ust.length ? Math.min(...ust) : Infinity, enGecAlt = alt.length ? Math.max(...alt) : -1;
+    if (enGecAlt >= enErkenUst) continue;                        // çelişki: kurallar aynı anda sağlanamaz — dokunma
+    if (i > enErkenUst) { ogeler.splice(i, 1); ogeler.splice(enErkenUst, 0, F); }                 // üstündekinden önceye al
+    else if (i < enGecAlt) { ogeler.splice(i, 1); ogeler.splice(enGecAlt, 0, F); }                 // altındakinden sonraya al
+  }
+  return ogeler;
+}
+export function sahneOgeleri(h, t, pr) {
+  const s = an(h, t);
+  const ogeler = [...h.ekipman(pr, s, t), ...figurOgeleri(pr, s)].sort((x, y) => x.d - y.d);
+  return { s, ogeler: pr.yon ? gorunurlukDuzelt(ogeler, pr.yon) : ogeler };
+}
+
+/* ── HAREKET İZİ BEDENİN YANINDAKİ BOŞLUKTA (14 Eki, Sabri: "hareket çizgisinin avatarın kalçasından ya da vücudun
+   herhangi bir yerinden gösterilmesi uygun değil; vücudun yan tarafındaki boşluğa taşı") ─────────────────────────────
+   İz, izlenen eklemin (kalça, el, ayak) yoludur — o eklem bedenin parçası olduğu için iz hep bedenin ya da tuttuğu aletin
+   üstüne düşüyordu. İzin ŞEKLİ aynı kalır; yeri, hareketin VARSAYILAN kamerasında ekranın yatay ekseni boyunca (dünyada
+   [cosθ, 0, −sinθ]) kaydırılır. Kayma ELLE yazılmaz, ÖLÇÜLÜR: hareketin 9 anındaki beden (gövde kesiti, kol/bacak
+   kapsülleri, baş) ve alet (kendi çizim geometrisi) ekrana izdüşürülür. Kural: BEDENE boşluk IZ_BOSLUK cm'den az
+   olamaz (zorunlu); bunu sağlayan en küçük kaymadan sonraki IZ_ALET_ARA cm içinde ALETE de boşluk bırakan kayma
+   varsa o seçilir (Sabri: aletten uzaklık şart değil, olursa iyi — leg press'te iz makinenin arkasında kalıyordu). Kadraj izi de içine
+   alır (hacimNoktalari) — iz hiçbir açıda kırpılmaz. fizik-denetimi her hareketi bu ölçüyle sınar. ⚠️ Sınır: boşluk
+   varsayılan açıda ölçülür; kullanıcı mankeni döndürürse iz başka açıda bedenin önüne geçebilir. */
+export const IZ_BOSLUK = 3;
+/** İZ GÖRÜNÜR MÜ (14 Eki, Sabri: "bütün hareketlerdeki hareket yol izini gizle") — iz ÇİZİLMEZ ve kadraja girmez; yolun
+ *  kendisi (izYolu) ve fizik denetimindeki boşluk kuralı durur: iz geri açılırsa ölçülmüş hâlde gelir. */
+export const IZ_GORUNUR = false;
+const IZ_ALET_ARA = 40, IZ_EN_COK = 120;
+const IZ_NOKTA_R = 1.4;                                            // iz noktasının çizilen yarıçapı (motor: küre 0,8–1,5)
+const izOnbellek = new WeakMap();
+const parcaUz2 = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
+  const u = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0;
+  return Math.hypot(p[0] - a[0] - u * dx, p[1] - a[1] - u * dy); };
+function cokgenUz(p, P) {                                          // içerideyse negatif (kenara uzaklığın eksisi)
+  let ic = false, en = Infinity;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+    const a = P[i], c = P[j];
+    if ((a[1] > p[1]) !== (c[1] > p[1]) && p[0] < (c[0] - a[0]) * (p[1] - a[1]) / (c[1] - a[1]) + a[0]) ic = !ic;
+    en = Math.min(en, parcaUz2(p, a, c));
+  }
+  return ic ? -en : en;
+}
+/** Ekrandaki engeller (beden + alet), varsayılan kamerada, hareketin 9 anında: [{tur:'k', a, b, r} | {tur:'p', P}] */
+function izEngelleri(h, pr) {
+  const o = [], { yariEn, yariDerin, merkezOn } = OLCU.govde;
+  const k = (a, b, r) => { const A = pr(a), B = pr(b); o.push({ tur: 'k', beden: true, a: [A[0], A[1]], b: [B[0], B[1]], r }); };
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8, s = an(h, t);
+    // gövde: kesitin dört köşesi üç yükseklikte → ekranda dışbükey zarf
+    const kose = [s.P, s.gogusAlt, s.boyun].flatMap(m => [-1, 1].flatMap(sy => [-1, 1].map(sd =>
+      ekle(ekle(m, s.yan, sy * yariEn), s.yuz, merkezOn + sd * yariDerin))));
+    o.push({ tur: 'p', beden: true, P: zarf(kose.map(q => { const v = pr(q); return [v[0], v[1]]; })) });
+    k(s.kafa, s.kafa, KAFA_R);
+    for (const y of ['A', 'B']) {
+      k(s[`om${y}`], s[`d${y}`], R.ua + 1); k(s[`d${y}`], s[`e${y}`], R.fa); k(s[`e${y}`], s[`e${y}`], R.el);
+      k(s[`ka${y}`], s[`z${y}`], OLCU.uyluk); k(s[`z${y}`], s[`a${y}`], OLCU.baldir); k(s[`a${y}`], s[`u${y}`], R.ayak + 1);
+    }
+    for (const e of h.ekipman(pr, s, t)) {
+      const g = e.geo; if (!g || g.tur === 'y') continue;          // yuvarlatılmış minder yalnız 3B; yerini kutu yüzleri tutar
+      if (g.tur === 'p' || g.tur === 'c') o.push({ tur: 'p', P: g.tur === 'p' ? g.P2 : zarf(g.P3.map(q => { const v = pr(q); return [v[0], v[1]]; })) });
+      else if (g.tur === 'k') o.push({ tur: 'k', a: g.a2, b: g.b2, r: g.r });
+      else o.push({ tur: 'k', a: g.c2, b: g.c2, r: g.r });
+    }
+  }
+  return o;
+}
+/** Ekrandaki iz noktalarının engellere en küçük boşluğu (cm; iz noktasının yarıçapı düşülmüş) */
+const izBoslugu = (noktalar, engeller) => engeller.length ? Math.min(...noktalar.map(p => Math.min(...engeller.map(g =>
+  (g.tur === 'k' ? parcaUz2(p, g.a, g.b) - g.r : cokgenUz(p, g.P)))))) - IZ_NOKTA_R : Infinity;
+/** İzin kayması (dünya vektörü) + ölçüm: { kayma, d, beden, alet } (boşluklar cm) — hareket başına bir kez */
+export function izKaymasi(h) {
+  if (izOnbellek.has(h)) return izOnbellek.get(h);
+  const [teta, fi] = h.kamera, pr = kamera(teta, fi), sag = [Math.cos(rd(teta)), 0, -Math.sin(rd(teta))];
+  const ham = Array.from({ length: 19 }, (_, i) => an(h, i / 18)[h.izlenen]);
+  const engeller = izEngelleri(h, pr), beden = engeller.filter(g => g.beden), alet = engeller.filter(g => !g.beden);
+  const olcV = v => { const n = ham.map(q => { const p = pr(ekle(q, v, 1)); return [p[0], p[1]]; });
+    return { beden: izBoslugu(n, beden), alet: izBoslugu(n, alet) }; };
+  const olc = d => ({ d, ...olcV(sag.map(x => x * d)) });
+  const yuvarla = a => ({ beden: +a.beden.toFixed(1), alet: Number.isFinite(a.alet) ? +a.alet.toFixed(1) : null });
+  // Elle verilen kayma (izKaydir: olumsuz fikstür, tanı) seçilmez ama AYNI ölçüyle ölçülür
+  if (h.izKaydir) { const x = { kayma: h.izKaydir, d: null, ...yuvarla(olcV(h.izKaydir)) }; izOnbellek.set(h, x); return x; }
+  const adaylar = [olc(0)];
+  for (let m = 2; m <= IZ_EN_COK; m += 2) adaylar.push(olc(m), olc(-m));
+  const bedenOk = adaylar.filter(a => a.beden >= IZ_BOSLUK);
+  let r;
+  if (!bedenOk.length) r = adaylar.reduce((x, y) => (y.beden > x.beden ? y : x));            // hiçbiri yetmiyorsa en iyisi (denetim kırmızı yanar)
+  else {
+    const m0 = Math.abs(bedenOk[0].d), tam = bedenOk.filter(a => a.alet >= IZ_BOSLUK && Math.abs(a.d) <= m0 + IZ_ALET_ARA);
+    const havuz = tam.length ? tam : bedenOk.filter(a => Math.abs(a.d) === m0);
+    const en = Math.min(...havuz.map(a => Math.abs(a.d)));
+    r = havuz.filter(a => Math.abs(a.d) === en).reduce((x, y) => (Math.min(y.alet, y.beden) > Math.min(x.alet, x.beden) ? y : x));
+  }
+  const x = { kayma: sag.map(v => v * r.d), d: r.d, ...yuvarla(r) };
+  izOnbellek.set(h, x);
+  return x;
+}
+/** Yörünge izi: izlenen eklemin 19 noktalık yolu, bedenin yanındaki boşluğa kaydırılmış (izKaymasi). `izKaydir`
+ * [x,y,z] verilirse ölçüm yerine o kullanılır (olumsuz fikstür ve tanı için). */
+export function izYolu(h) {
+  if (h.statik) return [];
+  const k = izKaymasi(h).kayma;
+  return Array.from({ length: 19 }, (_, i) => an(h, i / 18)[h.izlenen].map((v, j) => v + k[j]));
+}
+
+export function sahne(h, t, teta, fi) {
+  const t0 = performance.now();
+  const pr = kamera(teta, fi);
+  const { s, ogeler } = sahneOgeleri(h, t, pr);
+  const yol = izYolu(h);
+  // Duruş hareketinde (plank) yol tek noktadır — iz çizmek anlamsız bir ok bırakırdı
+  const svg = zemin(pr, h.merkez) + golge(pr, [s.P, s.aA, s.aB]) + ogeler.map(o => o.svg).join('') + (h.statik || !IZ_GORUNUR ? '' : iz(pr, yol));
+  return { svg, oge: (svg.match(/<(line|circle|polygon|ellipse|polyline)/g) || []).length, ms: performance.now() - t0 };
+}
+
+/* ── ÇERÇEVE ─────────────────────────────────────────────────────────────
+ * Sabit bir görüş kutusu küçük alanda (ısınma satırındaki 80×62 px) figürü boşlukta
+ * kaybettirir. Çerçeve hareketin KENDİ kapladığı hacimden türetilir: bedenin eklemleri
+ * ve ekipman, zamanın 13 anında. İki biçim:
+ *   'sabit'  → verilen açıdan izdüşümün sıkı kutusu (dönmeyen küçük görünümler)
+ *   'donen'  → hacmi saran DİKEY SİLİNDİR; θ değişince genişlik değişmez, sürüklerken
+ *              figür zıplamaz ve hiçbir açıda kırpılmaz.
+ * Dönen değer ekran koordinatıdır (y YUKARI): { sol, sag, ust, alt }. */
+const hacimOnbellek = new WeakMap();
+/**
+ * Noktalar [konum, yarıçap, üstü belirler mi]. ÜST sınırı yalnız BEDEN ve HAREKET EDEN aletler
+ * belirler; sabit makine gövdesi (lat kulesi, makara tepesi, kafes dikmeleri) belirlemez — tepesi
+ * kadrajın üstünden taşar. Alt ve yan sınırı her şey belirler: taban ve zemin hep kadrajdadır.
+ * Sabri (27 Eyl, telefonda): "animasyon çok küçük" — ölçüldü, kişi figür alanının %54'üydü, lat
+ * kulesi (2,1 m) oturan kişinin (1,3 m) boyunu belirliyordu. Fotoğrafta da kule üstten kırpılır.
+ * Hareket eden = 13 anın herhangi ikisinde yeri 0,5 cm'den fazla değişen nokta. Kablo: makara ucu
+ * sabit, tutulan ucu hareketli → yalnız tutulan uç sayılır.
+ */
+function hacimNoktalari(h) {
+  if (hacimOnbellek.has(h)) return hacimOnbellek.get(h);
+  const n = [], D = birim([0.31, 0.53, 0.79]);
+  const EKLEM = ['P', 'boyun', 'gogusAlt', 'omA', 'omB', 'dA', 'dB', 'eA', 'eB', 'kaA', 'kaB', 'zA', 'zB', 'aA', 'aB', 'uA', 'uB'];
+  const kareler = [];                                             // kare → öğe → [[q, r], …]
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12, s = an(h, t);
+    for (const k of EKLEM) n.push([s[k], 8, true]);
+    n.push([s.kafa, R.kafa + 2, true]);
+    if (IZ_GORUNUR && i === 0 && !h.statik && h.izlenen) for (const q of izYolu(h)) n.push([q, 2, true]);   // 14 Eki: iz kırpılmasın
+    const kare = [];
+    for (const y of [D, D.map(v => -v)]) {                       // kutular yalnız bakan yüzlerini verir → iki zıt yön
+      const pr = q => [q[0], q[1], nokta(q, y)];
+      for (const e of h.ekipman(pr, s, t)) {
+        const g = e.geo; if (!g || g.tur === 'y') { kare.push([]); continue; }   // yuvarlatılmış minder: kutu yüzleri temsil eder
+        if (g.tur === 'p' || g.tur === 'c') kare.push(g.P3.map(q => [q, 0]));
+        else if (g.tur === 'k') kare.push([[g.a3, g.r], [g.b3, g.r]]);
+        else kare.push([[g.c3, g.r]]);
+      }
+    }
+    kareler.push(kare);
+  }
+  // Öğe sayısı anlar arasında değişirse eşleme yapılamaz → hepsi hareketli sayılır (kırpmamak güvenli taraf)
+  const eslesir = kareler.every(k => k.length === kareler[0].length && k.every((o, j) => o.length === kareler[0][j].length));
+  if (!eslesir) for (const k of kareler) for (const o of k) for (const [q, r] of o) n.push([q, r, true]);
+  else for (let j = 0; j < kareler[0].length; j++) for (let p = 0; p < kareler[0][j].length; p++) {
+    const iz = kareler.map(k => k[j][p]);
+    const oynar = iz.some(x => mesafe(x[0], iz[0][0]) > 0.5);
+    for (const [q, r] of iz) n.push([q, r, oynar]);
+  }
+  hacimOnbellek.set(h, n);
+  return n;
+}
+export function cerceve(h, teta, fi, bicim = 'donen', pay = 0.06) {
+  const n = hacimNoktalari(h);
+  let c;
+  if (bicim === 'sabit') {
+    const pr = kamera(teta, fi);
+    c = { sol: Infinity, sag: -Infinity, ust: -Infinity, alt: Infinity };
+    for (const [q, r] of n) {
+      const P = pr(q), x = P[0], y = -P[1];
+      c.sol = Math.min(c.sol, x - r); c.sag = Math.max(c.sag, x + r); c.ust = Math.max(c.ust, y + r); c.alt = Math.min(c.alt, y - r);
+    }
+    /* ZEMİN DİSKİNİN ÖN KENARI kadraja girer. ⚠️ 27 Eyl'e kadar yalnız gövde sığdırılıyordu:
+       ısınma listesinin mini figürlerinde disk alttan DÜZ bir çizgiyle kesiliyordu (24 Eyl 3B
+       geçişinden kalma). Yalnız ALT sınır genişler — yanlar gövdeye sıkı kalır, disk yanlardan
+       taşabilir; zemin bir yama, kesik alt kenar ise "kırpılmış" okunuyordu. */
+    const m = h.merkez ?? [0, 0, 0];
+    for (let i = 0; i < 48; i++) {
+      const a = i / 48 * 2 * Math.PI;
+      c.alt = Math.min(c.alt, -pr([m[0] + ZEMIN_R * Math.cos(a), 0, m[2] + ZEMIN_R * Math.sin(a)])[1]);
+    }
+  } else {
+    /* Açıdan bağımsız sınır NOKTA BAŞINA: eksenden ρ uzaktaki nokta θ dönerken ekranda en çok
+       ±ρ·sinφ oynar. Eskiden en yüksek noktanın boyu ile en uzak noktanın ρ'su TOPLANIYORDU
+       (farklı noktalardan gelseler bile) — hiçbir açıda dolmayan boşluk. Zemin diski altta sayılır. */
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const [q, r] of n) { x0 = Math.min(x0, q[0] - r); x1 = Math.max(x1, q[0] + r); z0 = Math.min(z0, q[2] - r); z1 = Math.max(z1, q[2] + r); }
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const cT = Math.cos(rd(teta)), sT = Math.sin(rd(teta)), cF = Math.cos(rd(fi)), sF = Math.abs(Math.sin(rd(fi)));
+    let rr = 0, ust = -Infinity, alt = Infinity;
+    for (const [q, r, ustu] of n) {
+      const rho = Math.hypot(q[0] - cx, q[2] - cz);
+      rr = Math.max(rr, rho + r);
+      if (ustu) ust = Math.max(ust, q[1] * cF + rho * sF + r);
+      alt = Math.min(alt, q[1] * cF - rho * sF - r);
+    }
+    const m = h.merkez ?? [0, 0, 0];
+    alt = Math.min(alt, -(Math.hypot(m[0] - cx, m[2] - cz) + ZEMIN_R) * sF);
+    const ox = cx * cT - cz * sT, oz = (cx * sT + cz * cT) * Math.sin(rd(fi));
+    c = { sol: ox - rr, sag: ox + rr, ust: ust - oz, alt: alt - oz };
+  }
+  const px = (c.sag - c.sol) * pay, py = (c.ust - c.alt) * pay;
+  return { sol: c.sol - px, sag: c.sag + px, ust: c.ust + py, alt: c.alt - py };
+}
+/* ── PERSPEKTİF (16 Eki, Sabri: "görüntülere perspektif uygula; yakın kenarlar büyük, uzak kenarlar küçük") ─────────────
+ * WebGL motorları artık perspektif kamerayla çizer: kamera, kadrajın merkezinden geçen eksende, PERSPEKTIF × kadrajın yarı
+ * yüksekliği uzakta durur (≈ 23° görüş açısı — hafif, "perspektif hissi"). Yakın noktalar merkezden UZAKLAŞIR (büyür) → paralel izdüşümle kurulan çerçeve
+ * yetmeyebilir: perspektifCerceve, hareketin hacim noktalarını (beden + aletler, zemin diskinin ön kenarı) perspektifle izdüşürüp
+ * çerçeveyi en küçük pencereye göre kurar (dikeyde kayabilir). Kural paralel çerçeveyle aynı: beden ve hareketli alet her yönde,
+ * sabit makine yalnız yanlarda ve altta kadrajda (tepesi üstten taşabilir), zemin diski yalnız altta. 'donen' çerçevede 12 açının
+ * sınırları birleşir (sürükleyince görüntü büyüyüp küçülmesin). SVG yedeği paralel kalır. Ölçüm (48 hareket): pencere paralel
+ * çerçeveden ortalama %4 büyük, en çok %13 (oturarak kablo kürek — uzun kablo istasyonu). */
+export const PERSPEKTIF = 5;                                    // kamera uzaklığı / kadrajın yarı yüksekliği (≈ 23° görüş açısı; Sabri: "gerçek hesap olmak zorunda değil, his versin")
+const PERSP_PAY = 0.95;                                             // noktalar çerçevenin %95'i içinde (paralel çerçevedeki pay gibi)
+const perspOnbellek = new WeakMap();
+const perspNokta = new WeakMap();
+/** Hacim noktaları + zemin diskinin kenarı (yalnız altta) — perspektif sığdırma için, hareket başına bir kez */
+function perspNoktalari(h) {
+  if (perspNokta.has(h)) return perspNokta.get(h);
+  const m = h.merkez ?? [0, 0, 0];
+  const n = [...hacimNoktalari(h).map(([q, r, ustu]) => [q, r, ustu, false]),
+    ...Array.from({ length: 24 }, (_, i) => { const a = i / 24 * 2 * Math.PI; return [[m[0] + ZEMIN_R * Math.cos(a), 0, m[2] + ZEMIN_R * Math.sin(a)], 0, false, true]; })];
+  perspNokta.set(h, n); return n;
+}
+/** Bir açıda, kamera ekseni c'nin merkezinde ve uzaklık D iken noktaların izdüşüm sınırları (merkeze göre) */
+function perspSinir(h, c, teta, fi, D, s) {
+  const n = perspNoktalari(h), pr = kamera(teta, fi), cx = (c.sol + c.sag) / 2, cy = (c.ust + c.alt) / 2;
+  for (const [q, r, ustu, disk] of n) {
+    const P = pr(q), d = P[2], k = D / Math.max(1, D - d), x = (P[0] - cx) * k, y = (-P[1] - cy) * k, rr = r * k;
+    s.alt = Math.min(s.alt, y - rr);
+    if (disk) continue;
+    s.yan = Math.max(s.yan, Math.abs(x) + rr);
+    if (ustu) s.ust = Math.max(s.ust, y + rr);
+  }
+  return s;
+}
+/**
+ * Paralel çerçeve c (kabın oranına sığdırılmış) → perspektif çerçevesi. Kamera c'nin merkezinden geçen eksende, D = PERSPEKTIF ×
+ * yarı yükseklik uzakta. Noktaların perspektif izdüşümünü içeren EN KÜÇÜK pencere (oran sabit; yanlar ortalı, dikeyde kayabilir —
+ * zemin diskinin öne gelen kenarı aşağı iner, pencere simetrik büyümez, aşağı kayar). 'donen': 12 açının her biri KENDİ paralel
+ * çerçevesinin merkezine göre ölçülür, sınırlar birleştirilir (sürükleyince boyut ve konum sabit); oran ve φ başına önbellek.
+ */
+export function perspektifCerceve(h, c, teta, fi, bicim = 'donen') {
+  const cx = (c.sol + c.sag) / 2, cy = (c.ust + c.alt) / 2, hw = (c.sag - c.sol) / 2, hh = (c.ust - c.alt) / 2, oran = hw / hh;
+  const D = PERSPEKTIF * Math.max(hw, hh);                          // büyük kenara göre: perspektifin gücü panelin biçimine bağlı olmasın (yassı plank panelinde yarı yüksekliğe göre kamera fazla yaklaşıyordu)
+  const anahtar = bicim === 'donen' ? `d|${oran.toFixed(3)}|${fi.toFixed(1)}|${hh.toFixed(1)}` : `s|${teta.toFixed(1)}|${fi.toFixed(1)}|${[c.sol, c.sag, c.ust, c.alt].map(v => v.toFixed(2)).join(',')}`;
+  let o = perspOnbellek.get(h); if (!o) perspOnbellek.set(h, o = new Map());
+  let s = o.get(anahtar);
+  if (!s) {
+    s = { yan: 0, ust: -Infinity, alt: Infinity };
+    if (bicim === 'donen') for (let i = 0; i < 12; i++) perspSinir(h, sigdir(cerceve(h, i * 30, fi, 'donen'), oran), i * 30, fi, D, s);
+    perspSinir(h, c, teta, fi, D, s);
+    o.set(anahtar, s);
+  }
+  const yy = Math.max(s.ust - s.alt, 2 * s.yan / oran) / 2 / PERSP_PAY, xx = yy * oran, my = (s.ust + s.alt) / 2;
+  return { sol: cx - xx, sag: cx + xx, ust: cy + my + yy, alt: cy + my - yy, D, eksen: [cx, cy] };
+}
+/**
+ * KIRPILMIŞ ÇERÇEVE (16 Eki, Sabri: "avatar ekranında saç seçilince manken yakın ve büyük görünüyordu, şimdi uzak ve küçük;
+ * profil resmi de küçülmüş"): çağıranın bilerek kırptığı çerçeve (saç sekmesinde baş–omuz, profil resminde yüz) YENİDEN
+ * SIĞDIRILMAZ — perspektifCerceve bütün bedeni sığdırmak için pencereyi açıyordu. Yalnız perspektif eklenir; kamera uzaklığı
+ * bedenin TAM kadrajından (yakın çekimde yüz bozulmasın — tele objektif gibi).
+ */
+export function perspektifKirp(h, c, teta, fi) {
+  const t = sigdir(cerceve(h, teta, fi, 'donen'), 1);
+  return { ...c, D: PERSPEKTIF * Math.max(t.sag - t.sol, t.ust - t.alt) / 2, eksen: [(c.sol + c.sag) / 2, (c.ust + c.alt) / 2] };
+}
+/** Perspektif çerçevesinde bir dünya noktasının ekran konumu (denetim için; motorun kamerasıyla aynı geometri) */
+export function perspektifIzdusum(c, teta, fi) {
+  const pr = kamera(teta, fi);
+  return q => { const P = pr(q), s = c.D / (c.D - P[2]); return [c.eksen[0] + (P[0] - c.eksen[0]) * s, c.eksen[1] + (-P[1] - c.eksen[1]) * s, s]; };
+}
+/** Çerçeveyi kabın en-boy oranına genişlet (kırpmadan, ortalayarak) */
+export function sigdir(c, oran) {
+  let w = c.sag - c.sol, hh = c.ust - c.alt;
+  const mx = (c.sag + c.sol) / 2, my = (c.ust + c.alt) / 2;
+  if (w / hh < oran) w = hh * oran; else hh = w / oran;
+  return { sol: mx - w / 2, sag: mx + w / 2, ust: my + hh / 2, alt: my - hh / 2 };
+}
+/** SVG viewBox (SVG'de y AŞAĞI) */
+export const viewBox = c => `${c.sol.toFixed(1)} ${(-c.ust).toFixed(1)} ${(c.sag - c.sol).toFixed(1)} ${(c.ust - c.alt).toFixed(1)}`;

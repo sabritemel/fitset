@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FitSet — Antrenman Defteri</title>
+<meta name="description" content="Salon antrenman defteri. Ağırlık ve tekrar kaydı, hareket anlatımları, çevrimdışı çalışır.">
+<meta name="theme-color" content="#07090D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/fs-192.png">
+<link rel="apple-touch-icon" href="icons/fs-180.png">
+<!-- fonts.css ve style.css PARALEL yüklenir; @import zinciri biçimsiz an yaratıyordu -->
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ÇİZGİSEL İKON SETİ (tasarım dili 3): tek çizgi kalınlığı, yuvarlak uç. Pakette — çevrimdışı.
+     Eskiden metin karakterleriydi (← ? ▾ ◆ ✓ →): punto ve ağırlıkla oynuyor, her yerde ayrı hizalanıyordu.
+     Kullanım: <svg class="i"><use href="#i-geri"/></svg> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-geri" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-ileri" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-soru" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-asagi" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-yukari" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-tik" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-carpi" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
+  <symbol id="i-arti" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-eksi" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-geri-al" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-saat" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2h5"/></symbol>
+  <symbol id="i-alev" viewBox="0 0 24 24"><path d="M12 21a6 6 0 0 0 6-6c0-4.5-4-6.5-5-11-2.5 2-3.5 4.5-3.2 7.2C8.6 10.4 8 9.5 7.8 8.3 6.6 9.8 6 11.6 6 15a6 6 0 0 0 6 6z"/></symbol>
+  <symbol id="i-ayar" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-grafik" viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M5 15l4.5-4.5 3.5 3 6-7"/></symbol>
+  <symbol id="i-nabiz" viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 5 12 2.5-6H21"/></symbol>
+  <symbol id="i-takvim" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+  <symbol id="i-yildiz" viewBox="0 0 24 24"><path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5.1-1.9-5.1L5 10.4l5.1-1.9z"/></symbol>
+  <symbol id="i-gecmis" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.6"/><path d="M4 4v4.6h4.6M12 8v4l3 2"/></symbol>
+  <symbol id="i-sil" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+  <symbol id="i-uyari" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-bugun" viewBox="0 0 24 24"><path d="M6 9v6M18 9v6M3.5 12H6M18 12h2.5M6 12h12"/><path d="M8.5 7.5v9M15.5 7.5v9"/></symbol>
+  <symbol id="i-liste" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+  <symbol id="i-ara" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+  <symbol id="i-tutac" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></symbol>
+  <symbol id="i-figur" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 8v6M8 10l4 1 4-1M10 21l2-7 2 7"/></symbol>
+</svg>
+
+<!-- İki ekran, tek iş: LİSTE = "bugün ne var", ODAK = "şu an ne yapıyorum" -->
+<main id="list-screen" class="screen on"></main>
+<main id="focus-screen" class="screen"></main>
+<main id="warmup-screen" class="screen"></main>
+<main id="settings-screen" class="screen"></main>
+<main id="profile-screen" class="screen"></main>
+<main id="history-screen" class="screen"></main>
+<main id="session-screen" class="screen"></main>
+<main id="summary-screen" class="screen"></main>
+<main id="programs-screen" class="screen"></main>
+<main id="program-screen" class="screen"></main>
+<main id="picker-screen" class="screen"></main>
+<main id="custom-screen" class="screen"></main>
+<main id="library-screen" class="screen"></main>
+<main id="exercise-screen" class="screen"></main>
+<main id="add-screen" class="screen"></main>
+<main id="welcome-screen" class="screen"></main>
+<main id="preset-screen" class="screen"></main>
+
+<input type="file" id="file" accept="application/json,.json" hidden>
+
+<!-- AÇILIŞ (11 Eki, Sabri seçti: B "sade", ~1,15 sn): FS işareti sistem açılışının yerinden yukarı süzülür,
+     ad ve slogan belirir, ekran solar. Yalnız SOĞUK açılışta (sayfa yüklenirken) var; dokununca geçilir.
+     Ad js/marka.js'ten gelir (tek yer). JS çalışmazsa CSS 3 sn sonra kendisi gizler — uygulama kilitlenmez. -->
+<div id="acilis" class="acilis" aria-hidden="true">
+  <img class="isaret" src="icons/isaret.svg" alt="" width="144" height="84">
+  <div class="kelime"><span class="k1"></span><span class="k2"></span></div>
+  <div class="slogan"></div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+<noscript><p style="padding:24px;font:16px system-ui">Bu uygulama JavaScript gerektirir.</p></noscript>
+</body>
+</html>
