@@ -11,15 +11,13 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/fs-192.png">
 <link rel="apple-touch-icon" href="icons/fs-180.png">
-<!-- fonts.css ve style.css PARALEL yüklenir; @import zinciri biçimsiz an yaratıyordu -->
+
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<!-- ÇİZGİSEL İKON SETİ (tasarım dili 3): tek çizgi kalınlığı, yuvarlak uç. Pakette — çevrimdışı.
-     Eskiden metin karakterleriydi (← ? ▾ ◆ ✓ →): punto ve ağırlıkla oynuyor, her yerde ayrı hizalanıyordu.
-     Kullanım: <svg class="i"><use href="#i-geri"/></svg> -->
+
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <symbol id="i-geri" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
   <symbol id="i-ileri" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
@@ -48,7 +46,7 @@
   <symbol id="i-figur" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 8v6M8 10l4 1 4-1M10 21l2-7 2 7"/></symbol>
 </svg>
 
-<!-- İki ekran, tek iş: LİSTE = "bugün ne var", ODAK = "şu an ne yapıyorum" -->
+
 <main id="list-screen" class="screen on"></main>
 <main id="focus-screen" class="screen"></main>
 <main id="warmup-screen" class="screen"></main>
@@ -69,9 +67,7 @@
 
 <input type="file" id="file" accept="application/json,.json" hidden>
 
-<!-- AÇILIŞ (11 Eki, Sabri seçti: B "sade", ~1,15 sn): FS işareti sistem açılışının yerinden yukarı süzülür,
-     ad ve slogan belirir, ekran solar. Yalnız SOĞUK açılışta (sayfa yüklenirken) var; dokununca geçilir.
-     Ad js/marka.js'ten gelir (tek yer). JS çalışmazsa CSS 3 sn sonra kendisi gizler — uygulama kilitlenmez. -->
+
 <div id="acilis" class="acilis" aria-hidden="true">
   <img class="isaret" src="icons/isaret.svg" alt="" width="144" height="84">
   <div class="kelime"><span class="k1"></span><span class="k2"></span></div>
