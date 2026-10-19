@@ -1,100 +1,100 @@
 /*! © 2026 Sabri Temel — tüm hakları saklıdır. Kullanım koşulları: kosullar.html */
-import*as c from"./session.js";import*as h from"./schedule.js";import{dayKey as O}from"./store.js";import{mmss as w}from"./timer.js";import*as z from"./ilerleme.js";import*as I from"./rekorlar.js";import{GRUPLAR as A,EKIPMAN as f,SET_TURU as ta}from"./program.js";import{HAZIR as U,SORULAR as na,oner as ra,hazirBul as Y}from"./data/hazir.js";import{AD as C,SURUM as la}from"./marka.js";import*as g from"./avatar.js";import{KURULUM_TARIFI as da,bantGoster as oa}from"./kurulum.js";import*as R from"./hazirlik.js";export const fmt=(a,s=2,e=0)=>a==null||!Number.isFinite(+a)?"—":(+a).toLocaleString("tr-TR",{minimumFractionDigits:e,maximumFractionDigits:s}),esc=a=>String(a).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[s]);const d=a=>`<svg class="i" aria-hidden="true"><use href="#i-${a}"/></svg>`;export const adi=a=>esc(a.ad??a.tr??a.en??"");const ca=a=>a.en&&a.en!==(a.ad??a.tr)?`<span lang="en">${esc(a.en)}</span>`:"";export const cizimsiz=a=>!!(a.ozel||a.bilinmeyen),setLabel=a=>a.type==="time"?`${fmt(a.seconds)} sn`:a.type==="cardio"?`${fmt(a.minutes)} dk`:a.weight==null?`${fmt(a.reps)} tekrar`:`${fmt(a.weight)} × ${fmt(a.reps)}`;const V=(a,s)=>a.type==="time"?`${fmt(a.seconds)} sn`:a.type==="cardio"?`${fmt(a.minutes)} dk`:a.weight==null?`${fmt(a.reps)} tekrar`:`${fmt(a.weight)} ${s}`;export function lastTime(a,s,e,i=!1){const n=s[a.id];if(!n)return i?"Bu hareketi ilk kez yapıyorsun.":"Bu hareketin ilk kaydı.";const t=n.sets.map(setLabel),o=t.every(p=>p===t[0])?`<b>${t[0]}</b> · ${t.length} set`:`<b>${t.join(" · ")}</b>`,l=n.sets.at(-1)?.rir;return`Geçen sefer · ${h.relativeLabel(new Date(n.at))} · ${o}${l!=null?` · son set RIR ${l}`:""}`}export function hazirlikGoster(a){const{session:s,settings:e}=a;return a.hazirlik?!0:e.hazirlikSor!==!1&&e.hazirlikGunu?.d!==O()&&!c.hasAnySet(s)&&!s.warmupDone&&!s.hazirlik}function ua(a){const s=a.session.hazirlik?.azalan;if(s?.length&&!a.hazirlik)return`<div class="not hafif-not">${d("nabiz")}<span>Bugün ${s.length} harekette birer set az
-      (toparlanma kontrolü). <button class="bag" data-act="hz-geri">Programdaki gibi yap</button></span></div>`;if(!hazirlikGoster(a))return"";const e=a.hazirlik?.cevap??{},i=R.degerlendir(e),n=R.SORULAR.map(r=>`<div class="hz-soru"><p>${esc(r.soru)}</p>
-      <div class="segment" role="group" aria-label="${esc(r.soru)}">${r.secenekler.map(([o,l])=>`<button data-hz="${r.id}:${o}" aria-pressed="${e[r.id]===o}">${l}</button>`).join("")}</div></div>`).join(""),t=i?`<div class="hz-sonuc ${i.duzey}" role="status"><b>${i.baslik}</b><p>${i.metin}</p>
+import*as c from"./session.js";import*as f from"./schedule.js";import{dayKey as R}from"./store.js";import{mmss as D}from"./timer.js";import*as T from"./ilerleme.js";import*as L from"./rekorlar.js";import{GRUPLAR as K,EKIPMAN as z,SET_TURU as ma}from"./program.js";import{HAZIR as Z,SORULAR as $a,oner as ka,hazirBul as X}from"./data/hazir.js";import{AD as J,SURUM as ba}from"./marka.js";import*as h from"./avatar.js";import{KURULUM_TARIFI as va,bantGoster as ga}from"./kurulum.js";import*as G from"./hazirlik.js";import{anaAd as E,turkceAd as S}from"./adlar.js";export const fmt=(a,s=2,e=0)=>a==null||!Number.isFinite(+a)?"—":(+a).toLocaleString("tr-TR",{minimumFractionDigits:e,maximumFractionDigits:s}),esc=a=>String(a).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[s]);const o=a=>`<svg class="i" aria-hidden="true"><use href="#i-${a}"/></svg>`;export const adi=a=>esc(E(a));const ha=a=>{const s=S(a);return s?`<span>${esc(s)}</span>`:""},P=(a,...s)=>[S(a),...s].filter(Boolean).map(esc).join(" · ");export const cizimsiz=a=>!!(a.ozel||a.bilinmeyen),setLabel=a=>a.type==="time"?`${fmt(a.seconds)} sn`:a.type==="cardio"?`${fmt(a.minutes)} dk`:a.weight==null?`${fmt(a.reps)} tekrar`:`${fmt(a.weight)} × ${fmt(a.reps)}`;const Q=(a,s)=>a.type==="time"?`${fmt(a.seconds)} sn`:a.type==="cardio"?`${fmt(a.minutes)} dk`:a.weight==null?`${fmt(a.reps)} tekrar`:`${fmt(a.weight)} ${s}`;export function lastTime(a,s,e,i=!1){const t=s[a.id];if(!t)return i?"Bu hareketi ilk kez yapıyorsun.":"Bu hareketin ilk kaydı.";const n=t.sets.map(setLabel),l=n.every(u=>u===n[0])?`<b>${n[0]}</b> · ${n.length} set`:`<b>${n.join(" · ")}</b>`,d=t.sets.at(-1)?.rir;return`Geçen sefer · ${f.relativeLabel(new Date(t.at))} · ${l}${d!=null?` · son set RIR ${d}`:""}`}export function hazirlikGoster(a){const{session:s,settings:e}=a;return a.hazirlik?!0:e.hazirlikSor!==!1&&e.hazirlikGunu?.d!==R()&&!c.hasAnySet(s)&&!s.warmupDone&&!s.hazirlik}function fa(a){const s=a.session.hazirlik?.azalan;if(s?.length&&!a.hazirlik)return`<div class="not hafif-not">${o("nabiz")}<span>Bugün ${s.length} harekette birer set az
+      (toparlanma kontrolü). <button class="bag" data-act="hz-geri">Programdaki gibi yap</button></span></div>`;if(!hazirlikGoster(a))return"";const e=a.hazirlik?.cevap??{},i=G.degerlendir(e),t=G.SORULAR.map(r=>`<div class="hz-soru"><p>${esc(r.soru)}</p>
+      <div class="segment" role="group" aria-label="${esc(r.soru)}">${r.secenekler.map(([l,d])=>`<button data-hz="${r.id}:${l}" aria-pressed="${e[r.id]===l}">${d}</button>`).join("")}</div></div>`).join(""),n=i?`<div class="hz-sonuc ${i.duzey}" role="status"><b>${i.baslik}</b><p>${i.metin}</p>
       ${i.duzey==="hafif"?`<div class="cift dikey"><button class="btn p" data-act="hz-hafif">Hareketlerde birer set az yap</button>
              <button class="btn s" data-act="hz-tamam">Programdaki gibi devam et</button></div>`:`<button class="btn ${i.duzey==="uy"?"p":"s"}" data-act="hz-tamam">Tamam</button>`}</div>`:"";return`<div class="grup hazirlik"><h2 class="etiket">Bugün nasılsın?</h2><div class="ic">
-      ${n}${t}
+      ${t}${n}
       ${i?"":'<button class="bag hz-gec" data-act="hz-gec">Bugün sorma</button>'}
-      <p class="kucuk-yazi">${esc(R.KART_NOTU)}</p>
-    </div></div>`}const pa=a=>a?`
+      <p class="kucuk-yazi">${esc(G.KART_NOTU)}</p>
+    </div></div>`}const ya=a=>a?`
   <div class="grup carry"><div class="ic">
     <p class="baslik-satir">${c.gunEtiketiSeans(a.session).kisa} yarım kaldı</p>
-    <p class="alt-satir">${h.relativeLabel(new Date(a.session.finishedAt??a.session.startedAt))}
+    <p class="alt-satir">${f.relativeLabel(new Date(a.session.finishedAt??a.session.startedAt))}
       · ${a.yapilan}/${a.toplam} hareket</p>
     <p>${a.kalan.map(adi).join(" · ")}</p>
     <div class="cift dikey">
       <button class="btn s" data-act="carry-skip">Sıradakine geç</button>
       <button class="btn p" data-act="carry-go">Bu güne devam et</button>
     </div>
-  </div></div>`:"",ma=a=>{const{session:s,dayIndex:e,onerilen:i,gunSecici:n}=a;if(!n)return"";const t=c.canSwitchDay(s),r=c.gunEtiketi(e).kisa;return t.ok?`<div class="grup picker"><h2 class="etiket">Bugün ne yapıyorsun?</h2><div class="ic">
-    <div class="picks">${c.allDays().map(l=>{const{kisa:p,kaslar:m}=c.gunEtiketi(l.dayIndex);return`<button class="pick" data-gun-sec="${l.dayIndex}" aria-pressed="${l.dayIndex===e}">
-      <span class="pick-ad">${p}</span><span class="pick-kas">${esc(m)}</span>
-      ${l.dayIndex===i?'<span class="pick-not">program önerisi</span>':""}
+  </div></div>`:"",za=a=>{const{session:s,dayIndex:e,onerilen:i,gunSecici:t}=a;if(!t)return"";const n=c.canSwitchDay(s),r=c.gunEtiketi(e).kisa;return n.ok?`<div class="grup picker"><h2 class="etiket">Bugün ne yapıyorsun?</h2><div class="ic">
+    <div class="picks">${c.allDays().map(d=>{const{kisa:u,kaslar:k}=c.gunEtiketi(d.dayIndex);return`<button class="pick" data-gun-sec="${d.dayIndex}" aria-pressed="${d.dayIndex===e}">
+      <span class="pick-ad">${u}</span><span class="pick-kas">${esc(k)}</span>
+      ${d.dayIndex===i?'<span class="pick-not">program önerisi</span>':""}
     </button>`}).join("")}</div>
     <p>${r}'ü telefonsuz yaptıysan işaretle: kayda geçer, sıra sonraki güne atlar.
       Ağırlıklar bilinmediği için hacme ve "geçen sefer"e karışmaz.</p>
     <button class="btn s" data-act="gun-yapildi">${r}'ü yapıldı işaretle</button>
   </div></div>`:`<div class="grup picker"><div class="ic">
     <p>Bugün set girdin; günü değiştirmek bu setleri yanlış güne bağlardı. Önce <b>Seansı bitir</b>
-      ya da Ayarlar'dan <b>Bugünü sıfırla</b>.</p></div></div>`};function $a(a,s,e,i){const n=s.sets.filter(r=>!r.warmup).at(-1);if(n)return`<b>${V(n,i.unit)}</b>${s.calisma}/${s.hedef}`;const t=e?.sets?.at(-1);return t?`<b>${V(t,i.unit)}</b>geçen`:`<b>${c.repsLabel(a,i)}</b>hedef`}const ka=a=>a.tamam?`<span class="durum tamam">${d("tik")}</span>`:a.calisma>0?`<span class="durum kismi" style="--p:${Math.round(a.calisma/a.hedef*100)}"></span>`:'<span class="durum bos"></span>';function ba(a,s,e){if(s.tur==="isinma")return`<button class="btn p" data-act="warmup">Isınmaya başla${d("ileri")}</button>`;if(s.tur==="bitir")return'<button class="btn p" data-act="finish">Seansı bitir</button>';if(s.tur==="soguma")return`<div class="cift"><button class="btn s" data-act="finish" aria-label="Seansı bitir">Bitir</button>
-    <button class="btn p" data-act="cooldown">Soğumaya başla${d("ileri")}</button></div>`;const i=c.hasAnySet(a.session),n=e[s.idx],t=s.basladi?"Devam et":i?"Sıradaki":"Başla",r=`<button class="btn p iki" data-go="${s.idx}" aria-label="${t}: ${adi(n)}">
-      <span><small>${t}</small><b>${adi(n)}</b></span></button>`;return i?`<div class="cift"><button class="btn s" data-act="finish" aria-label="Seansı bitir">Bitir</button>${r}</div>`:r}export function listHTML(a){const{session:s,dayIndex:e,settings:i,status:n,yarim:t,oncekiYapilan:r,gunSecici:o,lastPerf:l={}}=a,p=c.exercisesFor(e),m=c.progress(s,e,i),$=c.summaryVolume(s),b=Math.max(0,Math.round((Date.now()-s.startedAt)/6e4)),{kisa:k,kaslar:u}=c.gunEtiketi(e),v=c.siradakiEylem(s,e,i),S=v.tur==="hareket"?v.idx:-1,j=p.map((M,N)=>{const H=c.exerciseProgress(s,M,i),F=r?.has(M.id),_=[H.tamam&&"bitti",N===S&&"simdi",F&&!H.calisma&&"onceki"].filter(Boolean).join(" ");return`<button class="satir${_?" "+_:""}" data-go="${N}">
-      ${ka(H)}
-      <span class="ad"><b>${adi(M)}</b>${F&&!H.calisma?"<span>geçen sefer yapıldı</span>":ca(M)}</span>
-      <span class="sag">${$a(M,H,l[M.id],i)}</span>
-    </button>`}).join(""),E=`<button class="satir${s.warmupDone?" bitti":""}" data-act="warmup">
-    <span class="durum ${s.warmupDone?"tamam":"ikon"}">${d(s.warmupDone?"tik":"alev")}</span>
+      ya da Ayarlar'dan <b>Bugünü sıfırla</b>.</p></div></div>`};function Sa(a,s,e,i){const t=s.sets.filter(r=>!r.warmup).at(-1);if(t)return`<b>${Q(t,i.unit)}</b>${s.calisma}/${s.hedef}`;const n=e?.sets?.at(-1);return n?`<b>${Q(n,i.unit)}</b>geçen`:`<b>${c.repsLabel(a,i)}</b>hedef`}const Ta=a=>a.tamam?`<span class="durum tamam">${o("tik")}</span>`:a.calisma>0?`<span class="durum kismi" style="--p:${Math.round(a.calisma/a.hedef*100)}"></span>`:'<span class="durum bos"></span>';function Ma(a,s,e){if(s.tur==="isinma")return`<button class="btn p" data-act="warmup">Isınmaya başla${o("ileri")}</button>`;if(s.tur==="bitir")return'<button class="btn p" data-act="finish">Seansı bitir</button>';if(s.tur==="soguma")return`<div class="cift"><button class="btn s" data-act="finish" aria-label="Seansı bitir">Bitir</button>
+    <button class="btn p" data-act="cooldown">Soğumaya başla${o("ileri")}</button></div>`;const i=c.hasAnySet(a.session),t=e[s.idx],n=s.basladi?"Devam et":i?"Sıradaki":"Başla",r=`<button class="btn p iki" data-go="${s.idx}" aria-label="${n}: ${adi(t)}">
+      <span><small>${n}</small><b>${adi(t)}</b></span></button>`;return i?`<div class="cift"><button class="btn s" data-act="finish" aria-label="Seansı bitir">Bitir</button>${r}</div>`:r}export function listHTML(a){const{session:s,dayIndex:e,settings:i,status:t,yarim:n,oncekiYapilan:r,gunSecici:l,lastPerf:d={}}=a,u=c.exercisesFor(e),k=c.progress(s,e,i),p=c.summaryVolume(s),v=Math.max(0,Math.round((Date.now()-s.startedAt)/6e4)),{kisa:b,kaslar:m}=c.gunEtiketi(e),g=c.siradakiEylem(s,e,i),$=g.tur==="hareket"?g.idx:-1,M=u.map((I,C)=>{const A=c.exerciseProgress(s,I,i),q=r?.has(I.id),V=[A.tamam&&"bitti",C===$&&"simdi",q&&!A.calisma&&"onceki"].filter(Boolean).join(" ");return`<button class="satir${V?" "+V:""}" data-go="${C}">
+      ${Ta(A)}
+      <span class="ad"><b>${adi(I)}</b>${q&&!A.calisma?"<span>geçen sefer yapıldı</span>":ha(I)}</span>
+      <span class="sag">${Sa(I,A,d[I.id],i)}</span>
+    </button>`}).join(""),B=`<button class="satir${s.warmupDone?" bitti":""}" data-act="warmup">
+    <span class="durum ${s.warmupDone?"tamam":"ikon"}">${o(s.warmupDone?"tik":"alev")}</span>
     <span class="ad"><b>Isınma</b><span>${c.warmupFor(e).length+1} adım · ${c.isinmaSuresi(e)}</span></span>
     <span class="sag">${s.warmupDone?"yapıldı":"başla"}</span>
-  </button>`,T=c.finisherFor(e),[B,ea]=T?T.h.split(" — "):[],ia=T?`<div class="satir">
-    <span class="durum ikon">${d("nabiz")}</span>
-    <span class="ad"><b>${B}</b><span>${T.p}</span></span>
-    <span class="sag"><b>${ea??""}</b>bitişte</span>
+  </button>`,H=c.finisherFor(e),[w,ua]=H?H.h.split(" — "):[],pa=H?`<div class="satir">
+    <span class="durum ikon">${o("nabiz")}</span>
+    <span class="ad"><b>${w}</b><span>${H.p}</span></span>
+    <span class="sag"><b>${ua??""}</b>bitişte</span>
   </div>`:"";return`
     <div class="ust liste-ust">
-      <span class="tarih">${n.label}</span>
+      <span class="tarih">${t.label}</span>
       <span class="tarih">${esc(c.aktifProgram().ad)}</span>
     </div>
-    <button class="cip gun-cip" data-act="gun-ac" aria-expanded="${!!o}" aria-label="Günü değiştir: ${k}">
-      ${k}${d(o?"yukari":"asagi")}</button>
-    <div class="gun-baslik"><h1>${esc(u)}</h1></div>
+    <button class="cip gun-cip" data-act="gun-ac" aria-expanded="${!!l}" aria-label="Günü değiştir: ${b}">
+      ${b}${o(l?"yukari":"asagi")}</button>
+    <div class="gun-baslik"><h1>${esc(m)}</h1></div>
     ${kurulumBantHTML(a)}
-    ${ua(a)}
-    ${n.isTrainingDay?"":`<div class="not">${d("takvim")}<span>Program günü değil; yine de kaydedebilirsin.
-      Sıradaki antrenman <b>${n.next?h.fmtShort(n.next):"—"}</b>.</span></div>`}
-    ${ma(a)}
+    ${fa(a)}
+    ${t.isTrainingDay?"":`<div class="not">${o("takvim")}<span>Program günü değil; yine de kaydedebilirsin.
+      Sıradaki antrenman <b>${t.next?f.fmtShort(t.next):"—"}</b>.</span></div>`}
+    ${za(a)}
     <div class="ozet">
-      <div><b>${m.done}<small>/${m.total}</small></b><span>Set</span></div>
-      <div><b>${fmt($.kg,0)}<small>${i.unit}</small></b><span>Hacim</span></div>
-      <div><b>${b}<small>dk</small></b><span>Süre</span></div>
+      <div><b>${k.done}<small>/${k.total}</small></b><span>Set</span></div>
+      <div><b>${fmt(p.kg,0)}<small>${i.unit}</small></b><span>Hacim</span></div>
+      <div><b>${v}<small>dk</small></b><span>Süre</span></div>
     </div>
-    ${pa(t)}
-    ${p.length?`<div class="liste">${E}${j}${ia}${Na(s,c.cooldownFor(e,i?.profil))}</div>
-    <div class="alt alt-sekmeli">${ba(a,v,p)}</div>`:`<div class="grup"><div class="ic"><p>Bu günde henüz hareket yok.</p>
+    ${ya(n)}
+    ${u.length?`<div class="liste">${B}${M}${pa}${Za(s,c.cooldownFor(e,i?.profil))}</div>
+    <div class="alt alt-sekmeli">${Ma(a,g,u)}</div>`:`<div class="grup"><div class="ic"><p>Bu günde henüz hareket yok.</p>
         <button class="btn s" data-program-ac="${esc(c.aktifProgram().id)}">Programı düzenle</button></div></div>`}
-    ${sekmelerHTML("bugun")}`}function va(a,s,e=""){if(cizimsiz(a))return`<div class="fig"><div class="sahne3d cizimsiz" role="img" aria-label="${adi(a)}: çizim yok">
-      ${d("figur")}<span>${a.ozel?"Özel hareket · çizimi yok":"Bu hareketin tanımı bulunamadı"}</span></div></div>`;if(a.hold){const i=Math.max(0,a.variants.findIndex(n=>n.ok));return s.calisma>=1?`<div class="fig">
+    ${sekmelerHTML("bugun")}`}function Ha(a,s,e=""){if(cizimsiz(a))return`<div class="fig"><div class="sahne3d cizimsiz" role="img" aria-label="${adi(a)}: çizim yok">
+      ${o("figur")}<span>${a.ozel?"Özel hareket · çizimi yok":"Bu hareketin tanımı bulunamadı"}</span></div></div>`;if(a.hold){const i=Math.max(0,a.variants.findIndex(t=>t.ok));return s.calisma>=1?`<div class="fig">
         <div class="sahne3d" data-varyant="${i}" role="img" aria-label="${adi(a)}: doğru duruş"></div>
-        <p class="fig-not">${d("tik")}${a.variants[i].note} · hatalar ? panelinde</p>${e}
-      </div>`:`<div class="variants">${a.variants.map((n,t)=>`<figure class="${n.ok?"ok":""}">
-        <div class="sahne3d" data-varyant="${t}" aria-hidden="true"></div>
-        <figcaption><b>${d(n.ok?"tik":"carpi")}${esc(n.label)}</b><span>${esc(n.note)}</span></figcaption>
+        <p class="fig-not">${o("tik")}${a.variants[i].note} · hatalar ? panelinde</p>${e}
+      </div>`:`<div class="variants">${a.variants.map((t,n)=>`<figure class="${t.ok?"ok":""}">
+        <div class="sahne3d" data-varyant="${n}" aria-hidden="true"></div>
+        <figcaption><b>${o(t.ok?"tik":"carpi")}${esc(t.label)}</b><span>${esc(t.note)}</span></figcaption>
       </figure>`).join("")}</div>`}return`<div class="fig${a.setType==="weight_reps"?" zemin":""}">
     <div class="sahne3d" id="fig3d" role="img" aria-label="${adi(a)} hareket çizimi; sürükleyerek döndürülür"></div>${e}
-  </div>`}const ga={agir:"en ağır set",bir:"tahmini 1RM",hacim:"set hacmi",tekrar:"en çok tekrar",sure:"en uzun süre"};function ha(a,s){const e=a.rozet;if(!e||e.exId!==s.id||Date.now()>e.bitis)return"";const i=e.tur==="tekrar"?fmt(e.simdi):rekorDeger(e.tur,e.simdi,a.settings.unit);return`<div class="rekor-rozet" role="status">${d("yildiz")}<span>Yeni rekor · <em>${ga[e.tur]} ${i}</em></span></div>`}function ya(a,s){const e=a.rirSor;if(!e||e.exId!==s.id||Date.now()>e.bitis)return"";const i=c.effective(s,a.settings).rir;return`<div class="rir-sor" role="group" aria-label="Bu sette kaç tekrar daha yapabilirdin?">
+  </div>`}const Ia={agir:"en ağır set",bir:"tahmini 1RM",hacim:"set hacmi",tekrar:"en çok tekrar",sure:"en uzun süre"};function Ea(a,s){const e=a.rozet;if(!e||e.exId!==s.id||Date.now()>e.bitis)return"";const i=e.tur==="tekrar"?fmt(e.simdi):rekorDeger(e.tur,e.simdi,a.settings.unit);return`<div class="rekor-rozet" role="status">${o("yildiz")}<span>Yeni rekor · <em>${Ia[e.tur]} ${i}</em></span></div>`}function Aa(a,s){const e=a.rirSor;if(!e||e.exId!==s.id||Date.now()>e.bitis)return"";const i=c.effective(s,a.settings).rir;return`<div class="rir-sor" role="group" aria-label="Bu sette kaç tekrar daha yapabilirdin?">
       <span>Kaç tekrar daha yapabilirdin?</span>
-      <div class="rir-cipler">${Z.map(n=>`<button class="cip${n===i?" hedef":""}" data-rir="${n}" aria-label="RIR ${n}${n===4?" ya da daha çok":""}${n===i?" (hedef)":""}">${n===4?"4+":n}</button>`).join("")}
-        <button class="rir-kapat" data-rir="x" aria-label="Sorma, kapat">${d("carpi")}</button></div>
-    </div>`}function fa(a,s){const e=s.session?.entries.find(n=>n.exerciseId===a.id)?.note??"",i=s.lastPerf?.[a.id]?.not;return`<div class="not-alani">
+      <div class="rir-cipler">${x.map(t=>`<button class="cip${t===i?" hedef":""}" data-rir="${t}" aria-label="RIR ${t}${t===4?" ya da daha çok":""}${t===i?" (hedef)":""}">${t===4?"4+":t}</button>`).join("")}
+        <button class="rir-kapat" data-rir="x" aria-label="Sorma, kapat">${o("carpi")}</button></div>
+    </div>`}function La(a,s){const e=s.session?.entries.find(t=>t.exerciseId===a.id)?.note??"",i=s.lastPerf?.[a.id]?.not;return`<div class="not-alani">
       <label class="etiket" for="ex-not">Notun</label>
       <textarea id="ex-not" data-not="${esc(a.id)}" maxlength="${c.NOT_SINIR}" rows="2"
         placeholder="${i?esc(i):"Ör. koltuk 4. delik · sol omuz biraz gergin"}">${esc(e)}</textarea>
       ${i?'<p class="kucuk-yazi">Gri yazı son notun; bugüne kaydedilmez. Bugün için yeni not yazabilirsin.</p>':""}
-    </div>`}function za(a,s){const e=c.effective(a,s.settings);return`<section class="sheet" id="sheet" aria-hidden="true" inert aria-label="Hedef ve anlatım">
+    </div>`}function ja(a,s){const e=c.effective(a,s.settings);return`<section class="sheet" id="sheet" aria-hidden="true" inert aria-label="Hedef ve anlatım">
       <button class="grab" data-act="sheet-close" aria-label="Kapat"></button>
       <div class="sheet-in">
         <h2>${adi(a)}</h2>
-        ${a.en?`<p class="alt-baslik" lang="en">${esc(a.en)}</p>`:""}
-        ${fa(a,s)}
-        ${Da(a,s)}
+        ${S(a)?`<p class="alt-baslik">${esc(S(a))}</p>`:""}
+        ${La(a,s)}
+        ${Ua(a,s)}
         ${oneriHTML(a,s)}
         <div class="goal">
           <div class="goal-hd">
             <span class="etiket">Hedef · ${esc(c.aktifProgram().ad)}</span>
             ${e.edited?'<button class="cip" data-act="goal-reset">Programa dön</button>':""}
           </div>
-          ${Ra(a,s)}
+          ${Ya(a,s)}
           <button class="btn p" data-act="goal-save">Hedefi kaydet</button>
           <p class="goal-note">Hedef <b>${esc(c.aktifProgram().ad)}</b> içindeki bu hareketin hedefidir; kaydedince program
             da değişir. Ağırlık boş kalırsa kutu geçen seferki değerle dolar.</p>
@@ -105,273 +105,279 @@ import*as c from"./session.js";import*as h from"./schedule.js";import{dayKey as 
         <ol class="steps">${a.steps.map(i=>`<li>${esc(i)}</li>`).join("")}</ol>`:""}
         ${a.hold?`<h3>Doğru duruş ve yaygın hatalar</h3>
           <ul class="hatalar">${a.variants.map(i=>`<li><b>${esc(i.label)}</b><span>${esc(i.note)}</span></li>`).join("")}</ul>`:""}
-        ${a.tip?`<h3 class="tip-bas">${d("uyari")}Dikkat</h3>
+        ${a.tip?`<h3 class="tip-bas">${o("uyari")}Dikkat</h3>
         <p>${esc(a.tip)}</p>`:""}
         ${ilkAgirlikNotu(a)?`<p class="kucuk-yazi">${ilkAgirlikNotu(a)}</p>`:""}
         <p class="kucuk-yazi">${GUVENLIK_NOTU}</p>
       </div>
-    </section>`}const Sa=a=>{const s=c.exercisesFor(a.dayIndex)[a.idx];return s?c.dinlenmeSuresi(s,a.settings):a.settings.restSeconds};export function gezinmeHTML(a,s=null,e=0){if(s===null){const i=c.exercisesFor(a.dayIndex).length-1;return`<div class="gezinme" id="gezinme">
-      <button data-act="prev" ${a.idx===0?"disabled":""} aria-label="Önceki hareket">${d("geri")}Önceki</button>
-      <button class="dinlenme" data-act="rest">${d("saat")}Dinlenme ${Sa(a)} sn</button>
-      <button data-act="next" ${a.idx===i?"disabled":""} aria-label="Sonraki hareket">Sonraki${d("ileri")}</button>
+    </section>`}const Ba=a=>{const s=c.exercisesFor(a.dayIndex)[a.idx];return s?c.dinlenmeSuresi(s,a.settings):a.settings.restSeconds};export function gezinmeHTML(a,s=null,e=0){if(s===null){const i=c.exercisesFor(a.dayIndex).length-1;return`<div class="gezinme" id="gezinme">
+      <button data-act="prev" ${a.idx===0?"disabled":""} aria-label="Önceki hareket">${o("geri")}Önceki</button>
+      <button class="dinlenme" data-act="rest">${o("saat")}Dinlenme ${Ba(a)} sn</button>
+      <button data-act="next" ${a.idx===i?"disabled":""} aria-label="Sonraki hareket">Sonraki${o("ileri")}</button>
     </div>`}return`<div class="gezinme run" id="gezinme">
     <button data-act="rest-plus" aria-label="Dinlenmeye 30 saniye ekle">+30</button>
     <div class="dinlenme" role="timer" aria-label="Kalan dinlenme">
-      <b id="rest-time">${w(s)}</b>
+      <b id="rest-time">${D(s)}</b>
       <span class="bar"><i id="rest-bar" style="transform:scaleX(${e?(s/e).toFixed(3):0})"></i></span>
     </div>
     <button data-act="rest-skip">Geç</button>
-  </div>`}const Ta={dumbbell:"tek dambıl",kettlebell:"kettlebell",barbell:"bar dahil",machine:"makinede seçili"};export const BAR_KG=20;const Ma=[25,20,15,10,5,2.5,1.25];export function plakaYazi(a,s,e){if(a.equipment==="bodyweight")return+s>0?"ek ağırlık":"ek ağırlık · 0 = yalnız vücut";if(a.equipment!=="barbell")return Ta[a.equipment]??"";const i=+s;if(e!=="kg"||s==null||s===""||!Number.isFinite(i))return"bar dahil";if(i<BAR_KG)return`boş bar ${BAR_KG} kg`;let n=(i-BAR_KG)/2;const t=[];for(const r of Ma)for(;n>=r-1e-9;)t.push(r),n-=r;return n>1e-9?"bar dahil":t.length?`her yana ${t.map(r=>fmt(r)).join(" + ")}`:"yalnız bar"}export const tekrarAlt=(a,s)=>{const e=c.effective(a,s.settings);return`Hedef <b>${e.repsMin?`${e.repsMin}-`:""}${fmt(e.reps)}</b>`};const Ha=a=>`Hedef <b>${a}</b>`;export function kaydetEtiketi(a,s,e){return a.setType==="time"?"Süreyi kaydet":e.draft.warmup?"Isınma setini kaydet":"Seti kaydet"}export function setEtiketi(a,s){if(a.tamam)return"Bütün setler tamam";if(s.draft.warmup)return"<b>Isınma</b> seti · sete sayılmaz";const e=a.sets.filter(i=>i.warmup).length;return`<b>${a.calisma+1}.</b> set · ${a.hedef} setten${e?` · ısınma ×${e}`:""}`}function Ia(a,s,e){const i=Math.max(a.hedef,a.calisma),n=s.rekorTaban?.[e?.id],t=a.sets.filter(l=>!l.warmup),r=l=>!!n&&!!I.setRekoru(t[l],[...n,...t.slice(0,l)]),o=Array.from({length:i},(l,p)=>p<a.calisma?r(p)?`<i class="bitti rekor">${d("yildiz")}</i>`:`<i class="bitti">${d("tik")}</i>`:`<i class="${p===a.calisma?"simdi":""}">${p+1}</i>`).join("");return`<div class="set-ilerleme"><span id="set-etiket">${setEtiketi(a,s)}</span><span class="cubuk" aria-hidden="true">${o}</span></div>`}const D=({ad:a,deger:s,alt:e,artir:i,azalt:n,etiket:t,sinif:r="",azaltPasif:o=!1})=>`
+  </div>`}const wa={dumbbell:"tek dambıl",kettlebell:"kettlebell",barbell:"bar dahil",machine:"makinede seçili"};export const BAR_KG=20;const Ra=[25,20,15,10,5,2.5,1.25];export function plakaYazi(a,s,e){if(a.equipment==="bodyweight")return+s>0?"ek ağırlık":"ek ağırlık · 0 = yalnız vücut";if(a.equipment!=="barbell")return wa[a.equipment]??"";const i=+s;if(e!=="kg"||s==null||s===""||!Number.isFinite(i))return"bar dahil";if(i<BAR_KG)return`boş bar ${BAR_KG} kg`;let t=(i-BAR_KG)/2;const n=[];for(const r of Ra)for(;t>=r-1e-9;)n.push(r),t-=r;return t>1e-9?"bar dahil":n.length?`her yana ${n.map(r=>fmt(r)).join(" + ")}`:"yalnız bar"}export const tekrarAlt=(a,s)=>{const e=c.effective(a,s.settings);return`Hedef <b>${e.repsMin?`${e.repsMin}-`:""}${fmt(e.reps)}</b>`};const Da=a=>`Hedef <b>${a}</b>`;export function kaydetEtiketi(a,s,e){return a.setType==="time"?"Süreyi kaydet":e.draft.warmup?"Isınma setini kaydet":"Seti kaydet"}export function setEtiketi(a,s){if(a.tamam)return"Bütün setler tamam";if(s.draft.warmup)return"<b>Isınma</b> seti · sete sayılmaz";const e=a.sets.filter(i=>i.warmup).length;return`<b>${a.calisma+1}.</b> set · ${a.hedef} setten${e?` · ısınma ×${e}`:""}`}function Ka(a,s,e){const i=Math.max(a.hedef,a.calisma),t=s.rekorTaban?.[e?.id],n=a.sets.filter(d=>!d.warmup),r=d=>!!t&&!!L.setRekoru(n[d],[...t,...n.slice(0,d)]),l=Array.from({length:i},(d,u)=>u<a.calisma?r(u)?`<i class="bitti rekor">${o("yildiz")}</i>`:`<i class="bitti">${o("tik")}</i>`:`<i class="${u===a.calisma?"simdi":""}">${u+1}</i>`).join("");return`<div class="set-ilerleme"><span id="set-etiket">${setEtiketi(a,s)}</span><span class="cubuk" aria-hidden="true">${l}</span></div>`}const N=({ad:a,deger:s,alt:e,artir:i,azalt:t,etiket:n,sinif:r="",azaltPasif:l=!1})=>`
   <div class="sutun ${r}">
-    <button class="ok" ${i} aria-label="${t} artır">${d("yukari")}</button>
+    <button class="ok" ${i} aria-label="${n} artır">${o("yukari")}</button>
     <span class="etk">${a}</span>
     ${s}
     <span class="s-alt">${e}</span>
-    <button class="ok" ${n} aria-label="${t} azalt"${o?" disabled":""}>${d("asagi")}</button>
-  </div>`;function Aa(a,s,e){const{settings:i}=e,n=c.effective(a,i),t=z.agirlikAdimi(a,i)??z.GIRIS_ADIMI_YEDEK,r=e.draft.weight,o=i.unit,l=r==null?"":String(r);return`<div class="sutunlar">
-    ${D({ad:"SET",etiket:"Bugünkü set sayısını",deger:`<b class="n">${s.hedef}</b>`,alt:Ha(n.sets),artir:'data-act="set-arti"',azalt:'data-act="set-eksi"',azaltPasif:s.hedef<=s.calisma+1})}
-    ${D({ad:"TEKRAR",etiket:"Tekrarı",deger:`<input class="n" type="number" inputmode="numeric" step="1" min="1" id="f-reps" value="${e.draft.reps??n.reps??""}" aria-label="Bu setin tekrarı">`,alt:`<span id="tk-alt">${tekrarAlt(a,e)}</span>`,artir:'data-step="reps:1"',azalt:'data-step="reps:-1"'})}
-    ${D({ad:"AĞIRLIK",etiket:"Ağırlığı",sinif:"genis",deger:`<span class="n-kap"><input class="n${l.length>=5?" uzun":""}" type="number" inputmode="decimal" step="${t}" min="0"
-               id="f-weight" value="${l}" placeholder="0" aria-label="Ağırlık (${o})"><small>${o}</small></span>`,alt:`<span id="plaka-yazi">${plakaYazi(a,r,o)}</span>`,artir:`data-step="weight:${t}"`,azalt:`data-step="weight:${-t}"`})}
-  </div>`}const q=(a,s)=>`<p class="gecen">${d("gecmis")}<span>${lastTime(a,s.lastPerf,s.settings.unit,c.exerciseProgress(s.session,a,s.settings).sets.length>0)}</span></p>`;function La(a,s,e){const i=c.effective(a,e.settings),n=a.setType==="time"?`${s.hedef} × ${fmt(i.seconds)} sn`:a.setType==="cardio"?`${fmt(i.minutes)} dk`:`${s.hedef} × ${i.repsMin?`${i.repsMin}-`:""}${fmt(i.reps)}${i.rir!=null?` · RIR ${i.rir}`:""}`,t=e.lastPerf[a.id]?.sets?.filter(o=>!o.warmup)??[],r=t.length?t.reduce((o,l)=>(l.weight??l.seconds??l.minutes??0)>(o.weight??o.seconds??o.minutes??0)?l:o):null;return`Hedef ${n}${r?` · geçen ${setLabel(r)}`:""}`}const ja=(a,s,e,i,n,t="")=>`
+    <button class="ok" ${t} aria-label="${n} azalt"${l?" disabled":""}>${o("asagi")}</button>
+  </div>`;function Ga(a,s,e){const{settings:i}=e,t=c.effective(a,i),n=T.agirlikAdimi(a,i)??T.GIRIS_ADIMI_YEDEK,r=e.draft.weight,l=i.unit,d=r==null?"":String(r);return`<div class="sutunlar">
+    ${N({ad:"SET",etiket:"Bugünkü set sayısını",deger:`<b class="n">${s.hedef}</b>`,alt:Da(t.sets),artir:'data-act="set-arti"',azalt:'data-act="set-eksi"',azaltPasif:s.hedef<=s.calisma+1})}
+    ${N({ad:"TEKRAR",etiket:"Tekrarı",deger:`<input class="n" type="number" inputmode="numeric" step="1" min="1" id="f-reps" value="${e.draft.reps??t.reps??""}" aria-label="Bu setin tekrarı">`,alt:`<span id="tk-alt">${tekrarAlt(a,e)}</span>`,artir:'data-step="reps:1"',azalt:'data-step="reps:-1"'})}
+    ${N({ad:"AĞIRLIK",etiket:"Ağırlığı",sinif:"genis",deger:`<span class="n-kap"><input class="n${d.length>=5?" uzun":""}" type="number" inputmode="decimal" step="${n}" min="0"
+               id="f-weight" value="${d}" placeholder="0" aria-label="Ağırlık (${l})"><small>${l}</small></span>`,alt:`<span id="plaka-yazi">${plakaYazi(a,r,l)}</span>`,artir:`data-step="weight:${n}"`,azalt:`data-step="weight:${-n}"`})}
+  </div>`}const W=(a,s)=>`<p class="gecen">${o("gecmis")}<span>${lastTime(a,s.lastPerf,s.settings.unit,c.exerciseProgress(s.session,a,s.settings).sets.length>0)}</span></p>`;function Pa(a,s,e){const i=c.effective(a,e.settings),t=a.setType==="time"?`${s.hedef} × ${fmt(i.seconds)} sn`:a.setType==="cardio"?`${fmt(i.minutes)} dk`:`${s.hedef} × ${i.repsMin?`${i.repsMin}-`:""}${fmt(i.reps)}${i.rir!=null?` · RIR ${i.rir}`:""}`,n=e.lastPerf[a.id]?.sets?.filter(l=>!l.warmup)??[],r=n.length?n.reduce((l,d)=>(d.weight??d.seconds??d.minutes??0)>(l.weight??l.seconds??l.minutes??0)?d:l):null;return`Hedef ${t}${r?` · geçen ${setLabel(r)}`:""}`}const Na=(a,s,e,i,t,n="")=>`
   <div class="giris">
     <div class="deger">
       <span class="etiket">${i}</span>
       <div><input type="number" inputmode="decimal" step="${e}" min="0"
-             id="f-${a}" value="${s??""}" placeholder="0" aria-label="${i} (${n})"><em>${n}</em></div>
-      ${t}
+             id="f-${a}" value="${s??""}" placeholder="0" aria-label="${i} (${t})"><em>${t}</em></div>
+      ${n}
     </div>
     <div class="stp">
-      <button data-step="${a}:${e}" aria-label="${fmt(e)} ${n} artır">+${fmt(e)}</button>
-      <button data-step="${a}:${-e}" aria-label="${fmt(e)} ${n} azalt">−${fmt(e)}</button>
+      <button data-step="${a}:${e}" aria-label="${fmt(e)} ${t} artır">+${fmt(e)}</button>
+      <button data-step="${a}:${-e}" aria-label="${fmt(e)} ${t} azalt">−${fmt(e)}</button>
     </div>
-  </div>`;function Ea(a,s,e){const i=c.effective(a,e.settings);if(a.setType==="time"){const n=e.draft.seconds??i.seconds;return`<div class="clock" id="clock">
+  </div>`;function _a(a,s,e){const i=c.effective(a,e.settings);if(a.setType==="time"){const t=e.draft.seconds??i.seconds;return`<div class="clock" id="clock">
       <span class="etiket">Hedef süre</span>
       <div class="crow">
         <button class="cadj" data-act="clock-minus" aria-label="5 saniye azalt">−5</button>
-        <span class="time" id="clock-time" role="timer">${w(n)}</span>
+        <span class="time" id="clock-time" role="timer">${D(t)}</span>
         <button class="cadj" data-act="clock-plus" aria-label="5 saniye ekle">+5</button>
       </div>
-    </div>`}return a.setType==="cardio"?ja("minutes",e.draft.minutes??i.minutes,5,"Süre","dk",q(a,e)):Aa(a,s,e)}export const SEMALAR=[[3,8],[3,10],[3,12],[4,8],[4,6],[5,5]];const Ba=[15,20,30,45,60,90];export const noktalarHTML=(a,s,e="")=>`<div class="noktalar-set" role="radiogroup" aria-label="Set sayısı">${Array.from({length:10},(i,n)=>`<button role="radio" aria-checked="${n+1===s}" class="${n<s?"on":""}" data-${a}="${e}${n+1}" aria-label="${n+1} set"><i></i></button>`).join("")}</div>`,tekrarSeridiHTML=(a,s,e="")=>`<div class="serit-t" role="radiogroup" aria-label="Tekrar">${Array.from({length:Math.max(30,s??0)},(i,n)=>n+1).map(i=>`<button role="radio" aria-checked="${i===s}" data-${a}="${e}${i}">${i}</button>`).join("")}</div>`,semalarHTML=(a,s,e,i="")=>`<div class="semalar" role="group" aria-label="Hazır şema">${SEMALAR.map(([n,t])=>`<button class="cip" aria-pressed="${n===s&&t===e}" data-${a}="${i}${n}:${t}">${n} × ${t}</button>`).join("")}</div>`;const Z=[0,1,2,3,4],wa=[60,90,120,180,240];export function yontemHTML(a,s,e="",i=60,{tekrarli:n=!0}={}){const t=(l,p,m,$,b=m)=>`<button class="cip" aria-pressed="${$}" data-${a}="${e}${l}:${p}" aria-label="${esc(b)}">${m}</button>`,r=(l,p,m)=>`<div class="g-alan"><div class="g-etk"><span>${l}</span><b>${p}</b></div>
-      <div class="semalar" role="group" aria-label="${l}">${m}</div></div>`;let o="";if(n&&s.reps>1){const l=[...new Set([s.reps-4,s.reps-3,s.reps-2,...s.repsMin?[s.repsMin]:[]])].filter(p=>p>=1&&p<s.reps).sort((p,m)=>p-m);o+=r("Tekrar aralığı",s.repsMin?`${s.repsMin}-${s.reps}`:"tek sayı",t("repsMin","x","Tek sayı",!s.repsMin)+l.map(p=>t("repsMin",p,`${p}-${s.reps}`,s.repsMin===p,`${p} ile ${s.reps} arası`)).join("")),o+=r("Hedef RIR",s.rir!=null?`${s.rir}`:"yok",t("rir","x","Yok",s.rir==null,"Hedef RIR yok")+Z.map(p=>t("rir",p,p===4?"4+":`${p}`,s.rir===p,`RIR ${p}`)).join(""))+'<p class="g-not">RIR: setin sonunda kaç temiz tekrar daha yapabilirdin. 2 = iki tekrar daha çıkardı.</p>'}return o+=r("Dinlenme",`${s.dinlenme??i} sn`,t("dinlenme","x",`Genel (${i} sn)`,s.dinlenme==null,"Genel ayar")+wa.map(l=>t("dinlenme",l,`${l} sn`,s.dinlenme===l)).join("")),o}function Ra(a,s){const{settings:e}=s,i=c.effective(a,e),n=z.agirlikAdimi(a,e)??z.GIRIS_ADIMI_YEDEK,t=(l,p,m,$)=>`<div class="gf">
-      <span class="etiket">${$}</span>
+    </div>`}return a.setType==="cardio"?Na("minutes",e.draft.minutes??i.minutes,5,"Süre","dk",W(a,e)):Ga(a,s,e)}export const SEMALAR=[[3,8],[3,10],[3,12],[4,8],[4,6],[5,5]];const Fa=[15,20,30,45,60,90];export const noktalarHTML=(a,s,e="")=>`<div class="noktalar-set" role="radiogroup" aria-label="Set sayısı">${Array.from({length:10},(i,t)=>`<button role="radio" aria-checked="${t+1===s}" class="${t<s?"on":""}" data-${a}="${e}${t+1}" aria-label="${t+1} set"><i></i></button>`).join("")}</div>`,tekrarSeridiHTML=(a,s,e="")=>`<div class="serit-t" role="radiogroup" aria-label="Tekrar">${Array.from({length:Math.max(30,s??0)},(i,t)=>t+1).map(i=>`<button role="radio" aria-checked="${i===s}" data-${a}="${e}${i}">${i}</button>`).join("")}</div>`,semalarHTML=(a,s,e,i="")=>`<div class="semalar" role="group" aria-label="Hazır şema">${SEMALAR.map(([t,n])=>`<button class="cip" aria-pressed="${t===s&&n===e}" data-${a}="${i}${t}:${n}">${t} × ${n}</button>`).join("")}</div>`;const x=[0,1,2,3,4],Oa=[60,90,120,180,240];export function yontemHTML(a,s,e="",i=60,{tekrarli:t=!0}={}){const n=(d,u,k,p,v=k)=>`<button class="cip" aria-pressed="${p}" data-${a}="${e}${d}:${u}" aria-label="${esc(v)}">${k}</button>`,r=(d,u,k)=>`<div class="g-alan"><div class="g-etk"><span>${d}</span><b>${u}</b></div>
+      <div class="semalar" role="group" aria-label="${d}">${k}</div></div>`;let l="";if(t&&s.reps>1){const d=[...new Set([s.reps-4,s.reps-3,s.reps-2,...s.repsMin?[s.repsMin]:[]])].filter(u=>u>=1&&u<s.reps).sort((u,k)=>u-k);l+=r("Tekrar aralığı",s.repsMin?`${s.repsMin}-${s.reps}`:"tek sayı",n("repsMin","x","Tek sayı",!s.repsMin)+d.map(u=>n("repsMin",u,`${u}-${s.reps}`,s.repsMin===u,`${u} ile ${s.reps} arası`)).join("")),l+=r("Hedef RIR",s.rir!=null?`${s.rir}`:"yok",n("rir","x","Yok",s.rir==null,"Hedef RIR yok")+x.map(u=>n("rir",u,u===4?"4+":`${u}`,s.rir===u,`RIR ${u}`)).join(""))+'<p class="g-not">RIR: setin sonunda kaç temiz tekrar daha yapabilirdin. 2 = iki tekrar daha çıkardı.</p>'}return l+=r("Dinlenme",`${s.dinlenme??i} sn`,n("dinlenme","x",`Genel (${i} sn)`,s.dinlenme==null,"Genel ayar")+Oa.map(d=>n("dinlenme",d,`${d} sn`,s.dinlenme===d)).join("")),l}function Ya(a,s){const{settings:e}=s,i=c.effective(a,e),t=T.agirlikAdimi(a,e)??T.GIRIS_ADIMI_YEDEK,n=(d,u,k,p)=>`<div class="gf">
+      <span class="etiket">${p}</span>
       <div class="gbox">
-        <button data-gstep="${l}:${-m}" aria-label="${$} azalt">${d("eksi")}</button>
-        <input type="number" inputmode="decimal" step="${m}" min="0" id="g-${l}" value="${p??""}" placeholder="—" aria-label="${$}">
-        <button data-gstep="${l}:${m}" aria-label="${$} artır">${d("arti")}</button>
+        <button data-gstep="${d}:${-k}" aria-label="${p} azalt">${o("eksi")}</button>
+        <input type="number" inputmode="decimal" step="${k}" min="0" id="g-${d}" value="${u??""}" placeholder="—" aria-label="${p}">
+        <button data-gstep="${d}:${k}" aria-label="${p} artır">${o("arti")}</button>
       </div>
     </div>`,r=`<div class="g-alan"><div class="g-etk"><span>Set sayısı</span><b id="g-sets-yaz">${i.sets}</b></div>
-      ${noktalarHTML("gset",i.sets)}<input type="hidden" id="g-sets" value="${i.sets}"></div>`,o=(l={})=>`<div id="g-yontem">${yontemHTML("g-yontem",i,"",e.restSeconds,l)}</div>`;return a.setType==="time"?`${r}
+      ${noktalarHTML("gset",i.sets)}<input type="hidden" id="g-sets" value="${i.sets}"></div>`,l=(d={})=>`<div id="g-yontem">${yontemHTML("g-yontem",i,"",e.restSeconds,d)}</div>`;return a.setType==="time"?`${r}
     <div class="g-alan"><div class="g-etk"><span>Süre</span><b id="g-seconds-yaz">${fmt(i.seconds)} sn</b></div>
-      <div class="semalar" role="group" aria-label="Süre">${[...new Set([...Ba,i.seconds])].sort((l,p)=>l-p).map(l=>`<button class="cip" aria-pressed="${l===i.seconds}" data-gsn="${l}">${l} sn</button>`).join("")}</div>
-      <input type="hidden" id="g-seconds" value="${i.seconds}"></div>${o({tekrarli:!1})}`:a.setType==="cardio"?`${r}<div class="goal-grid">${t("minutes",i.minutes,5,"Süre (dk)")}</div>`:`<div class="g-alan"><div class="g-etk"><span>Hazır şema</span></div>${semalarHTML("gsema",i.sets,i.reps)}</div>
+      <div class="semalar" role="group" aria-label="Süre">${[...new Set([...Fa,i.seconds])].sort((d,u)=>d-u).map(d=>`<button class="cip" aria-pressed="${d===i.seconds}" data-gsn="${d}">${d} sn</button>`).join("")}</div>
+      <input type="hidden" id="g-seconds" value="${i.seconds}"></div>${l({tekrarli:!1})}`:a.setType==="cardio"?`${r}<div class="goal-grid">${n("minutes",i.minutes,5,"Süre (dk)")}</div>`:`<div class="g-alan"><div class="g-etk"><span>Hazır şema</span></div>${semalarHTML("gsema",i.sets,i.reps)}</div>
     ${r}
     <div class="g-alan"><div class="g-etk"><span>Tekrar</span><b id="g-reps-yaz">${i.reps}</b></div>
       ${tekrarSeridiHTML("greps",i.reps)}<input type="hidden" id="g-reps" value="${i.reps}"></div>
-    ${o()}
-    <div class="goal-grid">${t("weight",i.weight,n,`Planlanan ağırlık (${e.unit})`)}</div>`}function Da(a,s){return a.setType==="cardio"?"":`<div class="set-satir">
+    ${l()}
+    <div class="goal-grid">${n("weight",i.weight,t,`Planlanan ağırlık (${e.unit})`)}</div>`}function Ua(a,s){return a.setType==="cardio"?"":`<div class="set-satir">
       <span class="etiket"><span id="warm-ad">Isınma seti</span><small id="warm-not">Bu set hacme ve "geçen sefer"e karışmaz</small></span>
       <button class="cip" id="warm" data-act="warm" role="switch" aria-checked="${!!s.draft.warmup}"
               aria-labelledby="warm-ad" aria-describedby="warm-not">${s.draft.warmup?"Açık":"Kapalı"}</button>
-    </div>`}export function warmupHTML(a){const{dayIndex:s}=a,e=c.warmupFor(s),{kaslar:i}=c.gunEtiketi(s),n=e.map(t=>`<div class="satir yalin" data-warm="${t.id}">
-      <span class="ad"><b>${esc(t.ad)}</b><span>${esc(t.not)}</span></span>
-      <span class="sag"><b>${esc(t.miktar)}</b></span>
-      <div class="mini sahne3d" data-anim="${t.id}" aria-hidden="true"></div>
+    </div>`}export function warmupHTML(a){const{dayIndex:s}=a,e=c.warmupFor(s),{kaslar:i}=c.gunEtiketi(s),t=e.map(n=>`<div class="satir yalin" data-warm="${n.id}">
+      <span class="ad"><b>${adi(n)}</b><span>${P(n,n.not)}</span></span>
+      <span class="sag"><b>${esc(n.miktar)}</b></span>
+      <div class="mini sahne3d" data-anim="${n.id}" aria-hidden="true"></div>
     </div>`).join("");return`
-    <div class="ust"><button class="ib" data-act="to-list" aria-label="Listeye dön">${d("geri")}</button><span class="ib-yer"></span></div>
+    <div class="ust"><button class="ib" data-act="to-list" aria-label="Listeye dön">${o("geri")}</button><span class="ib-yer"></span></div>
     <div class="sayfa-baslik"><h1>Isınma</h1><p>${esc(i)} · ${c.isinmaSuresi(s)} · sete sayılmaz</p></div>
     <div class="liste dagit">
       <div class="satir">
-        <span class="durum ikon">${d("nabiz")}</span>
+        <span class="durum ikon">${o("nabiz")}</span>
         <span class="ad"><b>${c.KARDIYO.ad}</b><span>${c.KARDIYO.not}</span></span>
         <span class="sag"><b>${c.KARDIYO.miktar}</b></span>
       </div>
-      ${n}
+      ${t}
     </div>
-    <div class="alt"><button class="btn p" data-act="warmup-done">Isınma tamam, 1. harekete geç${d("ileri")}</button></div>`}const X=a=>a.dinamik?`${a.tekrar} tekrar`:a.tek?`${a.sn} + ${a.sn} sn`:`${a.sn} sn`;export const esDakika=a=>`~${Math.max(1,Math.round(a/60))} dk`;const G={ayakta:"ayakta",minder:"minderde",duvar:"duvarda"},Ga={poz:"Pozu al",tut:"Tut",taraf:"Taraf değiştir",son:"Bırak"},Ka=(a,s)=>s==="tut"&&a.dinamik?`Yavaşça tekrarla · ${a.tekrar} kez`:Ga[s];function Pa(a){const s=c.tumVucut(a.settings?.profil);return`<div class="rutin-kart"><b>Tüm vücut esneme</b><span>${s.length} esneme · ${esDakika(c.sogumaSuresi(s))} · dinlenme günü ya da antrenman sonrası</span>
-    <button class="btn p" data-act="rutin-basla">Başla</button></div>`}function Na(a,s){if(!s.length)return"";const e=!!a.cooldownDone;return`<button class="satir${e?" bitti":""}" data-act="cooldown">
-    <span class="durum ${e?"tamam":"ikon"}">${d(e?"tik":"figur")}</span>
+    <div class="alt"><button class="btn p" data-act="warmup-done">Isınma tamam, 1. harekete geç${o("ileri")}</button></div>`}const aa=a=>a.dinamik?`${a.tekrar} tekrar`:a.tek?`${a.sn} + ${a.sn} sn`:`${a.sn} sn`;export const esDakika=a=>`~${Math.max(1,Math.round(a/60))} dk`;const _={ayakta:"ayakta",minder:"minderde",duvar:"duvarda"},Ca={poz:"Pozu al",tut:"Tut",taraf:"Taraf değiştir",son:"Bırak"},qa=(a,s)=>s==="tut"&&a.dinamik?`Yavaşça tekrarla · ${a.tekrar} kez`:Ca[s];function Va(a){const s=c.tumVucut(a.settings?.profil);return`<div class="rutin-kart"><b>Tüm vücut esneme</b><span>${s.length} esneme · ${esDakika(c.sogumaSuresi(s))} · dinlenme günü ya da antrenman sonrası</span>
+    <button class="btn p" data-act="rutin-basla">Başla</button></div>`}function Za(a,s){if(!s.length)return"";const e=!!a.cooldownDone;return`<button class="satir${e?" bitti":""}" data-act="cooldown">
+    <span class="durum ${e?"tamam":"ikon"}">${o(e?"tik":"figur")}</span>
     <span class="ad"><b>Soğuma</b><span>${s.length} esneme · ${esDakika(c.sogumaSuresi(s))}</span></span>
     <span class="sag">${e?"yapıldı":"başla"}</span>
-  </button>`}export function sogumaHTML(a){if(a.esneme)return Fa(a);const s=c.cooldownFor(a.dayIndex,a.settings?.profil),{kaslar:e}=c.gunEtiketi(a.dayIndex),i=!!a.session?.cooldownDone,n=s.map(t=>`<div class="satir yalin">
-      <span class="ad"><b>${esc(t.ad)}</b><span>${esc(t.kas)} · ${G[t.yer]}</span></span>
-      <span class="sag"><b>${X(t)}</b></span>
-      <div class="mini sahne3d" data-anim="${t.id}" aria-hidden="true"></div>
+  </button>`}export function sogumaHTML(a){if(a.esneme)return Xa(a);const s=c.cooldownFor(a.dayIndex,a.settings?.profil),{kaslar:e}=c.gunEtiketi(a.dayIndex),i=!!a.session?.cooldownDone,t=s.map(n=>`<div class="satir yalin">
+      <span class="ad"><b>${adi(n)}</b><span>${P(n,n.kas,_[n.yer])}</span></span>
+      <span class="sag"><b>${aa(n)}</b></span>
+      <div class="mini sahne3d" data-anim="${n.id}" aria-hidden="true"></div>
     </div>`).join("");return`
-    <div class="ust"><button class="ib" data-act="to-list" aria-label="Listeye dön">${d("geri")}</button><span class="ib-yer"></span></div>
+    <div class="ust"><button class="ib" data-act="to-list" aria-label="Listeye dön">${o("geri")}</button><span class="ib-yer"></span></div>
     <div class="sayfa-baslik"><h1>Soğuma</h1><p>${c.gunSogumasi(a.dayIndex)==="tum"?"Tüm vücut":esc(e)} · ${esDakika(c.sogumaSuresi(s))} · sete sayılmaz</p></div>
-    ${s.length?`<div class="liste dagit">${n}</div>
+    ${s.length?`<div class="liste dagit">${t}</div>
     <p class="kucuk-yazi grup-alti">Önce ayakta, sonra yerde yapılır. Gerginlik hissedince dur; ağrıya kadar zorlama, yaylanma, nefesini tutma.</p>
-    <div class="alt"><button class="btn p" data-act="esneme-basla">${i?"Yeniden başla":"Başla"}${d("ileri")}</button></div>`:`<div class="grup"><div class="ic"><p>${c.gunSogumasi(a.dayIndex)==="kapali"?"Bu günde soğuma kapalı; program düzenleyicide günün ayarından açabilirsin.":"Bu günde hareket yok; soğuma günün kaslarından kurulur."}</p></div></div>`}`}function Fa(a){const s=a.esneme,e=s.liste.length,i=s.kaynak==="rutin",n=i?"Tüm vücut esneme":"Soğuma",t=s.liste.map(($,b)=>`<i class="${b<s.i||s.bitti?"bitti":b===s.i?"simdi":""}"></i>`).join(""),r=i?"to-hareketler":"to-list",o=i?"Hareketlere dön":"Listeye dön";if(s.bitti)return`
-    <div class="ust"><button class="ib" data-act="${r}" aria-label="${o}">${d("geri")}</button><span class="tarih">${n}</span><span class="ib-yer"></span></div>
-    <div class="es-serit" aria-hidden="true">${t}</div>
-    <div class="sayfa-baslik ust-bosluk"><h1>${n} tamam</h1><p>${e} esneme · ${esDakika(c.sogumaSuresi(s.liste))}.${i?"":" Bugünkü listede “yapıldı” olarak görünür."}</p></div>
-    <div class="alt"><div class="cift"><button class="btn s" data-act="${i?"rutin-basla":"esneme-basla"}">Baştan</button><button class="btn p" data-act="${r}">${o}</button></div></div>`;const l=s.liste[s.i],p=s.liste[s.i+1],m=l.tek?`<span class="es-taraf">${s.faz==="taraf"?"Sol tarafa geç":s.taraf==="sol"?"Sol taraf":"Sağ taraf"}</span>`:"";return`
-    <div class="ust"><button class="ib" data-act="esneme-kapat" aria-label="Oynatıcıyı kapat">${d("carpi")}</button>
-      <span class="tarih">${n} · ${s.i+1}/${e}</span><span class="ib-yer"></span></div>
-    <div class="es-serit" aria-hidden="true">${t}</div>
-    <div class="es-ad"><h1>${esc(l.ad)}</h1><p>${esc(l.kas)} · ${X(l)}</p>${m}</div>
-    <div class="fig"><div class="sahne3d" id="es3d" role="img" aria-label="${esc(l.ad)} esneme çizimi"></div></div>
+    <div class="alt"><button class="btn p" data-act="esneme-basla">${i?"Yeniden başla":"Başla"}${o("ileri")}</button></div>`:`<div class="grup"><div class="ic"><p>${c.gunSogumasi(a.dayIndex)==="kapali"?"Bu günde soğuma kapalı; program düzenleyicide günün ayarından açabilirsin.":"Bu günde hareket yok; soğuma günün kaslarından kurulur."}</p></div></div>`}`}function Xa(a){const s=a.esneme,e=s.liste.length,i=s.kaynak==="rutin",t=i?"Tüm vücut esneme":"Soğuma",n=s.liste.map((p,v)=>`<i class="${v<s.i||s.bitti?"bitti":v===s.i?"simdi":""}"></i>`).join(""),r=i?"to-hareketler":"to-list",l=i?"Hareketlere dön":"Listeye dön";if(s.bitti)return`
+    <div class="ust"><button class="ib" data-act="${r}" aria-label="${l}">${o("geri")}</button><span class="tarih">${t}</span><span class="ib-yer"></span></div>
+    <div class="es-serit" aria-hidden="true">${n}</div>
+    <div class="sayfa-baslik ust-bosluk"><h1>${t} tamam</h1><p>${e} esneme · ${esDakika(c.sogumaSuresi(s.liste))}.${i?"":" Bugünkü listede “yapıldı” olarak görünür."}</p></div>
+    <div class="alt"><div class="cift"><button class="btn s" data-act="${i?"rutin-basla":"esneme-basla"}">Baştan</button><button class="btn p" data-act="${r}">${l}</button></div></div>`;const d=s.liste[s.i],u=s.liste[s.i+1],k=d.tek?`<span class="es-taraf">${s.faz==="taraf"?"Sol tarafa geç":s.taraf==="sol"?"Sol taraf":"Sağ taraf"}</span>`:"";return`
+    <div class="ust"><button class="ib" data-act="esneme-kapat" aria-label="Oynatıcıyı kapat">${o("carpi")}</button>
+      <span class="tarih">${t} · ${s.i+1}/${e}</span><span class="ib-yer"></span></div>
+    <div class="es-serit" aria-hidden="true">${n}</div>
+    <div class="es-ad"><h1>${adi(d)}</h1><p>${P(d,d.kas)} · ${aa(d)}</p>${k}</div>
+    <div class="fig"><div class="sahne3d" id="es3d" role="img" aria-label="${adi(d)} esneme çizimi"></div></div>
     <div class="clock${s.kosuyor&&s.faz==="tut"?" run":""}">
-      <p class="es-faz" id="es-faz">${Ka(l,s.faz)}</p>
+      <p class="es-faz" id="es-faz">${qa(d,s.faz)}</p>
       <div class="crow">
-        <button class="cadj" data-act="esneme-geri" aria-label="Önceki esneme"${s.i?"":" disabled"}>${d("geri")}</button>
-        <span class="time" id="es-zaman" role="timer" aria-live="off">${w(s.kalan??s.fazSn)}</span>
-        <button class="cadj" data-act="esneme-atla" aria-label="Sonraki esneme">${d("ileri")}</button>
+        <button class="cadj" data-act="esneme-geri" aria-label="Önceki esneme"${s.i?"":" disabled"}>${o("geri")}</button>
+        <span class="time" id="es-zaman" role="timer" aria-live="off">${D(s.kalan??s.fazSn)}</span>
+        <button class="cadj" data-act="esneme-atla" aria-label="Sonraki esneme">${o("ileri")}</button>
       </div>
     </div>
-    <p class="es-ipucu">${esc(l.ipucu)}</p>
-    <p class="es-sira">${p?`Sıradaki: <b>${esc(p.ad)}</b>`:"Son esneme"}</p>
-    <div class="alt"><button class="btn ${s.kosuyor?"s":"p"}" data-act="esneme-oynat">${s.kosuyor?"Duraklat":"Devam et"}</button></div>`}function _a(a,s){const e=a.kas.split("·").map(i=>i.trim()).filter(Boolean);return`
-    <div class="ust"><button class="ib" data-act="to-hareketler" aria-label="Hareketlere dön">${d("geri")}</button>
+    <p class="es-ipucu">${esc(d.ipucu)}</p>
+    <p class="es-sira">${u?`Sıradaki: <b>${adi(u)}</b>`:"Son esneme"}</p>
+    <div class="alt"><button class="btn ${s.kosuyor?"s":"p"}" data-act="esneme-oynat">${s.kosuyor?"Duraklat":"Devam et"}</button></div>`}function Ja(a,s){const e=a.kas.split("·").map(i=>i.trim()).filter(Boolean);return`
+    <div class="ust"><button class="ib" data-act="to-hareketler" aria-label="Hareketlere dön">${o("geri")}</button>
       <span class="tarih">Esneme</span><span class="ib-yer"></span></div>
-    <div class="sayfa-baslik"><h1>${esc(a.ad)}</h1><p lang="en">${esc(a.en)}</p></div>
-    <div class="buyuk3b"><div class="sahne3d" id="hareket3d" role="img" aria-label="${esc(a.ad)} esneme çizimi; sürükleyerek döndürülür"></div>
+    <div class="sayfa-baslik"><h1>${adi(a)}</h1>${S(a)?`<p>${esc(S(a))}</p>`:""}</div>
+    <div class="buyuk3b"><div class="sahne3d" id="hareket3d" role="img" aria-label="${adi(a)} esneme çizimi; sürükleyerek döndürülür"></div>
       <img class="damga" src="icons/isaret.svg" alt="" width="30" height="17"><span class="ipucu">Sürükle: döndür · dokun: yeniden oynat</span></div>
-    <p class="kunye">${[G[a.yer].replace(/^./,i=>i.toLocaleUpperCase("tr")),a.dinamik?`${a.tekrar} yavaş tekrar (~${a.sure} sn)`:`${a.tek?"her taraf ":""}${s} sn tut`].map(esc).join(" · ")}</p>
-    <div class="grup"><h2 class="etiket">Esnettiği kaslar</h2><div class="ic"><div class="kaslar">${e.map((i,n)=>`<span class="kas${n<2?" ana":""}">${esc(i)}</span>`).join("")}</div></div></div>
+    <p class="kunye">${[_[a.yer].replace(/^./,i=>i.toLocaleUpperCase("tr")),a.dinamik?`${a.tekrar} yavaş tekrar (~${a.sure} sn)`:`${a.tek?"her taraf ":""}${s} sn tut`].map(esc).join(" · ")}</p>
+    <div class="grup"><h2 class="etiket">Esnettiği kaslar</h2><div class="ic"><div class="kaslar">${e.map((i,t)=>`<span class="kas${t<2?" ana":""}">${esc(i)}</span>`).join("")}</div></div></div>
     <div class="grup"><h2 class="etiket">Faydası</h2><div class="ic"><p>${esc(a.fayda)}</p></div></div>
     <div class="grup"><h2 class="etiket">Nasıl yapılır</h2><div class="ic"><ol class="adimlar">${a.steps.map(i=>`<li>${esc(i)}</li>`).join("")}</ol></div></div>
     <div class="grup"><h2 class="etiket">Dikkat</h2><div class="ipucu-kutu">${esc(a.tip)}</div></div>
     <p class="kucuk-yazi grup-alti">Gerginlik hissedince dur; ağrıya kadar zorlama, yaylanma, nefesini tutma. Programa set olarak eklenmez; soğumada
       günün kaslarına göre kendiliğinden gelir, Hareketler'deki “Tüm vücut esneme” rutininde de var. Statik esneme ısınmanın yerine geçmez: antrenman sonunda, vücut ısınmışken yap.</p>
-    ${sekmelerHTML("hareketler")}`}export function oneriHTML(a,s){const e=s.oneri?.[a.id],i=s.session.entries.find(t=>t.exerciseId===a.id)?.sets;if(!z.oneriGecerliMi(e,i))return"";const n=s.settings.unit;return e.tur==="kal"?`<div class="oneri">${d("yildiz")}<span>Geçen sefer son sete RIR 0 ile vardın: <b>${fmt(e.agirlik)} ${n}</b> ile kal,
-      tekrarları temiz tamamla</span></div>`:e.tur==="agirlik"?`<div class="oneri">${d("yildiz")}
-      <span>İki seanstır ${e.setler} × ${e.tekrar} tamam${e.rir!=null?` (RIR ${e.rir}+)`:""}: <b>${fmt(e.agirlik)} ${n}</b> dene</span>
+    ${sekmelerHTML("hareketler")}`}export function oneriHTML(a,s){const e=s.oneri?.[a.id],i=s.session.entries.find(n=>n.exerciseId===a.id)?.sets;if(!T.oneriGecerliMi(e,i))return"";const t=s.settings.unit;return e.tur==="kal"?`<div class="oneri">${o("yildiz")}<span>Geçen sefer son sete RIR 0 ile vardın: <b>${fmt(e.agirlik)} ${t}</b> ile kal,
+      tekrarları temiz tamamla</span></div>`:e.tur==="agirlik"?`<div class="oneri">${o("yildiz")}
+      <span>İki seanstır ${e.setler} × ${e.tekrar} tamam${e.rir!=null?` (RIR ${e.rir}+)`:""}: <b>${fmt(e.agirlik)} ${t}</b> dene</span>
       ${s.draft.weight===e.agirlik?"":'<button class="cip" data-act="oneri-uygula">Uygula</button>'}
-    </div>`:`<div class="oneri">${d("yildiz")}<span>İki seanstır ${fmt(e.agirlik)} ${n} ile hedef tamam. Sonraki
-      ağırlık adımı büyük (%${Math.round(e.adimOrani*100)}); önce <b>${e.hedefTekrar} tekrara</b> çık.</span></div>`}function Oa(a){const s=c.aktifProgram(),e=s?.gunler[a.dayIndex];return e?`<div class="ust-yazi"><b>${esc(s.ad)}</b> · ${esc(e.ad?.trim()||c.gunEtiketi(a.dayIndex).kisa)}</div>`:""}export function focusHTML(a){const{session:s,dayIndex:e,idx:i,settings:n}=a,t=c.exercisesFor(e),r=t[i],o=c.exerciseProgress(s,r,n),l=t.map((m,$)=>`<i class="${c.exerciseProgress(s,m,n).tamam?"f":$===i?"c":""}"></i>`).join(""),p=i===t.length-1;return`
+    </div>`:`<div class="oneri">${o("yildiz")}<span>İki seanstır ${fmt(e.agirlik)} ${t} ile hedef tamam. Sonraki
+      ağırlık adımı büyük (%${Math.round(e.adimOrani*100)}); önce <b>${e.hedefTekrar} tekrara</b> çık.</span></div>`}function Qa(a){const s=c.aktifProgram(),e=s?.gunler[a.dayIndex];return e?`<div class="ust-yazi"><b>${esc(s.ad)}</b> · ${esc(e.ad?.trim()||c.gunEtiketi(a.dayIndex).kisa)}</div>`:""}export function focusHTML(a){const{session:s,dayIndex:e,idx:i,settings:t}=a,n=c.exercisesFor(e),r=n[i],l=c.exerciseProgress(s,r,t),d=n.map((k,p)=>`<i class="${c.exerciseProgress(s,k,t).tamam?"f":p===i?"c":""}"></i>`).join(""),u=i===n.length-1;return`
     <div class="ust uclu">
-      <button class="ib" data-act="to-list" aria-label="Listeye dön">${d("geri")}</button>
-      <div class="orta"><b>${i+1} / ${t.length}</b><span class="seritler" aria-hidden="true">${l}</span></div>
+      <button class="ib" data-act="to-list" aria-label="Listeye dön">${o("geri")}</button>
+      <div class="orta"><b>${i+1} / ${n.length}</b><span class="seritler" aria-hidden="true">${d}</span></div>
       <span class="sag-grup">
-        ${o.sets.length?`<button class="ib" data-act="undo" aria-label="Son seti geri al">${d("geri-al")}</button>`:""}
-        <button class="ib" data-act="sheet-open" aria-label="Nasıl yapılır, hedef ve ısınma seti">${d("soru")}</button>
+        ${l.sets.length?`<button class="ib" data-act="undo" aria-label="Son seti geri al">${o("geri-al")}</button>`:""}
+        <button class="ib" data-act="sheet-open" aria-label="Nasıl yapılır, hedef ve ısınma seti">${o("soru")}</button>
       </span>
     </div>
     <div class="baslik">
-      ${Oa(a)}
+      ${Qa(a)}
       <h1>${adi(r)}${r.grup?`<span class="kas-cip">${esc(r.grup.toLocaleUpperCase("tr"))}</span>`:""}</h1>
-      <p>${La(r,o,a)}</p>
+      <p>${Pa(r,l,a)}</p>
     </div>
-    ${va(r,o,ya(a,r)+ha(a,r))}
-    ${r.setType==="cardio"?"":Ia(o,a,r)}
-    ${o.tamam?"":Ea(r,o,a)}
-    ${r.setType==="time"&&!o.tamam?`<div class="gecen-bant">${q(r,a)}</div>`:""}
+    ${Ha(r,l,Aa(a,r)+Ea(a,r))}
+    ${r.setType==="cardio"?"":Ka(l,a,r)}
+    ${l.tamam?"":_a(r,l,a)}
+    ${r.setType==="time"&&!l.tamam?`<div class="gecen-bant">${W(r,a)}</div>`:""}
     <div class="foot">
-      ${o.tamam?`<div class="cift">
-             <button class="btn s" data-act="set-arti">${d("arti")}Bir set daha</button>
-             ${p?'<button class="btn p" data-act="to-list">Listeye dön</button>':`<button class="btn p" data-act="next">Sonraki hareket${d("ileri")}</button>`}
+      ${l.tamam?`<div class="cift">
+             <button class="btn s" data-act="set-arti">${o("arti")}Bir set daha</button>
+             ${u?'<button class="btn p" data-act="to-list">Listeye dön</button>':`<button class="btn p" data-act="next">Sonraki hareket${o("ileri")}</button>`}
            </div>`:r.setType==="time"?`<div class="cift">
                <button class="btn s" data-act="save">Kaydet</button>
                <button class="btn p" data-act="clock-start" id="clock-btn">Başlat</button>
-             </div>`:`<button class="btn p" data-act="save" id="kaydet-btn">${kaydetEtiketi(r,o,a)}</button>`}
+             </div>`:`<button class="btn p" data-act="save" id="kaydet-btn">${kaydetEtiketi(r,l,a)}</button>`}
     </div>
     ${gezinmeHTML(a)}
     <div class="sheet-bg" data-act="sheet-close" hidden></div>
-    ${za(r,a)}`}const Ua={agir:"en ağır set",bir:"tahmini 1 tekrar maksimumu",hacim:"en iyi set hacmi",tekrar:"en çok tekrar",sure:"en uzun süre"};export const rekorDeger=(a,s,e)=>a==="tekrar"?`${fmt(s)} tekrar`:a==="sure"?`${fmt(s)} sn`:a==="bir"?`${fmt(s,0)} ${e}`:a==="hacim"?`${fmt(s,0)} ${e}`:`${fmt(s)} ${e}`;const Ya=(a,s)=>a==="bir"||a==="hacim"?fmt(s,0):fmt(s);function Ca(a,s){if(!a)return"";const e=a.oncekiHacim>0?(a.hacim-a.oncekiHacim)/a.oncekiHacim:null,i=e==null?"":` · önceki döneme göre ${Math.abs(e)<5e-4?"aynı":`${e>0?"+":"−"}%${fmt(Math.abs(e*100),0)}`}`;return`<div class="oz-donem">
-    <span class="ust-satir">${d("takvim")}DÖNEM TAMAM</span>
+    ${ja(r,a)}`}const Wa={agir:"en ağır set",bir:"tahmini 1 tekrar maksimumu",hacim:"en iyi set hacmi",tekrar:"en çok tekrar",sure:"en uzun süre"};export const rekorDeger=(a,s,e)=>a==="tekrar"?`${fmt(s)} tekrar`:a==="sure"?`${fmt(s)} sn`:a==="bir"?`${fmt(s,0)} ${e}`:a==="hacim"?`${fmt(s,0)} ${e}`:`${fmt(s)} ${e}`;const xa=(a,s)=>a==="bir"||a==="hacim"?fmt(s,0):fmt(s);function as(a,s){if(!a)return"";const e=a.oncekiHacim>0?(a.hacim-a.oncekiHacim)/a.oncekiHacim:null,i=e==null?"":` · önceki döneme göre ${Math.abs(e)<5e-4?"aynı":`${e>0?"+":"−"}%${fmt(Math.abs(e*100),0)}`}`;return`<div class="oz-donem">
+    <span class="ust-satir">${o("takvim")}DÖNEM TAMAM</span>
     <h2>${a.antrenman} antrenman, ${a.gun} günde</h2>
     <span class="alt-satir">${esc(a.program)}: programın bütün günlerini bitirdin.${a.rekorSayisi?` Bu dönemde ${a.rekorSayisi} rekor kırdın.`:""}</span>
     <div class="iki"><div><b>${fmt(a.hacim,0)} ${s}</b><span>Toplam hacim${i}</span></div>
       <div><b>${a.calismaSet}</b><span>Çalışma seti</span></div></div>
-    ${a.hareketler.length?`<div>${a.hareketler.map(n=>`<div class="hareket"><span>${adi(n.ex)}</span><b>${fmt(n.once,0)} → ${fmt(n.simdi,0)} ${s}</b></div>`).join("")}
+    ${a.hareketler.length?`<div>${a.hareketler.map(t=>`<div class="hareket"><span>${adi(t.ex)}</span><b>${fmt(t.once,0)} → ${fmt(t.simdi,0)} ${s}</b></div>`).join("")}
       <p class="oz-kural">Tahmini 1 tekrar maksimumu, önceki dönem → bu dönem.</p></div>`:""}
-  </div>`}const Va={rekor:"yildiz",gelisim:"grafik",istikrar:"takvim",zor:"alev"};function qa(a,s,e){return a.ovgu?{ikon:Va[a.ovgu.tur]??"yildiz",baslik:a.ovgu.baslik,yazi:esc(a.ovgu.kanit)}:a.hacimFarki!=null&&a.hacimFarki>.005?{ikon:"grafik",baslik:`Hacim %${fmt(a.hacimFarki*100,0)} arttı`,yazi:`Geçen ${s}e göre aynı hareketlerde daha çok iş yaptın.`}:a.artislar.length?{ikon:"yukari",baslik:"Geçen seferden ağır",yazi:a.artislar.slice(0,2).map(n=>`${adi(n.ex)} ${fmt(n.once)} → ${fmt(n.simdi)} ${e}`).join(" · ")}:{ikon:"tik",notr:!0,baslik:"Antrenman tamam",yazi:`${[`${a.calismaSet} çalışma seti`,a.sure&&`${a.sure} dk`,a.kg&&`${fmt(a.kg,0)} ${e}`].filter(Boolean).join(" · ")}.`}}function Za(a){if(!a)return"";const s=a.serit.length,e=Math.max(0,a.hedef-a.buHafta),i=(e?`Bu hafta ${e} antrenman daha kaldı.`:"Bu haftanın hedefi tamam.")+(s>=3&&a.tutulan?` Son ${s} haftada ${a.tutulan} kez hedefini tuttun.`:"");return`<div class="grup"><h2 class="etiket">Bu hafta</h2><div class="ic">
+  </div>`}const ss={rekor:"yildiz",gelisim:"grafik",istikrar:"takvim",zor:"alev"};function es(a,s,e){return a.ovgu?{ikon:ss[a.ovgu.tur]??"yildiz",baslik:a.ovgu.baslik,yazi:esc(a.ovgu.kanit)}:a.hacimFarki!=null&&a.hacimFarki>.005?{ikon:"grafik",baslik:`Hacim %${fmt(a.hacimFarki*100,0)} arttı`,yazi:`Geçen ${s}e göre aynı hareketlerde daha çok iş yaptın.`}:a.artislar.length?{ikon:"yukari",baslik:"Geçen seferden ağır",yazi:a.artislar.slice(0,2).map(t=>`${adi(t.ex)} ${fmt(t.once)} → ${fmt(t.simdi)} ${e}`).join(" · ")}:{ikon:"tik",notr:!0,baslik:"Antrenman tamam",yazi:`${[`${a.calismaSet} çalışma seti`,a.sure&&`${a.sure} dk`,a.kg&&`${fmt(a.kg,0)} ${e}`].filter(Boolean).join(" · ")}.`}}function is(a){if(!a)return"";const s=a.serit.length,e=Math.max(0,a.hedef-a.buHafta),i=(e?`Bu hafta ${e} antrenman daha kaldı.`:"Bu haftanın hedefi tamam.")+(s>=3&&a.tutulan?` Son ${s} haftada ${a.tutulan} kez hedefini tuttun.`:"");return`<div class="grup"><h2 class="etiket">Bu hafta</h2><div class="ic">
     <div class="oz-hafta"><b>${a.buHafta} / ${a.hedef} antrenman</b><span class="kucuk-yazi">hedefin haftada ${a.hedef}</span></div>
-    <div class="oz-serit" aria-label="Son ${s} hafta">${a.serit.map((n,t)=>`<i class="${n}${t===s-1?" bu":""}"></i>`).join("")}</div>
+    <div class="oz-serit" aria-label="Son ${s} hafta">${a.serit.map((t,n)=>`<i class="${t}${n===s-1?" bu":""}"></i>`).join("")}</div>
     <div class="oz-serit-alt">${s>1?`<span>${s-1} hafta önce</span>`:"<span></span>"}<span>bu hafta</span></div>
-    <p class="oz-kural">${i}</p></div></div>`}export function summaryHTML(a){const s=a.ozet;if(!s)return"";const e=a.settings.unit,{kisa:i,kaslar:n}=s.gun??c.gunEtiketi(s.dayIndex),t=qa(s,i,e),r=s.rekor?.kirilan??[],o=new Set(r.map(u=>u.exId)),l=s.hacimFarki==null?"":(()=>{const u=Math.abs(s.hacimFarki*100);return u<.05?"aynı":`${s.hacimFarki>0?"+":"−"}%${fmt(u,0)}`})(),p=s.onceki?s.calismaSet===s.onceki.calismaSet?"aynı":`${s.calismaSet>s.onceki.calismaSet?"+":"−"}${Math.abs(s.calismaSet-s.onceki.calismaSet)}`:"",m=!r.length&&!s.gunHacmi&&!s.rekor?.ilkler?.length?"":`<div class="grup"><h2 class="etiket">${r.length||s.gunHacmi?"Rekorlar":"İlk kayıt"}</h2><div class="ic">
-    ${r.map(u=>`<div class="oz-kayit">${d("yildiz")}<b>${adi(c.byId[u.exId]??{ad:u.exId})}</b>
-      <span class="oz-deger"><s>${Ya(u.ana.tur,u.ana.once)} →</s> <em>${rekorDeger(u.ana.tur,u.ana.simdi,e)}</em></span>
-      <span class="oz-alt">${I.TUR_AD[u.ana.tur]}${u.turler.length>1?` · ayrıca ${u.turler.slice(1).map(v=>Ua[v.tur]).join(", ")}`:""}</span></div>`).join("")}
-    ${s.gunHacmi?`<div class="oz-kayit">${d("yildiz")}<b>Günün toplam hacmi</b>
+    <p class="oz-kural">${i}</p></div></div>`}export function summaryHTML(a){const s=a.ozet;if(!s)return"";const e=a.settings.unit,{kisa:i,kaslar:t}=s.gun??c.gunEtiketi(s.dayIndex),n=es(s,i,e),r=s.rekor?.kirilan??[],l=new Set(r.map(m=>m.exId)),d=s.hacimFarki==null?"":(()=>{const m=Math.abs(s.hacimFarki*100);return m<.05?"aynı":`${s.hacimFarki>0?"+":"−"}%${fmt(m,0)}`})(),u=s.onceki?s.calismaSet===s.onceki.calismaSet?"aynı":`${s.calismaSet>s.onceki.calismaSet?"+":"−"}${Math.abs(s.calismaSet-s.onceki.calismaSet)}`:"",k=!r.length&&!s.gunHacmi&&!s.rekor?.ilkler?.length?"":`<div class="grup"><h2 class="etiket">${r.length||s.gunHacmi?"Rekorlar":"İlk kayıt"}</h2><div class="ic">
+    ${r.map(m=>`<div class="oz-kayit">${o("yildiz")}<b>${adi(c.byId[m.exId]??{ad:m.exId})}</b>
+      <span class="oz-deger"><s>${xa(m.ana.tur,m.ana.once)} →</s> <em>${rekorDeger(m.ana.tur,m.ana.simdi,e)}</em></span>
+      <span class="oz-alt">${L.TUR_AD[m.ana.tur]}${m.turler.length>1?` · ayrıca ${m.turler.slice(1).map(g=>Wa[g.tur]).join(", ")}`:""}</span></div>`).join("")}
+    ${s.gunHacmi?`<div class="oz-kayit">${o("yildiz")}<b>Günün toplam hacmi</b>
       <span class="oz-deger"><s>${fmt(s.gunHacmi.once,0)} →</s> <em>${fmt(s.gunHacmi.simdi,0)} ${e}</em></span>
       <span class="oz-alt">${esc(i)} için en yüksek</span></div>`:""}
-    ${s.rekor?.ilkler?.length?`<p class="oz-kural">İlk kayıt: ${s.rekor.ilkler.map(u=>adi(c.byId[u]??{ad:u})).join(", ")}. Bugünkü değerlerin taban oldu; sonraki seferlerde rekorlar sayılır.</p>`:""}
-  </div></div>`,$=s.artislar.filter(u=>!o.has(u.ex.id)),b=$.length?`<div class="grup"><h2 class="etiket">Geçen seferden ağır</h2><div class="ic">${$.map(u=>`<div class="oz-kayit">${d("yukari")}<b>${adi(u.ex)}</b><span class="oz-deger"><s>${fmt(u.once)} →</s> <em>${fmt(u.simdi)} ${e}</em></span>
-      <span class="oz-alt">En ağır çalışma seti</span></div>`).join("")}</div></div>`:"",k=s.gelecek?.length?`<div class="grup"><h2 class="etiket">Gelecek sefer</h2><div class="ic">${s.gelecek.map(u=>`<div class="oz-kayit">${u.tur==="artir"?d("yukari"):d("ileri").replace('class="i"','class="i notr"')}<b>${adi(u.ex)}</b><span class="oz-deger">${esc(u.deger)}</span>
-      <span class="oz-alt neden">${esc(u.neden)}</span></div>`).join("")}
+    ${s.rekor?.ilkler?.length?`<p class="oz-kural">İlk kayıt: ${s.rekor.ilkler.map(m=>adi(c.byId[m]??{ad:m})).join(", ")}. Bugünkü değerlerin taban oldu; sonraki seferlerde rekorlar sayılır.</p>`:""}
+  </div></div>`,p=s.artislar.filter(m=>!l.has(m.ex.id)),v=p.length?`<div class="grup"><h2 class="etiket">Geçen seferden ağır</h2><div class="ic">${p.map(m=>`<div class="oz-kayit">${o("yukari")}<b>${adi(m.ex)}</b><span class="oz-deger"><s>${fmt(m.once)} →</s> <em>${fmt(m.simdi)} ${e}</em></span>
+      <span class="oz-alt">En ağır çalışma seti</span></div>`).join("")}</div></div>`:"",b=s.gelecek?.length?`<div class="grup"><h2 class="etiket">Gelecek sefer</h2><div class="ic">${s.gelecek.map(m=>`<div class="oz-kayit">${m.tur==="artir"?o("yukari"):o("ileri").replace('class="i"','class="i notr"')}<b>${adi(m.ex)}</b><span class="oz-deger">${esc(m.deger)}</span>
+      <span class="oz-alt neden">${esc(m.neden)}</span></div>`).join("")}
     <p class="oz-kural">Kural: aynı ağırlıkta iki seans üst üste hedef tekrarların hepsini yaparsan ağırlığı küçük bir adımla artır (ACSM). Öneridir; kutu yine geçen seferle dolar.</p></div></div>`:"";return`
     <div class="ust">
-      <button class="cip" data-act="ozet-geri-al" aria-label="Bitirmeyi geri al, seansa dön">${d("geri-al")}Geri al</button>
+      <button class="cip" data-act="ozet-geri-al" aria-label="Bitirmeyi geri al, seansa dön">${o("geri-al")}Geri al</button>
       <span class="ib-yer"></span>
     </div>
-    ${Ca(s.donem,e)}
+    ${as(s.donem,e)}
     <div class="oz-haber">
-      <span class="rozet${t.notr?" notr":""}">${d(t.ikon)}</span>
-      <h1>${t.baslik}</h1><p>${t.yazi}</p>
-      <span class="tarih">${esc(i)} · ${esc(n)} · ${h.fmtDate(new Date(s.bitis))}</span>
+      <span class="rozet${n.notr?" notr":""}">${o(n.ikon)}</span>
+      <h1>${n.baslik}</h1><p>${n.yazi}</p>
+      <span class="tarih">${esc(i)} · ${esc(t)} · ${f.fmtDate(new Date(s.bitis))}</span>
     </div>
     <div class="oz-uc">
       <div><b>${s.sure??"—"}<small>dk</small></b><span>Süre</span>${s.onceki?.sure?`<em>geçen sefer ${s.onceki.sure}</em>`:""}</div>
-      <div><b>${s.calismaSet}<small>set</small></b><span>Set</span>${p?`<em>${p}</em>`:""}</div>
-      ${s.kg?`<div><b>${fmt(s.kg,0)}<small>${e}</small></b><span>Hacim</span>${l?`<em class="${s.hacimFarki>5e-4?"art":""}">${l}</em>`:""}</div>`:`<div><b>${fmt(s.seconds??0)}<small>sn</small></b><span>Süre hareketi</span></div>`}
+      <div><b>${s.calismaSet}<small>set</small></b><span>Set</span>${u?`<em>${u}</em>`:""}</div>
+      ${s.kg?`<div><b>${fmt(s.kg,0)}<small>${e}</small></b><span>Hacim</span>${d?`<em class="${s.hacimFarki>5e-4?"art":""}">${d}</em>`:""}</div>`:`<div><b>${fmt(s.seconds??0)}<small>sn</small></b><span>Süre hareketi</span></div>`}
     </div>
     ${s.onceki?`<p class="oz-not">${s.hacimKismi?`Hacim farkı yalnız bugün de yapılan hareketlerde, geçen ${esc(i)}e göre.`:`Farklar geçen ${esc(i)}e göre.`}</p>`:""}
-    ${m}${b}${k}${Za(s.duzen)}
-    ${s.yedekZamani?`<div class="not">${d("uyari")}<span>Veri yalnız bu telefonda. <b>Yedek almanın zamanı.</b></span></div>`:""}
+    ${k}${v}${b}${is(s.duzen)}
+    ${s.yedekZamani?`<div class="not">${o("uyari")}<span>Veri yalnız bu telefonda. <b>Yedek almanın zamanı.</b></span></div>`:""}
     ${s.sonraki?`<p class="kucuk-yazi">Sıradaki antrenman: <b>${s.sonraki}</b></p>`:""}
     <div class="alt"><div class="cift">
       <button class="btn s" data-act="backup">Yedek al</button>
       <button class="btn p" data-act="ozet-tamam">Tamam</button>
-    </div></div>`}function J(a,{w:s=280,h:e=72,alan:i=!0}={}){if(a.length<2)return"";const n=Math.min(...a),t=Math.max(...a),r=(t-n)*.18||Math.max(1,t*.02),o=n-r,l=t+r,p=4,m=v=>p+v/(a.length-1)*(s-2*p),$=v=>p+(e-2*p)-(v-o)/(l-o)*(e-2*p),b=a.map((v,S)=>`${S?"L":"M"}${m(S).toFixed(1)} ${$(v).toFixed(1)}`).join(" "),k=m(a.length-1).toFixed(1),u=$(a.at(-1)).toFixed(1);return`<svg class="spark" viewBox="0 0 ${s} ${e}" preserveAspectRatio="none" role="img"
+    </div></div>`}function sa(a,{w:s=280,h:e=72,alan:i=!0}={}){if(a.length<2)return"";const t=Math.min(...a),n=Math.max(...a),r=(n-t)*.18||Math.max(1,n*.02),l=t-r,d=n+r,u=4,k=g=>u+g/(a.length-1)*(s-2*u),p=g=>u+(e-2*u)-(g-l)/(d-l)*(e-2*u),v=a.map((g,$)=>`${$?"L":"M"}${k($).toFixed(1)} ${p(g).toFixed(1)}`).join(" "),b=k(a.length-1).toFixed(1),m=p(a.at(-1)).toFixed(1);return`<svg class="spark" viewBox="0 0 ${s} ${e}" preserveAspectRatio="none" role="img"
       aria-label="${a.length} ölçüm: ${fmt(a[0])} → ${fmt(a.at(-1))}">
-    ${i?`<path class="alan-dolgu" d="${b} L${k} ${e} L${m(0).toFixed(1)} ${e} Z"/>`:""}
-    <path class="cizgi" d="${b}"/>
-    <path class="uc" d="M${k} ${u} h0"/>
-  </svg>`}const Xa=a=>{if(a.length<2)return"";const s=a.at(-1).kg-a[0].kg,e=Math.round((a.at(-1).ts-a[0].ts)/864e5),i=e>=14?`${Math.round(e/7)} hafta`:`${e} gün`;return Math.abs(s)<.05?`<span class="fark">değişmedi · ${i}</span>`:`<span class="fark">${s>0?"+":"−"}${fmt(Math.abs(s),1,1)} kg · ${i}</span>`};export function historyHTML(a){const{kilolar:s=[],gecmis:e=[],ilerleme:i=[],settings:n}=a,t=s.at(-1),r=`
-    <div class="grup"><h2 class="etiket">Kilo</h2><div class="ic">
-      ${t?`<div class="kilo"><b>${fmt(t.kg,1,1)}</b><em>kg</em>${Xa(s)}</div>
-               ${J(s.map(u=>u.kg))}
-               <p>${s.length} ölçüm · son giriş ${h.relativeLabel(new Date(t.ts))}</p>`:"<p>Henüz kilo kaydı yok. Aşağıya yazınca burada takip edilir.</p>"}
-      <div class="alan kilo-gir">
-        <label for="h-weight">Bugün</label>
-        <label class="kutucuk"><input type="number" id="h-weight" inputmode="decimal" step="0.1" min="20" max="400"
-               value="${t&&t.d===O()?t.kg:""}" placeholder="—" aria-label="Bugünkü kilo"><small>kg</small></label>
-        <button class="cip" data-act="weight-save">Kaydet</button>
-      </div>
-    </div></div>`,o=`
+    ${i?`<path class="alan-dolgu" d="${v} L${b} ${e} L${k(0).toFixed(1)} ${e} Z"/>`:""}
+    <path class="cizgi" d="${v}"/>
+    <path class="uc" d="M${b} ${m} h0"/>
+  </svg>`}const ts=(a,s)=>{if(!s)return"";if(!a)return`<p>Hedef kilon <b>${fmt(s,1,1)} kg</b>.</p>`;const e=a.kg-s;return`<p>Hedef kilon <b>${fmt(s,1,1)} kg</b> · ${Math.abs(e)<.05?"hedeftesin":`${fmt(Math.abs(e),1,1)} kg ${e>0?"üstünde":"altında"}`}</p>`};export function historyHTML(a){const{kilolar:s=[],gecmis:e=[],ilerleme:i=[],settings:t}=a,n=s.at(-1),r=a.kiloGir,l=r?`
+      <div class="kilo-panel" role="group" aria-label="Kilo gir">
+        <div class="kilo-adim">
+          <button class="ib" data-kilo-adim="-0.1" aria-label="0,1 kg azalt">${o("eksi")}</button>
+          <label class="kilo-deger"><input type="number" id="h-weight" inputmode="decimal" step="0.1" min="20" max="400"
+            value="${r.kg}" aria-label="Kilo (kg)"><em>kg</em></label>
+          <button class="ib" data-kilo-adim="0.1" aria-label="0,1 kg artır">${o("arti")}</button></div>
+        <div class="segment" role="group" aria-label="Hangi gün">${[["bugun","Bugün"],["dun","Dün"],["tarih","Tarih seç"]].map(([$,M])=>`<button data-kilo-gun="${$}" aria-pressed="${r.gun===$}">${M}</button>`).join("")}</div>
+        ${r.gun==="tarih"?`<input type="date" class="metin" id="h-tarih" max="${R()}" value="${r.tarih??R()}" aria-label="Tarih">`:""}
+        <div class="cift"><button class="btn s" data-act="kilo-vazgec">Vazgeç</button><button class="btn p" data-act="weight-save">Kaydet</button></div>
+        ${r.var?`<button class="btn s" data-act="kilo-sil">${o("sil")}Bu günün kaydını sil</button>`:""}
+      </div>`:`<button class="btn p" data-act="kilo-gir">${o("arti")}Kilo gir</button>`,d=`
+    <div class="grup"><h2 class="etiket">Kilo${n?` · ${s.length} ölçüm`:""}</h2><div class="ic">
+      ${kiloOzetHTML(s)}
+      ${s.length>1?sa(s.map($=>$.kg)):""}
+      ${ts(n,t.profil?.hedefKilo)}
+      ${l}
+    </div></div>`,u=`
     <div class="grup"><h2 class="etiket">Son seanslar</h2>
-      ${e.length?`<div class="ic sira">${e.map(u=>`
-        <button class="seans" data-seans="${esc(u.id)}" aria-label="${h.fmtShort(new Date(u.at))} seansını düzenle">
-          <span class="s-baslik">${u.gun}</span>
-          <span class="s-hacim">${u.kayitsiz?"—":`${fmt(u.hacim.kg,0)} ${n.unit}`}</span>
-          <span class="s-ikinci">${h.fmtShort(new Date(u.at))}${u.programAdi?` · ${esc(u.programAdi)}`:""}${u.kayitsiz?'<span class="etk kyt">kayıtsız</span>':u.yarim?'<span class="etk">yarım</span>':""}</span>
-          <span class="s-oran">${u.kayitsiz?"":`${u.yapilan}/${u.toplam} hareket`}</span>
+      ${e.length?`<div class="ic sira">${e.map($=>`
+        <button class="seans" data-seans="${esc($.id)}" aria-label="${f.fmtShort(new Date($.at))} seansını düzenle">
+          <span class="s-baslik">${$.gun}</span>
+          <span class="s-hacim">${$.kayitsiz?"—":`${fmt($.hacim.kg,0)} ${t.unit}`}</span>
+          <span class="s-ikinci">${f.fmtShort(new Date($.at))}${$.programAdi?` · ${esc($.programAdi)}`:""}${$.kayitsiz?'<span class="etk kyt">kayıtsız</span>':$.yarim?'<span class="etk">yarım</span>':""}</span>
+          <span class="s-oran">${$.kayitsiz?"":`${$.yapilan}/${$.toplam} hareket`}</span>
         </button>`).join("")}</div>`:'<div class="ic"><p>Henüz tamamlanmış seans yok.</p></div>'}
-    </div>`,l=`
+    </div>`,k=`
     <div class="grup"><h2 class="etiket">Hareket ilerlemesi · en ağır set</h2>
-      ${i.length?`<div class="ic sira">${i.map(u=>`
+      ${i.length?`<div class="ic sira">${i.map($=>`
         <div class="ilerleme">
-          <b>${adi(u.ex)}</b>
-          <span>${fmt(u.seri[0].v)} → <em>${fmt(u.seri.at(-1).v)} ${u.birim}</em></span>
-          ${J(u.seri.map(v=>v.v),{w:280,h:18,alan:!1})}
+          <b>${adi($.ex)}</b>
+          <span>${fmt($.seri[0].v)} → <em>${fmt($.seri.at(-1).v)} ${$.birim}</em></span>
+          ${sa($.seri.map(M=>M.v),{w:280,h:18,alan:!1})}
         </div>`).join("")}</div>
-        <p class="kucuk-yazi grup-alti">${i.length} hareket · çizgi en fazla son ${Math.max(...i.map(u=>u.seri.length))} seansı gösterir.</p>`:'<div class="ic"><p>İlerleme çizgisi için bir hareketin en az iki seansta kaydı gerekiyor.</p></div>'}
-    </div>`,p=a.rekorOlaylari??[],m=new Date;m.setDate(1),m.setHours(0,0,0,0);const $=p.filter(u=>u.at>=m.getTime()).length,b=u=>`<button class="oz-kayit satir-dugme" data-hareket="${esc(u.exId)}">${d("yildiz")}<b>${adi(c.byId[u.exId]??{ad:u.exId})}</b>
-      <span class="oz-deger"><em>${rekorDeger(u.tur,u.simdi,n.unit)}</em></span>
-      <span class="oz-alt">${I.TUR_AD[u.tur]} · ${h.fmtShort(new Date(u.at))}</span></button>`;return`
+        <p class="kucuk-yazi grup-alti">${i.length} hareket · çizgi en fazla son ${Math.max(...i.map($=>$.seri.length))} seansı gösterir.</p>`:'<div class="ic"><p>İlerleme çizgisi için bir hareketin en az iki seansta kaydı gerekiyor.</p></div>'}
+    </div>`,p=a.rekorOlaylari??[],v=new Date;v.setDate(1),v.setHours(0,0,0,0);const b=p.filter($=>$.at>=v.getTime()).length,m=$=>`<button class="oz-kayit satir-dugme" data-hareket="${esc($.exId)}">${o("yildiz")}<b>${adi(c.byId[$.exId]??{ad:$.exId})}</b>
+      <span class="oz-deger"><em>${rekorDeger($.tur,$.simdi,t.unit)}</em></span>
+      <span class="oz-alt">${L.TUR_AD[$.tur]} · ${f.fmtShort(new Date($.at))}</span></button>`,g=`
+    <div class="grup"><h2 class="etiket">Rekorlar · son kırılanlar</h2><div class="ic">${p.length?`${p.slice(0,6).map(m).join("")}
+         <p class="oz-kural">${b?`Bu ay ${b} rekor · `:""}Bir harekete dokun: bütün rekorları ve geçmişi.</p>`:"<p>Rekorlar bir hareketi ikinci kez yaptığında sayılmaya başlar: ilk kayıt taban olur.</p>"}</div></div>`;return`
     <div class="sayfa-baslik ust-bosluk"><h1>İlerleme</h1></div>
-    ${`
-    <div class="grup"><h2 class="etiket">Rekorlar · son kırılanlar</h2><div class="ic">${p.length?`${p.slice(0,6).map(b).join("")}
-         <p class="oz-kural">${$?`Bu ay ${$} rekor · `:""}Bir harekete dokun: bütün rekorları ve geçmişi.</p>`:"<p>Rekorlar bir hareketi ikinci kez yaptığında sayılmaya başlar: ilk kayıt taban olur.</p>"}</div></div>`}${r}${o}${l}
-    ${sekmelerHTML("ilerleme")}`}export function sessionEditHTML(a){const{duzenlenen:s,settings:e}=a;if(!s)return`<div class="ust"><button class="ib" data-act="to-history" aria-label="Geçmişe dön">${d("geri")}</button></div>
-    <div class="sayfa-baslik"><h1>Seans bulunamadı</h1></div>`;const i=c.gunEtiketiSeans(s).kisa,n=c.exercisesOfSession(s),t=s.entries.filter(l=>!n.some(p=>p.id===l.exerciseId)).map(l=>c.byId[l.exerciseId]??c.bilinmeyenHareket(l.exerciseId)),r=[...n,...t].map(l=>{const p=s.entries.find(k=>k.exerciseId===l.id);if(!p?.sets.length)return"";const m=z.agirlikAdimi(l,e)??z.GIRIS_ADIMI_YEDEK;let $=0;const b=p.sets.map((k,u)=>{const v=k.type==="time"?[["seconds",k.seconds,"sn",5]]:k.type==="cardio"?[["minutes",k.minutes,"dk",5]]:[["weight",k.weight,e.unit,m],["reps",k.reps,"tekrar",1]],S=k.warmup?"ısınma":`${++$}.`;return`<div class="eset">
-        <span class="eno">${k.warmup?"ıs":$}</span>
-        ${v.map(([j,E,T,B])=>`
+    ${d}${g}${u}${k}
+    ${sekmelerHTML("ilerleme")}`}export function sessionEditHTML(a){const{duzenlenen:s,settings:e}=a;if(!s)return`<div class="ust"><button class="ib" data-act="to-history" aria-label="Geçmişe dön">${o("geri")}</button></div>
+    <div class="sayfa-baslik"><h1>Seans bulunamadı</h1></div>`;const i=c.gunEtiketiSeans(s).kisa,t=c.exercisesOfSession(s),n=s.entries.filter(d=>!t.some(u=>u.id===d.exerciseId)).map(d=>c.byId[d.exerciseId]??c.bilinmeyenHareket(d.exerciseId)),r=[...t,...n].map(d=>{const u=s.entries.find(b=>b.exerciseId===d.id);if(!u?.sets.length)return"";const k=T.agirlikAdimi(d,e)??T.GIRIS_ADIMI_YEDEK;let p=0;const v=u.sets.map((b,m)=>{const g=b.type==="time"?[["seconds",b.seconds,"sn",5]]:b.type==="cardio"?[["minutes",b.minutes,"dk",5]]:[["weight",b.weight,e.unit,k],["reps",b.reps,"tekrar",1]],$=b.warmup?"ısınma":`${++p}.`;return`<div class="eset">
+        <span class="eno">${b.warmup?"ıs":p}</span>
+        ${g.map(([M,B,H,w])=>`
           <label class="efield">
-            <input type="number" inputmode="decimal" step="${B}" min="0"
-                   value="${E??""}" placeholder="—"
-                   data-eset="${l.id}:${u}:${j}" aria-label="${adi(l)} ${S} set ${T}">
-            <span class="eunit">${T}</span>
+            <input type="number" inputmode="decimal" step="${w}" min="0"
+                   value="${B??""}" placeholder="—"
+                   data-eset="${d.id}:${m}:${M}" aria-label="${adi(d)} ${$} set ${H}">
+            <span class="eunit">${H}</span>
           </label>`).join("")}
-        <button class="esil" data-eset-sil="${l.id}:${u}" aria-label="${S} seti sil">${d("sil")}</button>
-      </div>`}).join("");return`<div class="grup"><h2 class="etiket">${adi(l)}</h2><div class="ic sira">${b}${p.note?`<p class="seans-notu">${d("liste")}<span>${esc(p.note)}</span></p>`:""}</div></div>`}).join(""),o=c.summaryVolume(s);return`
-    <div class="ust"><button class="ib" data-act="to-history" aria-label="Geçmişe dön">${d("geri")}</button><span class="ib-yer"></span></div>
+        <button class="esil" data-eset-sil="${d.id}:${m}" aria-label="${$} seti sil">${o("sil")}</button>
+      </div>`}).join("");return`<div class="grup"><h2 class="etiket">${adi(d)}</h2><div class="ic sira">${v}${u.note?`<p class="seans-notu">${o("liste")}<span>${esc(u.note)}</span></p>`:""}</div></div>`}).join(""),l=c.summaryVolume(s);return`
+    <div class="ust"><button class="ib" data-act="to-history" aria-label="Geçmişe dön">${o("geri")}</button><span class="ib-yer"></span></div>
     <div class="sayfa-baslik">
       <h1>${i}</h1>
-      <p>${h.fmtShort(new Date(s.finishedAt??s.startedAt))} · ${o.sets} set · ${fmt(o.kg,0)} ${e.unit}</p>
+      <p>${f.fmtShort(new Date(s.finishedAt??s.startedAt))} · ${l.sets} set · ${fmt(l.kg,0)} ${e.unit}</p>
     </div>
     <p class="aciklama">Bir değeri düzeltmek için üstüne yaz; alandan çıkınca kaydedilir. Hacim, "geçen sefer"
       ve ilerleme çizgisi kendiliğinden yeniden hesaplanır.</p>
@@ -379,63 +385,48 @@ import*as c from"./session.js";import*as h from"./schedule.js";import{dayKey as 
     <div class="grup"><div class="ic">
       <button class="btn s" data-act="seans-sil">Bu seansı sil</button>
       <p>Silinen seans geçmişten kalkar, sıra yeniden hesaplanır. Geri getirebilirsin.</p>
-    </div></div>`}const Ja=[1,2,3,4,5,6,0],Qa=[30,45,60,90,120];function Wa(a={}){const s=da[a.tur];return`<div class="grup" id="kurulum"><h2 class="etiket">Telefona yükle</h2><div class="ic">${a.kurulu?"<p>Telefona yüklü: ana ekrandaki simgesiyle, adres çubuğu olmadan açılıyor.</p>":a.istem?`<button class="btn p" data-act="kur">Telefona yükle</button>
+    </div></div>`}const ns=[1,2,3,4,5,6,0],rs=[30,45,60,90,120];function ls(a={}){const s=va[a.tur];return`<div class="grup" id="kurulum"><h2 class="etiket">Telefona yükle</h2><div class="ic">${a.kurulu?"<p>Telefona yüklü: ana ekrandaki simgesiyle, adres çubuğu olmadan açılıyor.</p>":a.istem?`<button class="btn p" data-act="kur">Telefona yükle</button>
          <p>Ana ekrana kendi simgesiyle eklenir; adres çubuğu olmadan açılır, internetsiz çalışır.
            Kayıtların aynen kalır. Mağaza gerekmez.</p>`:s?`<p class="kurulum-tarayici">${esc(s.tarayici)} için:</p>
            <ol class="kurulum-adim">${s.adimlar.map(i=>`<li>${i}</li>`).join("")}</ol>
            ${s.not?`<p class="kucuk-not">${esc(s.not)}</p>`:""}
-           <p class="kucuk-not">Zaten yüklüyse ana ekrandaki FSet simgesinden aç.</p>`:"<p>Tarayıcı menüsünden <b>Uygulamayı yükle</b> ya da <b>Ana ekrana ekle</b>'yi seç.</p>"}</div></div>`}export function kurulumBantHTML(a){const s=a.kurulum??{};return oa(s.tur,a.settings)?`<div class="kurulum-bant"><span class="yazi"><b>FSet'i telefona yükle</b><span>Ana ekranda kendi simgesiyle, internetsiz açılır.</span></span>
+           <p class="kucuk-not">Zaten yüklüyse ana ekrandaki FSet simgesinden aç.</p>`:"<p>Tarayıcı menüsünden <b>Uygulamayı yükle</b> ya da <b>Ana ekrana ekle</b>'yi seç.</p>"}</div></div>`}export function kurulumBantHTML(a){const s=a.kurulum??{};return ga(s.tur,a.settings)?`<div class="kurulum-bant"><span class="yazi"><b>FSet'i telefona yükle</b><span>Ana ekranda kendi simgesiyle, internetsiz açılır.</span></span>
     <button class="btn p kucuk" data-act="${s.istem?"kur":"kurulum-nasil"}">${s.istem?"Yükle":"Nasıl?"}</button>
-    <button class="kapat" data-act="kurulum-kapat" aria-label="Bandı kapat">${d("carpi")}</button></div>`:""}export function settingsHTML(a){const{settings:s}=a,e=s.trainingDays??[],i=Ja.map(l=>`
-    <button class="cip" data-gun="${l}" aria-pressed="${e.includes(l)}" aria-label="${h.GUN[l]}">${h.GUN_KISA[l]}</button>`).join(""),n=h.upcoming(new Date,e,3),t=n.length?`<b>${n.map(l=>h.fmtShort(l)).join(" · ")}</b>`:"Hiç gün seçili değil; takvim çalışmaz.",r=Qa.map(l=>`
-    <button data-rest="${l}" aria-pressed="${s.restSeconds===l}" aria-label="${l} saniye">${l}</button>`).join(""),o=z.DAMBIL_ADIMLARI.map(l=>`
-    <button data-dambil="${l}" aria-pressed="${s.dambilAdimi===l}">${fmt(l)} kg</button>`).join("");return`
+    <button class="kapat" data-act="kurulum-kapat" aria-label="Bandı kapat">${o("carpi")}</button></div>`:""}export function profilOzeti(a,s=[]){const e=a.profil??{},i=s.at(-1),t=(a.trainingDays??[]).length;return[e.yas&&`${e.yas} yaş`,a.heightCm&&`${a.heightCm} cm`,i&&`${fmt(i.kg,1,1)} kg`,e.hedef&&profilEtiketi("hedef",e.hedef),t&&`haftada ${t} gün`].filter(Boolean).join(" · ")}export function settingsHTML(a){const{settings:s}=a,e=rs.map(t=>`
+    <button data-rest="${t}" aria-pressed="${s.restSeconds===t}" aria-label="${t} saniye">${t}</button>`).join(""),i=T.DAMBIL_ADIMLARI.map(t=>`
+    <button data-dambil="${t}" aria-pressed="${s.dambilAdimi===t}">${fmt(t)} kg</button>`).join("");return`
     <div class="sayfa-baslik ust-bosluk"><h1>Ayarlar</h1></div>
 
     <div class="grup"><h2 class="etiket">Profil ve avatar</h2><div class="ic">
       <button class="pm-satir" data-act="to-profil">
         <span class="avatar-k" data-avatar-k aria-hidden="true"></span>
-        <span class="yazi"><b>${esc(s.profil?.ad?.trim()||"Profil oluştur")}</b></span>${d("ileri")}
+        <span class="yazi"><b>${esc(s.profil?.ad?.trim()||"Profil oluştur")}</b><span>${esc(profilOzeti(s,a.kilolar))}</span></span>${o("ileri")}
       </button>
     </div></div>
 
-    <div class="grup"><h2 class="etiket">Antrenman günleri</h2><div class="ic">
-      <div class="cipler">${i}</div>
-      <p>Sıradaki: ${t}</p>
-    </div></div>
-
     <div class="grup"><h2 class="etiket">Setler arası dinlenme</h2><div class="ic">
-      <div class="segment" role="group" aria-label="Dinlenme süresi">${r}</div>
+      <div class="segment" role="group" aria-label="Dinlenme süresi">${e}</div>
       <p>Saniye. Odak ekranındaki sayaç bu süreyle başlar.</p>
     </div></div>
 
     <div class="grup"><h2 class="etiket">Setten sonra zorluk (RIR)</h2><div class="ic">
-      <div class="segment" role="group" aria-label="RIR sorusu">${[["kapali","Sorma",!1],["acik","Sor",!0]].map(([l,p,m])=>`<button data-rirsor="${l}" aria-pressed="${!!s.rirSor===m}">${p}</button>`).join("")}</div>
+      <div class="segment" role="group" aria-label="RIR sorusu">${[["kapali","Sorma",!1],["acik","Sor",!0]].map(([t,n,r])=>`<button data-rirsor="${t}" aria-pressed="${!!s.rirSor===r}">${n}</button>`).join("")}</div>
       <p>Ağırlıklı her setten sonra "kaç tekrar daha yapabilirdin?" sorulur; cevap ağırlık önerisini daha doğru yapar.
         Programda hedef RIR verdiğin harekette her zaman sorulur.</p>
     </div></div>
 
     <div class="grup"><h2 class="etiket">Seans başında kontrol</h2><div class="ic">
-      <div class="segment" role="group" aria-label="Toparlanma kontrolü">${[["kapali","Sorma",!1],["acik","Sor",!0]].map(([l,p,m])=>`<button data-hzsor="${l}" aria-pressed="${s.hazirlikSor!==!1===m}">${p}</button>`).join("")}</div>
+      <div class="segment" role="group" aria-label="Toparlanma kontrolü">${[["kapali","Sorma",!1],["acik","Sor",!0]].map(([t,n,r])=>`<button data-hzsor="${t}" aria-pressed="${s.hazirlikSor!==!1===r}">${n}</button>`).join("")}</div>
       <p>Seansa başlamadan uyku, uzun süren kas tutulması ve ağrı sorulur; cevaba göre "plana uy", "biraz hafiflet" ya da
         "dinlen" önerilir. Günde bir kez sorulur, atlanabilir.</p>
     </div></div>
 
     <div class="grup"><h2 class="etiket">Dambıl adımı</h2><div class="ic">
-      <div class="segment" role="group" aria-label="Dambıl adımı">${o}</div>
+      <div class="segment" role="group" aria-label="Dambıl adımı">${i}</div>
       <p>Salondaki dambıl setinde bir sonraki ağırlık. Bar 2,5 kg, makine ve kablo 5 kg adımla ilerler.</p>
     </div></div>
 
-    <div class="grup"><h2 class="etiket">Vücut</h2><div class="ic">
-      <div class="alan">
-        <label for="s-height">Boy</label>
-        <label class="kutucuk"><input type="number" id="s-height" inputmode="numeric" min="100" max="250" step="1"
-               value="${s.heightCm??""}" placeholder="—" aria-label="Boy (cm)"><small>cm</small></label>
-      </div>
-      <p>Kilo takibi İlerleme ekranında.</p>
-    </div></div>
-
-    ${Wa(a.kurulum)}
+    ${ls(a.kurulum)}
 
     <div class="grup"><h2 class="etiket">Yedek</h2><div class="ic">
       <p>Veri yalnız bu telefonda; sunucuya hiçbir şey gönderilmez. Telefonu değiştirirsen ya da tarayıcı
@@ -453,53 +444,84 @@ import*as c from"./session.js";import*as h from"./schedule.js";import{dayKey as 
 
     <div class="grup"><h2 class="etiket">Hakkında</h2><div class="ic">
       <div class="hk-ust"><img src="icons/isaret.svg" alt="" width="44" height="26">
-        <div class="hk-ad"><b class="hk-kelime"><span class="k1">${esc(C.on)}</span><span class="k2">${esc(C.son)}</span></b>
-          <small>Sürüm ${esc(la)}</small></div></div>
+        <div class="hk-ad"><b class="hk-kelime"><span class="k1">${esc(J.on)}</span><span class="k2">${esc(J.son)}</span></b>
+          <small>Sürüm ${esc(ba)}</small></div></div>
       <p>Verilerin yalnızca bu telefonda durur; hesap yok, hiçbir sunucuya bir şey gönderilmez.</p>
-      <a class="hk-bag" href="gizlilik.html">Gizlilik politikası${d("ileri")}</a>
-      <a class="hk-bag" href="kosullar.html">Kullanım koşulları${d("ileri")}</a>
+      <a class="hk-bag" href="gizlilik.html">Gizlilik politikası${o("ileri")}</a>
+      <a class="hk-bag" href="kosullar.html">Kullanım koşulları${o("ileri")}</a>
     </div></div>
 
     <p class="kucuk-yazi">Ağrı hissettiğin bir harekette dur; bu uygulama tıbbi tavsiye vermez.
       Hareket çizimleri <a href="js/vendor/three-LICENSE.txt" target="_blank" rel="noopener">three.js</a> ile yapılır (MIT lisansı);
       manken MakeHuman ile üretildi (CC0); yazı tipi Archivo (<a href="fonts/OFL.txt" target="_blank" rel="noopener">SIL OFL 1.1</a>).
       © 2026 Sabri Temel, tüm hakları saklıdır.</p>
-    ${sekmelerHTML("ayarlar")}`}const L=(a,s,e)=>a.map(([i,n,t])=>`<button class="renk" data-${e}="${i}" aria-pressed="${s===i}" aria-label="${esc(n)}" style="--renk:${t}"></button>`).join("");export function profilHTML(a){const s=a.settings??{},e=s.avatar??{},i=s.profil??{},n=g.cozumle(e,i),t=g.govdeBul(n.govde),r=a.avatarOneri,o=a.avatarSekme??"avatar",l=a.kiyafetParca??"ust",p=(k,u)=>`<p class="renk-ad">${esc(k.find(v=>v[0]===u)?.[1]??"")}</p>`,m=`<p class="av-not">Roby'nin teni, saçı ve kıyafeti yok; bunlar Leo, Mia, Max ve Nora için.</p>`,$={avatar:()=>`<div class="govdeler">${g.GOVDELER.map(k=>`<button class="cip" data-avatar-govde="${k.id}" aria-pressed="${n.govde===k.id}">${esc(k.ad)}</button>`).join("")}</div>
-      <p class="av-not">${n.robot?"Roby daha hafif bir manken; pili korur.":a.cAcilamadi?"Ayrıntılı manken bu telefonda açılamadı; şimdilik Roby çiziliyor.":"Yaşını Profil'de yazarsan avatar önerilir; seçimin hep senin."}</p>`,ten:()=>n.robot?m:`<div class="renkler">${L(g.TEN,n.ten,"avatar-ten")}</div>${p(g.TEN,n.ten)}
-      <p class="av-not">Ten ve saç rengi telefonunun bölge ayarına göre önerildi; internete bağlanılmaz.</p>`,sac:()=>n.robot?m:(t.kadin?"":`<div class="segment" role="group" aria-label="Saç">
-        <button data-avatar-sacvar="1" aria-pressed="${n.sacli}">Saçlı</button><button data-avatar-sacvar="0" aria-pressed="${!n.sacli}">Saçsız</button></div>`)+(n.sacli?`<div class="renkler">${L(g.SAC,n.sacRenk,"avatar-sac")}</div>${p(g.SAC,n.sacRenk)}`:""),kiyafet:()=>n.robot?m:`<div class="segment" role="group" aria-label="Kıyafet">
-        <button data-kiyafet-parca="ust" aria-pressed="${l==="ust"}">Üst</button><button data-kiyafet-parca="alt" aria-pressed="${l==="alt"}">Alt</button></div>`+(l==="ust"?`<div class="renkler">${L(g.UST,n.ust,"avatar-ust")}</div>${p(g.UST,n.ust)}`:`<div class="renkler">${L(g.ALT,n.alt,"avatar-alt")}</div>${p(g.ALT,n.alt)}`),profil:()=>`<div class="av-iki">
-        <div class="profil-alan"><label for="p-adin">Adın</label><input class="metin" id="p-adin" maxlength="24" autocomplete="off" placeholder="Örneğin Deniz" value="${esc(i.ad??"")}"></div>
-        <div class="profil-alan av-yas"><label for="p-yas">Yaşın</label><input class="metin" id="p-yas" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="—" value="${i.yas??""}"></div></div>
-      <div class="segment" role="group" aria-label="Cinsiyet">${g.CINSIYET.map(([k,u])=>`<button data-profil-cins="${k}" aria-pressed="${i.cinsiyet===k}">${u}</button>`).join("")}</div>
-      <p class="av-not">İsteğe bağlı; yalnız bu telefonda saklanır. Yaş ve cinsiyet avatarını önerir.</p>`},b=[["avatar","Avatar"],["ten","Ten"],["sac","Saç"],["kiyafet","Kıyafet"],["profil","Profil"]];return`
-    <div class="ust av-baslik"><button class="ib" data-act="to-settings" aria-label="Ayarlara dön">${d("geri")}</button><h1>Profil ve avatar</h1><span class="ib-yer"></span></div>
+    ${sekmelerHTML("ayarlar")}`}const j=(a,s,e)=>a.map(([i,t,n])=>`<button class="renk" data-${e}="${i}" aria-pressed="${s===i}" aria-label="${esc(t)}" style="--renk:${n}"></button>`).join("");export function profilHTML(a){const s=a.settings??{},e=s.avatar??{},i=s.profil??{},t=h.cozumle(e,i),n=h.govdeBul(t.govde),r=a.avatarOneri,l=a.avatarSekme??"profil",d=a.kiyafetParca??"ust",u=(b,m)=>`<p class="renk-ad">${esc(b.find(g=>g[0]===m)?.[1]??"")}</p>`,k=`<p class="av-not">Roby'nin teni, saçı ve kıyafeti yok; bunlar Leo, Mia, Max ve Nora için.</p>`,p={avatar:()=>`<div class="govdeler">${h.GOVDELER.map(b=>`<button class="cip" data-avatar-govde="${b.id}" aria-pressed="${t.govde===b.id}">${esc(b.ad)}</button>`).join("")}</div>
+      <p class="av-not">${t.robot?"Roby daha hafif bir manken; pili korur.":a.cAcilamadi?"Ayrıntılı manken bu telefonda açılamadı; şimdilik Roby çiziliyor.":"Yaşını Profil'de yazarsan avatar önerilir; seçimin hep senin."}</p>`,ten:()=>t.robot?k:`<div class="renkler">${j(h.TEN,t.ten,"avatar-ten")}</div>${u(h.TEN,t.ten)}
+      <p class="av-not">Ten ve saç rengi telefonunun bölge ayarına göre önerildi; internete bağlanılmaz.</p>`,sac:()=>t.robot?k:(n.kadin?"":`<div class="segment" role="group" aria-label="Saç">
+        <button data-avatar-sacvar="1" aria-pressed="${t.sacli}">Saçlı</button><button data-avatar-sacvar="0" aria-pressed="${!t.sacli}">Saçsız</button></div>`)+(t.sacli?`<div class="renkler">${j(h.SAC,t.sacRenk,"avatar-sac")}</div>${u(h.SAC,t.sacRenk)}`:""),kiyafet:()=>t.robot?k:`<div class="segment" role="group" aria-label="Kıyafet">
+        <button data-kiyafet-parca="ust" aria-pressed="${d==="ust"}">Üst</button><button data-kiyafet-parca="alt" aria-pressed="${d==="alt"}">Alt</button></div>`+(d==="ust"?`<div class="renkler">${j(h.UST,t.ust,"avatar-ust")}</div>${u(h.UST,t.ust)}`:`<div class="renkler">${j(h.ALT,t.alt,"avatar-alt")}</div>${u(h.ALT,t.alt)}`)},v=[["profil","Profil"],["avatar","Avatar"],["ten","Ten"],["sac","Saç"],["kiyafet","Kıyafet"]];return`
+    <div class="ust av-baslik"><button class="ib" data-act="to-settings" aria-label="Ayarlara dön">${o("geri")}</button><h1>Profil ve avatar</h1><span class="ib-yer"></span></div>
     <div class="av-sahne">
       <div class="avatar-onizleme" id="avatar3d" aria-label="Avatarın — döndürmek için sürükle"></div>
       ${r?"":'<img class="damga" src="icons/isaret.svg" alt="" width="30" height="17">'}
-      ${r?`<div class="avatar-oneri"><span>Avatarın ${r.yas?"yaşına":"seçimine"} göre ${esc(g.govdeBul(r.yeni).ad)} oldu.</span>
+      ${r?`<div class="avatar-oneri"><span>Avatarın ${r.yas?"yaşına":"seçimine"} göre ${esc(h.govdeBul(r.yeni).ad)} oldu.</span>
         <button data-act="avatar-geri-al">Geri al</button></div>`:'<p class="avatar-ipucu">Döndürmek için sürükle</p>'}
     </div>
-    <div class="av-sekmeler" role="tablist" aria-label="Avatar ayarları">${b.map(([k,u])=>`<button role="tab" data-avatar-sekme="${k}" aria-selected="${o===k}">${u}</button>`).join("")}</div>
-    <div class="av-panel" role="tabpanel">${$[o]()}</div>`}const xa=[["bugun","Bugün","bugun","to-list"],["ilerleme","İlerleme","grafik","to-history"],["hareketler","Hareketler","figur","to-hareketler"],["programlar","Programlar","liste","to-programs"],["ayarlar","Ayarlar","ayar","to-settings"]];export function sekmelerHTML(a){return`<nav class="sekmeler" aria-label="Ana gezinme">${xa.map(([s,e,i,n])=>`<button data-act="${n}"${s===a?' aria-current="page"':""}>${d(i)}<span>${e}</span></button>`).join("")}</nav>`}const K=a=>cizimsiz(a)?`<span class="kucuk yer" aria-hidden="true">${d("figur")}</span>`:`<span class="kucuk" data-kucuk="${esc(a.id)}" aria-hidden="true"></span>`,as=a=>a.gunler.reduce((s,e)=>s+e.hareketler.length,0);export function programsHTML(){const a=c.aktifProgram();return`
+    <div class="av-sekmeler" role="tablist" aria-label="Profil ve avatar">${v.map(([b,m])=>`<button role="tab" data-avatar-sekme="${b}" aria-selected="${l===b}">${m}</button>`).join("")}</div>
+    ${l==="profil"?`<div class="pf-sayfa" role="tabpanel">${ds(a)}</div>`:`<div class="av-panel" role="tabpanel">${p[l]()}</div>`}`}const ea={hedef:[["kas","Kas"],["guc","Güç"],["form","Genel form"]],yer:[["salon","Salonda"],["ev","Evde"]],deneyim:[["yeni","Yeni"],["orta","Bir süredir"],["ileri","Deneyimli"]]};export const profilEtiketi=(a,s)=>ea[a]?.find(e=>e[0]===s)?.[1]??"";const F=(a,s,e)=>`<div class="segment" role="group" aria-label="${e}">${ea[a].map(([i,t])=>`<button data-profil-${a}="${i}" aria-pressed="${s===i}">${t}</button>`).join("")}</div>`;export function kiloOzetHTML(a=[]){if(!a.length)return'<p class="kilo-yok">Henüz kilo kaydı yok. "Kilo gir" ile ilk ölçümünü yaz; o senin başlangıcın olur.</p>';const s=a[0],e=a.at(-1),i=e.kg-s.kg,t=Math.round((e.ts-s.ts)/864e5),n=t>=14?`${Math.round(t/7)} hafta`:`${t} gün`,r=(l,d,u,k="")=>`<div class="${k}"><small>${l}</small><b>${d}</b><em>kg</em><span>${u}</span></div>`;return`<div class="kilo-uc">${r("Başlangıç",fmt(s.kg,1,1),f.fmtShort(new Date(s.ts)))}${r("Güncel",fmt(e.kg,1,1),f.relativeLabel(new Date(e.ts)))}${r("Değişim",a.length<2||Math.abs(i)<.05?"0":`${i>0?"+":"−"}${fmt(Math.abs(i),1,1)}`,a.length<2?"ilk ölçüm":n,"fark")}</div>`}function ds(a){const s=a.settings??{},e=s.profil??{},i=s.trainingDays??[],t=f.upcoming(new Date,i,3);return`
+    <div class="grup"><h2 class="etiket">Sen</h2><div class="ic">
+      <div class="av-iki">
+        <div class="profil-alan"><label for="p-adin">Adın</label><input class="metin" id="p-adin" maxlength="24" autocomplete="off" placeholder="Örneğin Deniz" value="${esc(e.ad??"")}"></div>
+        <div class="profil-alan av-yas"><label for="p-yas">Yaşın</label><input class="metin" id="p-yas" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="—" value="${e.yas??""}"></div></div>
+      <p class="pf-soru">Cinsiyet</p>
+      <div class="segment" role="group" aria-label="Cinsiyet">${h.CINSIYET.map(([n,r])=>`<button data-profil-cins="${n}" aria-pressed="${e.cinsiyet===n}">${r}</button>`).join("")}</div>
+      <p>İsteğe bağlı; yalnız bu telefonda saklanır. Yaş ve cinsiyet avatarını önerir.</p>
+    </div></div>
+
+    <div class="grup"><h2 class="etiket">Vücut</h2><div class="ic">
+      <div class="alan"><label for="p-boy">Boy</label>
+        <label class="kutucuk"><input type="number" id="p-boy" inputmode="numeric" min="100" max="250" step="1"
+          value="${s.heightCm??""}" placeholder="—" aria-label="Boy (cm)"><small>cm</small></label></div>
+      <div class="alan"><label for="p-hedefkilo">Hedef kilo</label>
+        <label class="kutucuk"><input type="number" id="p-hedefkilo" inputmode="decimal" min="20" max="400" step="0.1"
+          value="${e.hedefKilo??""}" placeholder="—" aria-label="Hedef kilo (kg)"><small>kg</small></label></div>
+      <p>Boy ve hedef kilo isteğe bağlı.</p>
+      <p class="pf-soru">Kilo</p>
+      ${kiloOzetHTML(a.kilolar)}
+      <div class="cift"><button class="btn s" data-act="kilo-gir">${o("arti")}Kilo gir</button><button class="btn s" data-act="to-history">${o("grafik")}Grafik</button></div>
+    </div></div>
+
+    <div class="grup"><h2 class="etiket">Antrenman</h2><div class="ic">
+      <p class="pf-soru ilk">Hedefin</p>${F("hedef",e.hedef,"Hedefin")}
+      <p class="pf-soru">Nerede</p>${F("yer",e.yer,"Nerede çalışıyorsun")}
+      <p class="pf-soru">Deneyimin</p>${F("deneyim",e.deneyim,"Deneyimin")}
+      <p class="pf-soru">Antrenman günlerin</p>
+      <div class="cipler">${ns.map(n=>`<button class="cip" data-gun="${n}" aria-pressed="${i.includes(n)}" aria-label="${f.GUN[n]}">${f.GUN_KISA[n]}</button>`).join("")}</div>
+      <p>Sıradaki: ${t.length?`<b>${t.map(n=>f.fmtShort(n)).join(" · ")}</b>`:"Hiç gün seçili değil; takvim çalışmaz."}</p>
+      <button class="btn s" data-act="profil-oner">Bu cevaplara göre program öner</button>
+      <p>Cevapları değiştirmek programını değiştirmez; öneriyi görür, istersen eklersin.</p>
+    </div></div>
+
+    <div class="grup"><button class="btn s" data-act="profil-sil">${o("sil")}Profil bilgilerimi sil</button>
+      <p class="kucuk-yazi grup-alti">Ad, yaş, cinsiyet, boy, hedef kilo ve cevaplar boşalır. Antrenman günlerin ve kilo geçmişin kalır; kilo kayıtları İlerleme'den silinir.</p></div>`}const os=[["ilerleme","İlerleme","ilerleme","to-history"],["hareketler","Hareketler","hareket","to-hareketler"],["bugun","Bugün","bugun","to-list"],["programlar","Programlar","program","to-programs"],["ayarlar","Ayarlar","ayar","to-settings"]],ia=a=>`<svg class="si" aria-hidden="true"><use href="#s-${a}"/></svg>`;export function sekmelerHTML(a){return`<nav class="sekmeler" aria-label="Ana gezinme">${os.map(([s,e,i,t])=>{const n=s===a?' aria-current="page"':"";return s==="bugun"?`<button class="orta" data-act="${t}" aria-label="${e}"${n}><span class="daire">${ia(i)}</span></button>`:`<button data-act="${t}"${n}>${ia(i)}<span>${e}</span></button>`}).join("")}</nav>`}const ta=a=>cizimsiz(a)?`<span class="kucuk yer" aria-hidden="true">${o("figur")}</span>`:`<span class="kucuk" data-kucuk="${esc(a.id)}" aria-hidden="true"></span>`,cs=a=>a.gunler.reduce((s,e)=>s+e.hareketler.length,0);export function programsHTML(){const a=c.aktifProgram();return`
     <div class="sayfa-baslik ust-bosluk"><h1>Programlar</h1>
       <p>Bugün ekranı <b>kullanılan</b> programın sıradaki gününü gösterir.</p></div>
     <div class="liste">${c.programListesi().map(e=>`
     <button class="satir yalin" data-program-ac="${esc(e.id)}">
-      <span class="ad"><b>${esc(e.ad)}</b><span>${e.gunler.length} gün · ${as(e)} hareket</span></span>
-      <span class="sag">${e===a?'<span class="rozet">Kullanılıyor</span>':""}</span>${d("ileri")}
+      <span class="ad"><b>${esc(e.ad)}</b><span>${e.gunler.length} gün · ${cs(e)} hareket</span></span>
+      <span class="sag">${e===a?'<span class="rozet">Kullanılıyor</span>':""}</span>${o("ileri")}
     </button>`).join("")}</div>
-    <div class="grup"><button class="btn s" data-act="program-yeni">${d("arti")}Yeni program</button></div>
-    <div class="grup"><h2 class="etiket">Hazır programlar</h2><div class="hazir-liste">${U.map(Q("data-hazir")).join("")}</div>
+    <div class="grup"><button class="btn s" data-act="program-yeni">${o("arti")}Yeni program</button></div>
+    <div class="grup"><h2 class="etiket">Hazır programlar</h2><div class="hazir-liste">${Z.map(na("data-hazir")).join("")}</div>
       <p class="kucuk-yazi grup-alti">Dokun: günlerini gör, kopyasını programlarına ekle. Eklenen kopya senindir; düzenleyebilirsin.</p></div>
-    ${sekmelerHTML("programlar")}`}const ss=a=>a.gunler.length===2?"A / B":`${a.gunler.length} farklı gün`,Q=a=>s=>`<button class="hazir" ${a}="${esc(s.id)}"><span class="ad"><b>${esc(s.ad)}</b><span>${esc(s.kime)}</span></span>
-  <span class="rozet">${ss(s)}</span></button>`;function W(a,s){const e=i=>i.seconds!=null?`${i.sets}×${i.seconds} sn`:`${i.sets}×${i.reps}`;return`<div class="oneri-kart">${s?`<small>${s}</small>`:""}<h2>${esc(a.ad)}</h2><p>${esc(a.kime)}</p>
-    <div class="gun-ozet">${a.gunler.map(([i,n],t)=>`<div><b>${esc(i||`${t+1}. Gün`)}</b><span>${n.map(r=>`${esc(c.byId[r.exId]?.ad??r.exId)} ${e(r)}`).join(" · ")}</span></div>`).join("")}</div></div>`}export function hazirHTML(a){const s=Y(a.hazirId);return s?`
-    <div class="ust"><button class="ib" data-act="to-programs" aria-label="Programlara dön">${d("geri")}</button>
+    ${sekmelerHTML("programlar")}`}const us=a=>a.gunler.length===2?"A / B":`${a.gunler.length} farklı gün`,na=a=>s=>`<button class="hazir" ${a}="${esc(s.id)}"><span class="ad"><b>${esc(s.ad)}</b><span>${esc(s.kime)}</span></span>
+  <span class="rozet">${us(s)}</span></button>`;function ra(a,s){const e=i=>i.seconds!=null?`${i.sets}×${i.seconds} sn`:`${i.sets}×${i.reps}`;return`<div class="oneri-kart">${s?`<small>${s}</small>`:""}<h2>${esc(a.ad)}</h2><p>${esc(a.kime)}</p>
+    <div class="gun-ozet">${a.gunler.map(([i,t],n)=>`<div><b>${esc(i||`${n+1}. Gün`)}</b><span>${t.map(r=>`${esc(c.byId[r.exId]?.ad??r.exId)} ${e(r)}`).join(" · ")}</span></div>`).join("")}</div></div>`}export function hazirHTML(a){const s=X(a.hazirId),e=a.hazirGeri==="profil"?`<button class="ib" data-act="to-profil" aria-label="Profile dön">${o("geri")}</button>`:`<button class="ib" data-act="to-programs" aria-label="Programlara dön">${o("geri")}</button>`;return s?`
+    <div class="ust">${e}
       <span class="tarih">Hazır program</span><span class="ib-yer"></span></div>
-    ${W(s)}
-    <div class="grup"><button class="btn p" data-act="hazir-ekle">${d("arti")}Programlarıma ekle</button></div>
-    <p class="kucuk-yazi grup-alti">Kopyası eklenir; günlerini ve hedeflerini düzenleyebilirsin. Kullanmak için programda "Bu programı kullan".</p>`:`<div class="ust"><button class="ib" data-act="to-programs" aria-label="Programlara dön">${d("geri")}</button></div>`}export function ilkAcilisHTML(a){const s=a.ia,e=`<div class="ilerleme-cizgi" aria-hidden="true">${[1,2,3,4,5].map(t=>`<i class="${t<=s.adim?"dolu":""}"></i>`).join("")}</div>`;if(s.adim===0)return`
+    ${ra(s,a.hazirGeri==="profil"?"PROFİLİNE GÖRE ÖNERİLEN":void 0)}
+    <div class="grup"><button class="btn p" data-act="hazir-ekle">${o("arti")}Programlarıma ekle</button></div>
+    <p class="kucuk-yazi grup-alti">Kopyası eklenir; günlerini ve hedeflerini düzenleyebilirsin. Kullanmak için programda "Bu programı kullan".</p>`:`<div class="ust">${e}</div>`}export function ilkAcilisHTML(a){const s=a.ia,e=`<div class="ilerleme-cizgi" aria-hidden="true">${[1,2,3,4,5].map(n=>`<i class="${n<=s.adim?"dolu":""}"></i>`).join("")}</div>`;if(s.adim===0)return`
     <div class="karsilama"><img class="logo" src="icons/fset-192.png" alt="">
       <h1>Antrenman defterin hazır.</h1>
       <p>Dört kısa soru; sana uygun programı önerelim. Bir dakika sürer.</p>
@@ -508,135 +530,121 @@ import*as c from"./session.js";import*as h from"./schedule.js";import{dayKey as 
         Devam ederek <a href="kosullar.html">Kullanım koşullarını</a> kabul etmiş olursun; verilerinin nasıl tutulduğu
         <a href="gizlilik.html">Gizlilik politikasında</a>.</p></div>
     <div class="alt-bar dikey"><button class="btn p" data-ia="ileri">Başlayalım</button>
-      <button class="btn s" data-ia="kendim">Kendim kuracağım</button></div>`;if(s.adim<=4){const t=na[s.adim-1];return`${e}
-    <div class="soru"><h1>${t.soru}</h1>${t.alt?`<p>${t.alt}</p>`:""}</div>
-    <div class="secenekler" role="group" aria-label="${t.soru}">${t.secenek.map(([r,o,l])=>`<button class="secenek" aria-pressed="${s.c[t.anahtar]===r}" data-ia-cevap="${t.anahtar}:${r}"><span class="ad"><b>${o}</b>${l?`<span>${l}</span>`:""}</span></button>`).join("")}</div>
-    <div class="alt-bar"><button class="btn s" data-ia="geri">${d("geri")}Geri</button><span class="kucuk-yazi">${s.adim} / 4</span></div>`}if(s.adim===5){const t=g.cozumle({},{yas:s.profil.yas,cinsiyet:null}).govde,r=s.profil.govde??t;return`${e}
-    <div class="soru"><h1>Seni tanıyalım</h1><p>İsteğe bağlı: avatarını seç. Bilgiler yalnız bu telefonda kalır.</p></div>
+      <button class="btn s" data-ia="kendim">Kendim kuracağım</button></div>`;if(s.adim<=4){const n=$a[s.adim-1];return`${e}
+    <div class="soru"><h1>${n.soru}</h1>${n.alt?`<p>${n.alt}</p>`:""}</div>
+    <div class="secenekler" role="group" aria-label="${n.soru}">${n.secenek.map(([r,l,d])=>`<button class="secenek" aria-pressed="${s.c[n.anahtar]===r}" data-ia-cevap="${n.anahtar}:${r}"><span class="ad"><b>${l}</b>${d?`<span>${d}</span>`:""}</span></button>`).join("")}</div>
+    <div class="alt-bar"><button class="btn s" data-ia="geri">${o("geri")}Geri</button><span class="kucuk-yazi">${s.adim} / 4</span></div>`}if(s.adim===5){const n=h.cozumle({},{yas:s.profil.yas,cinsiyet:s.profil.cinsiyet??null}).govde,r=s.profil.govde??n;return`${e}
+    <div class="soru"><h1>Seni tanıyalım</h1><p>Hepsi isteğe bağlı ve Profil'e yazılır; istediğin zaman değiştirir ya da silersin. Yalnız bu telefonda kalır.</p></div>
     <div class="profil-alan">
       <div class="form-alan"><label for="ia-ad">Adın</label><input id="ia-ad" class="metin" maxlength="24" autocomplete="off" placeholder="İsteğe bağlı" value="${esc(s.profil.ad??"")}"></div>
       <div class="form-alan"><label for="ia-yas">Yaşın</label><input id="ia-yas" class="metin" inputmode="numeric" maxlength="3" placeholder="İsteğe bağlı" value="${s.profil.yas??""}"></div>
-      <div class="form-alan"><span class="etiket">Avatar</span><div class="cip-izgara">${g.GOVDELER.map(o=>`<button class="cip" aria-pressed="${o.id===r}" data-ia-govde="${o.id}">${esc(o.ad)}</button>`).join("")}</div></div></div>
-    <div class="alt-bar"><button class="btn s" data-ia="atla">Atla</button><button class="btn p" data-ia="ileri">Devam</button></div>`}const i=s.secili??ra(s.c),n=Y(i);return`
+      <div class="form-alan"><span class="etiket">Cinsiyet</span><div class="segment" role="group" aria-label="Cinsiyet">${h.CINSIYET.map(([l,d])=>`<button data-ia-cins="${l}" aria-pressed="${s.profil.cinsiyet===l}">${d}</button>`).join("")}</div></div>
+      <div class="av-iki">
+        <div class="form-alan"><label for="ia-boy">Boy (cm)</label><input id="ia-boy" class="metin" inputmode="numeric" maxlength="3" placeholder="İsteğe bağlı" value="${s.profil.boy??""}"></div>
+        <div class="form-alan"><label for="ia-kilo">Kilo (kg)</label><input id="ia-kilo" class="metin" inputmode="decimal" maxlength="5" placeholder="İsteğe bağlı" value="${s.profil.kilo??""}"></div></div>
+      <p class="kucuk-yazi">Kilo, İlerleme'deki kilo takibinin ilk ölçümü olur.</p>
+      <div class="form-alan"><span class="etiket">Avatar</span><div class="cip-izgara">${h.GOVDELER.map(l=>`<button class="cip" aria-pressed="${l.id===r}" data-ia-govde="${l.id}">${esc(l.ad)}</button>`).join("")}</div></div></div>
+    <div class="alt-bar"><button class="btn s" data-ia="atla">Atla</button><button class="btn p" data-ia="ileri">Devam</button></div>`}const i=s.secili??ka(s.c),t=X(i);return`
     <div class="soru"><h1>Senin için önerimiz</h1><p>Hedefine ve haftana göre seçildi; istediğin zaman değiştirebilirsin.</p></div>
-    ${W(n,s.secili?"SEÇTİĞİN":"ÖNERİLEN")}
+    ${ra(t,s.secili?"SEÇTİĞİN":"ÖNERİLEN")}
     <div class="alt-bar dikey"><button class="btn p" data-ia="basla">Bu programla başla</button></div>
-    <div class="grup"><h2 class="etiket">Diğer programlar</h2><div class="hazir-liste">${U.filter(t=>t.id!==i).map(Q("data-ia-sec")).join("")}</div></div>
-    <div class="grup"><button class="btn s" data-ia="kendim">Kendim kuracağım</button></div>`}const es=(a,s,e,i)=>`<span class="hedef">
-    <button class="adim" data-kalem="${a}:${s}:-1" aria-label="${i} azalt">${d("eksi")}</button>
+    <div class="grup"><h2 class="etiket">Diğer programlar</h2><div class="hazir-liste">${Z.filter(n=>n.id!==i).map(na("data-ia-sec")).join("")}</div></div>
+    <div class="grup"><button class="btn s" data-ia="kendim">Kendim kuracağım</button></div>`}const ps=(a,s,e,i)=>`<span class="hedef">
+    <button class="adim" data-kalem="${a}:${s}:-1" aria-label="${i} azalt">${o("eksi")}</button>
     <b>${e}</b>
-    <button class="adim" data-kalem="${a}:${s}:1" aria-label="${i} artır">${d("arti")}</button></span>`,x=a=>a.minutes!=null?`${a.minutes} dk`:a.seconds!=null?`${a.sets} × ${a.seconds} sn`:`${a.sets} × ${a.repsMin&&a.repsMin<a.reps?`${a.repsMin}-`:""}${a.reps}`;function is(a,s,e,i=60){const n=c.byId[a.exId]??c.bilinmeyenHareket(a.exId),t=[n.grup,f[n.equipment]].filter(Boolean).join(" · "),r=`${s}:`;let o="";if(e){const l=a.minutes!=null?"":`<div class="g-alan"><div class="g-etk"><span>Set</span><b>${a.sets}</b></div>${noktalarHTML("dz-set",a.sets,r)}</div>`,p=a.minutes!=null?`<div class="g-alan"><div class="g-etk"><span>Süre</span></div>${es(s,"minutes",`${a.minutes} dk`,"Süre")}</div>`:a.seconds!=null?`<div class="g-alan"><div class="g-etk"><span>Süre</span><b>${a.seconds} sn</b></div>
-            <div class="semalar" role="group" aria-label="Süre">${[...new Set([15,20,30,45,60,90,a.seconds])].sort(($,b)=>$-b).map($=>`<button class="cip" aria-pressed="${$===a.seconds}" data-dz-sn="${r}${$}">${$} sn</button>`).join("")}</div></div>`:`<div class="g-alan"><div class="g-etk"><span>Tekrar</span><b>${a.reps}</b></div>${tekrarSeridiHTML("dz-tekrar",a.reps,r)}</div>
-           ${semalarHTML("dz-sema",a.sets,a.reps,r)}`,m=a.minutes!=null?"":yontemHTML("dz-yontem",a,r,i,{tekrarli:a.reps!=null&&n.setType!=="time"});o=`<div class="acilir">${l}${p}${m}
-      <div class="alt-eylem"><button class="btn s" data-cikar="${s}">${d("sil")}Bu günden çıkar</button></div></div>`}return`<div class="satir-d${e?" acik":""}" data-dz-i="${s}">
-    <div class="kafa">${K(n)}
-      <button class="ad" data-dz-ac="${s}" aria-expanded="${e}"><b>${adi(n)}</b>${t?`<small>${esc(t)}</small>`:""}</button>
-      <button class="hap" data-dz-ac="${s}" aria-label="${adi(n)}: hedef ${x(a)}">${x(a)}</button>
-      <button class="tutac" data-dz-tutac="${s}" aria-label="${adi(n)}: sırayı değiştir — sürükle ya da yukarı/aşağı ok tuşu">${d("tutac")}</button>
-    </div>${o}</div>`}const aa=a=>JSON.stringify({...a,guncellendi:0});export const programDegisti=(a,s)=>!!(a&&s&&aa(a)!==aa(s));export function programHTML(a){const s=c.programGetir(a.duzen?.id);if(!s)return`<div class="ust"><button class="ib" data-act="to-programs" aria-label="Programlara dön">${d("geri")}</button></div>
-    <div class="sayfa-baslik"><h1>Program bulunamadı</h1></div>`;const e=Math.min(a.duzen.gun??0,s.gunler.length-1),i=s.gunler[e],n=s===c.aktifProgram(),t=i.hareketler.map((r,o)=>is(r,o,a.duzen.acik===o,a.settings?.restSeconds??60)).join("");return`
-    <div class="ust"><button class="ib" data-act="to-programs" aria-label="Programlara dön">${d("geri")}</button>
-      ${programDegisti(s,a.duzen.kopya)?`<button class="geri-don" data-act="program-geri-don">${d("geri-al")}Açtığın hâle dön</button>`:""}
-      ${n?'<span class="rozet">Kullanılıyor</span>':'<button class="cip" data-act="program-aktif">Bu programı kullan</button>'}</div>
+    <button class="adim" data-kalem="${a}:${s}:1" aria-label="${i} artır">${o("arti")}</button></span>`,la=a=>a.minutes!=null?`${a.minutes} dk`:a.seconds!=null?`${a.sets} × ${a.seconds} sn`:`${a.sets} × ${a.repsMin&&a.repsMin<a.reps?`${a.repsMin}-`:""}${a.reps}`;function ms(a,s,e,i=60){const t=c.byId[a.exId]??c.bilinmeyenHareket(a.exId),n=[t.grup,z[t.equipment]].filter(Boolean).join(" · "),r=`${s}:`;let l="";if(e){const d=a.minutes!=null?"":`<div class="g-alan"><div class="g-etk"><span>Set</span><b>${a.sets}</b></div>${noktalarHTML("dz-set",a.sets,r)}</div>`,u=a.minutes!=null?`<div class="g-alan"><div class="g-etk"><span>Süre</span></div>${ps(s,"minutes",`${a.minutes} dk`,"Süre")}</div>`:a.seconds!=null?`<div class="g-alan"><div class="g-etk"><span>Süre</span><b>${a.seconds} sn</b></div>
+            <div class="semalar" role="group" aria-label="Süre">${[...new Set([15,20,30,45,60,90,a.seconds])].sort((p,v)=>p-v).map(p=>`<button class="cip" aria-pressed="${p===a.seconds}" data-dz-sn="${r}${p}">${p} sn</button>`).join("")}</div></div>`:`<div class="g-alan"><div class="g-etk"><span>Tekrar</span><b>${a.reps}</b></div>${tekrarSeridiHTML("dz-tekrar",a.reps,r)}</div>
+           ${semalarHTML("dz-sema",a.sets,a.reps,r)}`,k=a.minutes!=null?"":yontemHTML("dz-yontem",a,r,i,{tekrarli:a.reps!=null&&t.setType!=="time"});l=`<div class="acilir">${d}${u}${k}
+      <div class="alt-eylem"><button class="btn s" data-cikar="${s}">${o("sil")}Bu günden çıkar</button></div></div>`}return`<div class="satir-d${e?" acik":""}" data-dz-i="${s}">
+    <div class="kafa">${ta(t)}
+      <button class="ad" data-dz-ac="${s}" aria-expanded="${e}"><b>${adi(t)}</b>${n?`<small>${esc(n)}</small>`:""}</button>
+      <button class="hap" data-dz-ac="${s}" aria-label="${adi(t)}: hedef ${la(a)}">${la(a)}</button>
+      <button class="tutac" data-dz-tutac="${s}" aria-label="${adi(t)}: sırayı değiştir — sürükle ya da yukarı/aşağı ok tuşu">${o("tutac")}</button>
+    </div>${l}</div>`}const da=a=>JSON.stringify({...a,guncellendi:0});export const programDegisti=(a,s)=>!!(a&&s&&da(a)!==da(s));export function programHTML(a){const s=c.programGetir(a.duzen?.id);if(!s)return`<div class="ust"><button class="ib" data-act="to-programs" aria-label="Programlara dön">${o("geri")}</button></div>
+    <div class="sayfa-baslik"><h1>Program bulunamadı</h1></div>`;const e=Math.min(a.duzen.gun??0,s.gunler.length-1),i=s.gunler[e],t=s===c.aktifProgram(),n=i.hareketler.map((r,l)=>ms(r,l,a.duzen.acik===l,a.settings?.restSeconds??60)).join("");return`
+    <div class="ust"><button class="ib" data-act="to-programs" aria-label="Programlara dön">${o("geri")}</button>
+      ${programDegisti(s,a.duzen.kopya)?`<button class="geri-don" data-act="program-geri-don">${o("geri-al")}Açtığın hâle dön</button>`:""}
+      ${t?'<span class="rozet">Kullanılıyor</span>':'<button class="cip" data-act="program-aktif">Bu programı kullan</button>'}</div>
     <div class="form-alan"><label for="p-ad">Programın adı</label>
       <input id="p-ad" class="metin" value="${esc(s.ad)}" maxlength="60" autocomplete="off"></div>
-    <div class="kaydir" role="group" aria-label="Günler">${s.gunler.map((r,o)=>`<button class="cip" aria-pressed="${o===e}" data-pgun="${o}">${o+1}. Gün</button>`).join("")}
-      ${s.gunler.length<7?`<button class="cip" data-act="gun-ekle" aria-label="Gün ekle">${d("arti")}Gün</button>`:""}</div>
+    <div class="kaydir" role="group" aria-label="Günler">${s.gunler.map((r,l)=>`<button class="cip" aria-pressed="${l===e}" data-pgun="${l}">${l+1}. Gün</button>`).join("")}
+      ${s.gunler.length<7?`<button class="cip" data-act="gun-ekle" aria-label="Gün ekle">${o("arti")}Gün</button>`:""}</div>
     <div class="form-alan"><label for="g-ad">${e+1}. günün adı</label>
       <input id="g-ad" class="metin" value="${esc(i.ad??"")}" maxlength="60" autocomplete="off"
              placeholder="${esc(c.gunEtiketi(e,s).kaslar)}"></div>
     <div class="grup"><h2 class="etiket">Hareketler · ${i.hareketler.length}</h2>
-      ${i.hareketler.length?`<div class="liste-d" id="dz-liste">${t}</div>`:'<div class="ic"><p>Bu gün boş. Aşağıdan hareket ekle.</p></div>'}
+      ${i.hareketler.length?`<div class="liste-d" id="dz-liste">${n}</div>`:'<div class="ic"><p>Bu gün boş. Aşağıdan hareket ekle.</p></div>'}
     </div>
     <div class="grup"><h2 class="etiket">Soğuma</h2>
-      <div class="segment" role="group" aria-label="${e+1}. günün soğuması">${Object.entries(c.SOGUMA_SECENEK).map(([r,o])=>`<button aria-pressed="${(i.soguma??"kas")===r}" data-psoguma="${r}">${o}</button>`).join("")}</div>
+      <div class="segment" role="group" aria-label="${e+1}. günün soğuması">${Object.entries(c.SOGUMA_SECENEK).map(([r,l])=>`<button aria-pressed="${(i.soguma??"kas")===r}" data-psoguma="${r}">${l}</button>`).join("")}</div>
       <p class="kucuk-yazi gun-ayar-not">${{kas:"Günün kaslarından en fazla 5 esneme, ~5 dk.",tum:`Tüm vücut esneme: ${c.ESNEME.length} esneme, ${esDakika(c.sogumaSuresi(c.tumVucut(a.settings?.profil)))}.`,kapali:"Bu günün listesinde soğuma satırı görünmez."}[i.soguma??"kas"]}</p></div>
-    <div class="grup eylemler"><button class="btn s" data-act="secici-ac">${d("arti")}Hareket ekle</button>
+    <div class="grup eylemler"><button class="btn s" data-act="secici-ac">${o("arti")}Hareket ekle</button>
       ${s.gunler.length>1?`<button class="btn s" data-act="gun-sil">${e+1}. günü sil</button>`:""}
-      ${!n&&s.id!=="benim"?'<button class="btn s" data-act="program-sil">Programı sil</button>':""}
+      ${!t&&s.id!=="benim"?'<button class="btn s" data-act="program-sil">Programı sil</button>':""}
     </div>
-    <p class="kucuk-yazi">Satıra dokun: set ve tekrar. ⋮⋮ tutup sürükle: sıra. Değişiklikler hemen kaydedilir; geçmişteki seanslar etkilenmez.</p>`}const y=a=>String(a??"").toLocaleLowerCase("tr");export function seciciSonuc(a){const s=y(a.ara).trim();return c.kutuphaneListesi().filter(e=>(!a.grup||e.grup===a.grup)&&(!a.eq||e.equipment===a.eq)&&(!s||y(e.ad).includes(s)||y(e.en).includes(s)||y(e.mus).includes(s))).sort((e,i)=>y(e.ad).localeCompare(y(i.ad),"tr"))}export function seciciListeHTML(a){const s=seciciSonuc(a.secici),e=c.programGetir(a.duzen?.id)?.gunler[a.duzen.gun],i=new Set(e?.hareketler.map(t=>t.exId)??[]);if(!s.length)return'<div class="grup"><div class="ic"><p>Bulunamadı. Aşağıdan özel hareket olarak ekleyebilirsin.</p></div></div>';const n=t=>`
-    <button class="satir" data-ekle="${esc(t.id)}">
-      ${K(t)}
-      <span class="ad"><b>${adi(t)}</b><span>${[i.has(t.id)&&"bu günde var",t.en&&`<span lang="en">${esc(t.en)}</span>`,f[t.equipment],t.ozel&&"özel"].filter(Boolean).join(" · ")}</span></span>
-      <span class="durum ikon">${d("arti")}</span>
-    </button>`;return`<p class="sayac">${s.length} hareket</p><div class="liste">${s.map(t=>t.ozel?`<div class="satir-ozel">${n(t)}<button class="ozel-sil" data-ozel-sil="${esc(t.id)}" aria-label="${adi(t)}: kütüphaneden sil">${d("sil")}</button></div>`:n(t)).join("")}</div>`}export function seciciHTML(a){const s=a.secici;return`
-    <div class="ust"><button class="ib" data-act="secici-kapat" aria-label="Kapat">${d("carpi")}</button>
-      <span class="tarih">Hareket ekle · ${a.duzen.gun+1}. Gün</span><span class="ib-yer"></span></div>
-    <label class="arama">${d("ara")}<input id="ara" type="search" value="${esc(s.ara)}" placeholder="Ara: squat, göğüs, curl…"
+    <p class="kucuk-yazi">Satıra dokun: set ve tekrar. ⋮⋮ tutup sürükle: sıra. Değişiklikler hemen kaydedilir; geçmişteki seanslar etkilenmez.</p>`}const $s={Göğüs:"bb_bench_press",Sırt:"bw_pullup",Omuz:"db_lateral_raise",Kol:"db_biceps_curl",Bacak:"bb_squat",Karın:"plank",Kardiyo:"bw_jumping_jack"},O={kutuphane:{durum:a=>a.kutuphane,grup:"kgrup",eq:"keq",ara:"k-ara",liste:"kutuphane-liste"},secici:{durum:a=>a.secici,grup:"sgrup",eq:"seq",ara:"ara",liste:"secici-liste"}};export const gozAtMi=a=>!a.grup&&!a.eq&&!String(a.ara??"").trim();export function vurgula(a,s){const e=String(a??"");if(!s)return esc(e);const i=y(e);if(i.length!==e.length)return esc(e);let t="",n=0,r;for(;(r=i.indexOf(s,n))>=0;)t+=`${esc(e.slice(n,r))}<mark>${esc(e.slice(r,r+s.length))}</mark>`,n=r+s.length;return t+esc(e.slice(n))}function ks(a,s,e,i){const t=S(a),n=!!a.kas&&!a.equipment,r=[s==="secici"&&i?.has(a.id)&&"bu günde var",n?a.kas:a.mus,n?_[a.yer]:z[a.equipment],a.ozel&&"özel"].filter(Boolean).map(esc).join(" · "),l=`${ta(a)}<span class="ad"><b>${vurgula(E(a),e)}</b>${t?`<span>${vurgula(t,e)}</span>`:""}<span>${r}</span></span>`;if(s!=="secici")return`<button class="satir" data-hareket="${esc(a.id)}">${l}<span class="durum ok">${o("ileri")}</span></button>`;const d=`<button class="satir" data-ekle="${esc(a.id)}">${l}<span class="durum ikon">${o("arti")}</span></button>`;return a.ozel?`<div class="satir-ozel">${d}<button class="ozel-sil" data-ozel-sil="${esc(a.id)}" aria-label="${adi(a)}: kütüphaneden sil">${o("sil")}</button></div>`:d}const y=a=>String(a??"").toLocaleLowerCase("tr");export function seciciSonuc(a){const s=y(a.ara).trim();return c.kutuphaneListesi().filter(e=>(!a.grup||e.grup===a.grup)&&(!a.eq||e.equipment===a.eq)&&(!s||[e.ad,e.en,e.tr,e.mus].some(i=>y(i).includes(s)))).sort((e,i)=>y(E(e)).localeCompare(y(E(i)),"tr"))}export function esnemeSonuc(a){if(a.eq||a.grup&&a.grup!=="Esneme")return[];const s=y(a.ara).trim();return c.ESNEME.filter(e=>!s||[e.ad,e.en,e.kas].some(i=>y(i).includes(s))).sort((e,i)=>y(E(e)).localeCompare(y(E(i)),"tr"))}function bs(a,s){const e=O[s],i=c.kutuphaneListesi(),t=l=>i.filter(d=>d.grup===l).length,n=(a.sonYapilanlar??[]).map(l=>c.byId[l]).filter(l=>l&&!l.arsiv),r=l=>s==="secici"?`data-ekle="${esc(l.id)}"`:`data-hareket="${esc(l.id)}"`;return`${n.length?`
+    <div class="bolum-baslik"><h2>Son yaptıkların</h2><span>${n.length}</span></div>
+    <div class="gz-son">${n.map(l=>`<button ${r(l)}><span class="k3" ${cizimsiz(l)?"":`data-kucuk="${esc(l.id)}"`} aria-hidden="true"></span>
+      <b>${adi(l)}</b><small>${esc(l.grup??"")}</small></button>`).join("")}</div>`:""}
+    <div class="bolum-baslik"><h2>Kas grupları</h2><span>dokun: o grubun hareketleri</span></div>
+    <div class="gz-izgara">${K.filter(l=>t(l)).map(l=>`<button class="gz-kart" data-${e.grup}="${l}">
+      <span class="g3" data-kucuk="${$s[l]}" aria-hidden="true"></span><b>${l}</b><small>${t(l)} hareket</small></button>`).join("")}
+      ${s==="kutuphane"?`<button class="gz-kart genis" data-kgrup="Esneme"><span class="g3" data-kucuk="es_cocuk_pozu" aria-hidden="true"></span>
+        <b>Esneme</b><small>${c.ESNEME.length} esneme · tüm vücut rutini</small></button>`:""}</div>
+    <div class="bolum-baslik"><h2>Ekipmana göre</h2></div>
+    <div class="kaydir" role="group" aria-label="Ekipman">${Object.keys(z).filter(l=>i.some(d=>d.equipment===l)).map(l=>`<button class="cip" data-${e.eq}="${l}">${z[l]}</button>`).join("")}</div>`}function Y(a,s){const e=O[s].durum(a);if(gozAtMi(e))return bs(a,s);const i=y(e.ara).trim(),t=s==="secici"?new Set(c.programGetir(a.duzen?.id)?.gunler[a.duzen.gun]?.hareketler.map(p=>p.exId)??[]):null,n=e.grup==="Esneme"?[]:seciciSonuc(e),r=s==="secici"?[]:esnemeSonuc(e),l=n.length+r.length;if(!l)return'<div class="grup"><div class="ic"><p>Bulunamadı. Aşağıdan özel hareket olarak ekleyebilirsin.</p></div></div>';const d=p=>`<div class="liste">${p.map(v=>ks(v,s,i,t)).join("")}</div>`,u=i?`<p class="sayac">${l} sonuç${e.grup?"":" · tüm gruplarda"}</p>`:"";if(e.grup)return u+d(e.grup==="Esneme"?r:n);const k=K.map(p=>[p,n.filter(v=>v.grup===p)]).filter(([,p])=>p.length);return r.length&&k.push(["Esneme",r]),u+k.map(([p,v])=>`<div class="bolum-baslik"><h2>${esc(p)}</h2><span>${v.length}</span></div>${d(v)}`).join("")}export const seciciListeHTML=a=>Y(a,"secici"),kutuphaneListeHTML=a=>Y(a,"kutuphane");function oa(a,s){const e=O[s],i=e.durum(a),t=gozAtMi(i),n=i.grup||(i.eq?z[i.eq]:""),r=c.kutuphaneListesi(),l=`<button class="ib" data-${e.grup}="" aria-label="Kas gruplarına dön">${o("geri")}</button>`,d=`<button class="ib" data-act="secici-kapat" aria-label="Kapat">${o("carpi")}</button>`,u=s==="secici"?`<div class="ust">${n?l:d}<span class="tarih">Hareket ekle · ${a.duzen.gun+1}. Gün</span>${n?d:'<span class="ib-yer"></span>'}</div>`:n?`<div class="ust">${l}<span class="tarih">Hareketler</span><span class="ib-yer"></span></div>`:"",k=i.grup==="Esneme"?c.ESNEME.length:r.filter(b=>(!i.grup||b.grup===i.grup)&&(!i.eq||b.equipment===i.eq)).length,p=n?`<div class="sayfa-baslik"><h1>${esc(n)}</h1><p>${k} ${i.grup==="Esneme"?"esneme":"hareket"}</p></div>`:s==="kutuphane"?`<div class="sayfa-baslik ust-bosluk"><h1>Hareketler</h1><p>${r.length} hareket · ${c.ESNEME.length} esneme</p></div>`:"",v=i.grup&&i.grup!=="Esneme"?Object.keys(z).filter(b=>r.some(m=>m.grup===i.grup&&m.equipment===b)):[];return`${u}${p}
+    ${s==="kutuphane"&&i.grup==="Esneme"&&!i.ara.trim()?Va(a):""}
+    <label class="arama">${o("ara")}<input id="${e.ara}" type="search" value="${esc(i.ara)}" placeholder="${n?`${esc(n)} içinde ara`:"Ara: squat, göğüs, curl…"}"
       autocomplete="off" aria-label="Hareket ara"></label>
-    <div class="kaydir" role="group" aria-label="Kas grubu">${["",...A].map(e=>`<button class="cip" aria-pressed="${s.grup===e}" data-sgrup="${e}">${e||"Tüm kaslar"}</button>`).join("")}</div>
-    <div class="kaydir" role="group" aria-label="Ekipman">${["",...Object.keys(f)].map(e=>`<button class="cip" aria-pressed="${s.eq===e}" data-seq="${e}">${e?f[e]:"Tüm ekipman"}</button>`).join("")}</div>
-    <div id="secici-liste">${seciciListeHTML(a)}</div>
-    <div class="grup"><button class="btn s" data-act="ozel-ac">Listede yok mu? Özel hareket ekle</button></div>`}export function esnemeSonuc(a){if(a.eq||a.grup&&a.grup!=="Esneme")return[];const s=y(a.ara).trim();return c.ESNEME.filter(e=>!s||y(e.ad).includes(s)||y(e.en).includes(s)||y(e.kas).includes(s))}export function kutuphaneListeHTML(a){const s=a.kutuphane.grup==="Esneme"?[]:seciciSonuc(a.kutuphane),e=esnemeSonuc(a.kutuphane),i=(a.kutuphane.grup?[a.kutuphane.grup]:A).map(t=>[t,s.filter(r=>r.grup===t)]).filter(([,t])=>t.length);if(!i.length&&!e.length)return'<div class="grup"><div class="ic"><p>Bulunamadı. Aşağıdan özel hareket olarak ekleyebilirsin.</p></div></div>';const n=e.length?`
-    <div class="bolum-baslik"><h2>Esneme</h2><span>${e.length}</span></div>
-    <div class="liste">${e.map(t=>`
-      <button class="satir" data-hareket="${t.id}">
-        <span class="kucuk" data-kucuk="${t.id}" aria-hidden="true"></span>
-        <span class="ad"><b>${esc(t.ad)}</b><span>${esc(t.kas)} · ${G[t.yer]}</span></span>
-        <span class="durum ok">${d("ileri")}</span>
-      </button>`).join("")}</div>`:"";return i.map(([t,r])=>`
-    <div class="bolum-baslik"><h2>${esc(t)}</h2><span>${r.length}</span></div>
-    <div class="liste">${r.map(o=>`
-      <button class="satir" data-hareket="${esc(o.id)}">
-        ${K(o)}
-        <span class="ad"><b>${adi(o)}</b><span>${[o.mus,f[o.equipment],o.ozel&&"özel"].filter(Boolean).map(esc).join(" · ")}</span></span>
-        <span class="durum ok">${d("ileri")}</span>
-      </button>`).join("")}</div>`).join("")+n}export function kutuphaneHTML(a){const s=a.kutuphane,e=(s.grup==="Esneme"?0:seciciSonuc(s).length)+esnemeSonuc(s).length;return`
-    <div class="sayfa-baslik ust-bosluk"><h1>Hareketler</h1><p>${s.grup==="Esneme"?`${e} esneme · dokun: nasıl yapılır, esnettiği kaslar`:`${e} hareket · dokun: nasıl yapılır, kaslar, geçmişin`}</p></div>
-    ${(!s.grup||s.grup==="Esneme")&&!s.eq&&!s.ara.trim()?Pa(a):""}
-    <label class="arama">${d("ara")}<input id="k-ara" type="search" value="${esc(s.ara)}" placeholder="Ara: squat, göğüs, curl…"
-      autocomplete="off" aria-label="Hareket ara"></label>
-    <div class="kaydir" role="group" aria-label="Kas grubu">${["",...A,"Esneme"].map(i=>`<button class="cip" aria-pressed="${s.grup===i}" data-kgrup="${i}">${i||"Tüm kaslar"}</button>`).join("")}</div>
-    <div class="kaydir" role="group" aria-label="Ekipman">${["",...Object.keys(f)].map(i=>`<button class="cip" aria-pressed="${s.eq===i}" data-keq="${i}">${i?f[i]:"Tüm ekipman"}</button>`).join("")}</div>
-    <div id="kutuphane-liste">${kutuphaneListeHTML(a)}</div>
-    <div class="grup"><button class="btn s" data-act="ozel-ac-kutuphane">${d("arti")}Özel hareket ekle</button></div>
-    ${sekmelerHTML("hareketler")}`}function ts(a,s,e,i){if(!a||!s||s.sayi<2)return"";const n=I.TURLER.filter(t=>a[t]);return n.length?`<div class="grup"><h2 class="etiket">Rekorların</h2><div class="ic"><div class="rekor-tablo">${n.map(t=>`<span>${I.TUR_AD[t]}<small>${i(a[t].at)} · ${P(a[t].set,e)}</small></span><span><b>${rekorDeger(t,a[t].deger,e)}</b></span>`).join("")}</div>
-    ${a.tekrarlar.length>1?`<p class="rekor-ara">Ağırlık başına en çok tekrar</p><div class="tekrar-cipleri">${a.tekrarlar.map(t=>`<span><b>${fmt(t.agirlik)} ${e}</b> × ${t.tekrar}</span>`).join("")}</div>`:""}
-    ${a.bir?'<p class="oz-kural">Tahmini 1 tekrar maksimumu en fazla 10 tekrarlı setlerden hesaplanır (Brzycki); ısınma setleri sayılmaz.</p>':""}</div></div>`:""}export const GUVENLIK_NOTU="Ağrı, baş dönmesi, göğüs ağrısı ya da olağandışı nefes darlığı olursa hemen dur. Bir sağlık sorunun varsa, gebeysen ya da uzun süredir hareketsizsen başlamadan önce hekimine danış. FSet tıbbi tavsiye vermez.",ilkAgirlikNotu=a=>a?.setType!=="weight_reps"||a.equipment==="bodyweight"?"":`İlk seansta hedef tekrarı temiz teknikle bitirip 2–3 tekrar daha yapabileceğin ağırlığı seç.${a.equipment==="barbell"?" Önce boş barla tekniği öğren.":""}`;const P=(a,s)=>a.type==="time"?`${fmt(a.seconds)} sn`:a.type==="cardio"?`${fmt(a.minutes)} dk`:a.weight?`${fmt(a.weight)} ${s} × ${a.reps??"—"}`:`${a.reps??"—"} tekrar`,sa=a=>a.target?.minutes!=null?`${a.target.minutes} dk`:a.target?.seconds!=null?`${a.sets} × ${a.target.seconds} sn`:`${a.sets} × ${a.target?.reps??"—"}`;export function hareketHTML(a){if(c.esnemeById[a.hareketId])return _a(c.esnemeById[a.hareketId],c.tutusSn(a.settings?.profil));const s=c.byId[a.hareketId];if(!s)return`<div class="ust"><button class="ib" data-act="to-hareketler" aria-label="Hareketlere dön">${d("geri")}</button></div>
-    <div class="sayfa-baslik"><h1>Hareket bulunamadı</h1></div>`;const e=String(s.mus??"").split("·").map(r=>r.trim()).filter(Boolean),i=a.hareketGecmisi,n=a.settings?.unit??"kg",t=r=>h.fmtShort(new Date(r));return`
-    <div class="ust"><button class="ib" data-act="to-hareketler" aria-label="Hareketlere dön">${d("geri")}</button>
+    ${v.length>1?`<div class="kaydir" role="group" aria-label="Ekipman">${["",...v].map(b=>`<button class="cip" aria-pressed="${i.eq===b}" data-${e.eq}="${b}">${b?z[b]:"Tümü"}</button>`).join("")}</div>`:""}
+    <div id="${e.liste}">${Y(a,s)}</div>
+    <div class="grup"><button class="btn s" data-act="${s==="secici"?"ozel-ac":"ozel-ac-kutuphane"}">${o("arti")}${s==="secici"?"Listede yok mu? Özel hareket ekle":"Özel hareket ekle"}</button></div>
+    ${s==="kutuphane"?sekmelerHTML("hareketler"):""}`}export const seciciHTML=a=>oa(a,"secici"),kutuphaneHTML=a=>oa(a,"kutuphane");function vs(a,s,e,i){if(!a||!s||s.sayi<2)return"";const t=L.TURLER.filter(n=>a[n]);return t.length?`<div class="grup"><h2 class="etiket">Rekorların</h2><div class="ic"><div class="rekor-tablo">${t.map(n=>`<span>${L.TUR_AD[n]}<small>${i(a[n].at)} · ${U(a[n].set,e)}</small></span><span><b>${rekorDeger(n,a[n].deger,e)}</b></span>`).join("")}</div>
+    ${a.tekrarlar.length>1?`<p class="rekor-ara">Ağırlık başına en çok tekrar</p><div class="tekrar-cipleri">${a.tekrarlar.map(n=>`<span><b>${fmt(n.agirlik)} ${e}</b> × ${n.tekrar}</span>`).join("")}</div>`:""}
+    ${a.bir?'<p class="oz-kural">Tahmini 1 tekrar maksimumu en fazla 10 tekrarlı setlerden hesaplanır (Brzycki); ısınma setleri sayılmaz.</p>':""}</div></div>`:""}export const GUVENLIK_NOTU="Ağrı, baş dönmesi, göğüs ağrısı ya da olağandışı nefes darlığı olursa hemen dur. Bir sağlık sorunun varsa, gebeysen ya da uzun süredir hareketsizsen başlamadan önce hekimine danış. FSet tıbbi tavsiye vermez.",ilkAgirlikNotu=a=>a?.setType!=="weight_reps"||a.equipment==="bodyweight"?"":`İlk seansta hedef tekrarı temiz teknikle bitirip 2–3 tekrar daha yapabileceğin ağırlığı seç.${a.equipment==="barbell"?" Önce boş barla tekniği öğren.":""}`;const U=(a,s)=>a.type==="time"?`${fmt(a.seconds)} sn`:a.type==="cardio"?`${fmt(a.minutes)} dk`:a.weight?`${fmt(a.weight)} ${s} × ${a.reps??"—"}`:`${a.reps??"—"} tekrar`,ca=a=>a.target?.minutes!=null?`${a.target.minutes} dk`:a.target?.seconds!=null?`${a.sets} × ${a.target.seconds} sn`:`${a.sets} × ${a.target?.reps??"—"}`;export function hareketHTML(a){if(c.esnemeById[a.hareketId])return Ja(c.esnemeById[a.hareketId],c.tutusSn(a.settings?.profil));const s=c.byId[a.hareketId];if(!s)return`<div class="ust"><button class="ib" data-act="to-hareketler" aria-label="Hareketlere dön">${o("geri")}</button></div>
+    <div class="sayfa-baslik"><h1>Hareket bulunamadı</h1></div>`;const e=String(s.mus??"").split("·").map(r=>r.trim()).filter(Boolean),i=a.hareketGecmisi,t=a.settings?.unit??"kg",n=r=>f.fmtShort(new Date(r));return`
+    <div class="ust"><button class="ib" data-act="to-hareketler" aria-label="Hareketlere dön">${o("geri")}</button>
       <span class="tarih">${esc(s.grup??"")}</span><span class="ib-yer"></span></div>
-    <div class="sayfa-baslik"><h1>${adi(s)}</h1>${s.en?`<p lang="en">${esc(s.en)}</p>`:""}</div>
+    <div class="sayfa-baslik"><h1>${adi(s)}</h1>${S(s)?`<p>${esc(S(s))}</p>`:""}</div>
     ${cizimsiz(s)?'<div class="grup"><div class="ic"><p>Özel hareket · çizimi yok.</p></div></div>':`<div class="buyuk3b"><div class="sahne3d" id="hareket3d" role="img" aria-label="${adi(s)} hareket çizimi; sürükleyerek döndürülür"></div>
          <img class="damga" src="icons/isaret.svg" alt="" width="30" height="17"><span class="ipucu">Sürükle: döndür · dokun: yeniden oynat</span></div>`}
-    <p class="kunye">${[f[s.equipment],`Önerilen ${sa(s)}`].filter(Boolean).map(esc).join(" · ")}</p>
-    ${e.length?`<div class="grup"><h2 class="etiket">Çalışan kaslar</h2><div class="ic"><div class="kaslar">${e.map((r,o)=>`<span class="kas${o<2?" ana":""}">${esc(r)}</span>`).join("")}</div></div></div>`:""}
+    <p class="kunye">${[z[s.equipment],`Önerilen ${ca(s)}`].filter(Boolean).map(esc).join(" · ")}</p>
+    ${e.length?`<div class="grup"><h2 class="etiket">Çalışan kaslar</h2><div class="ic"><div class="kaslar">${e.map((r,l)=>`<span class="kas${l<2?" ana":""}">${esc(r)}</span>`).join("")}</div></div></div>`:""}
     ${s.fayda?`<div class="grup"><h2 class="etiket">Faydası</h2><div class="ic"><p>${esc(s.fayda)}</p></div></div>`:""}
     <div class="grup"><h2 class="etiket">Geçmişin</h2><div class="ic">${i?`
       <div class="ozet-iki">
-        <div><small>Son · ${t(i.son.at)}</small><b>${P(i.son.set,n)}</b></div>
-        <div><small>En iyi · ${t(i.enIyi.at)}</small><b>${P(i.enIyi.set,n)}</b></div></div>
+        <div><small>Son · ${n(i.son.at)}</small><b>${U(i.son.set,t)}</b></div>
+        <div><small>En iyi · ${n(i.enIyi.at)}</small><b>${U(i.enIyi.set,t)}</b></div></div>
       <p class="kucuk-yazi">${i.sayi} seansta yapıldı</p>
-      ${i.not?`<p class="seans-notu">${d("liste")}<span>${esc(i.not.metin)} <small>· ${t(i.not.at)}</small></span></p>`:""}`:"<p>Bu hareketi henüz kaydetmedin.</p>"}</div></div>
-    ${ts(a.hareketRekor,i,n,t)}
+      ${i.not?`<p class="seans-notu">${o("liste")}<span>${esc(i.not.metin)} <small>· ${n(i.not.at)}</small></span></p>`:""}`:"<p>Bu hareketi henüz kaydetmedin.</p>"}</div></div>
+    ${vs(a.hareketRekor,i,t,n)}
     ${s.steps?.length?`<div class="grup"><h2 class="etiket">Nasıl yapılır</h2><div class="ic"><ol class="adimlar">${s.steps.map(r=>`<li>${esc(r)}</li>`).join("")}</ol></div></div>`:""}
     ${s.tip?`<div class="grup"><h2 class="etiket">Dikkat</h2><div class="ipucu-kutu">${esc(s.tip)}</div></div>`:""}
     ${ilkAgirlikNotu(s)?`<p class="kucuk-yazi grup-alti">${ilkAgirlikNotu(s)}</p>`:""}
     <p class="kucuk-yazi grup-alti">${GUVENLIK_NOTU}</p>
-    <div class="grup eylemler"><button class="btn p" data-act="hareket-ekle-ac">${d("arti")}Programa ekle</button>
-      ${s.ozel?`<button class="btn s" data-ozel-sil="${esc(s.id)}">${d("sil")}Hareketi sil</button>`:""}</div>
+    <div class="grup eylemler"><button class="btn p" data-act="hareket-ekle-ac">${o("arti")}Programa ekle</button>
+      ${s.ozel?`<button class="btn s" data-ozel-sil="${esc(s.id)}">${o("sil")}Hareketi sil</button>`:""}</div>
     ${sekmelerHTML("hareketler")}`}export function hareketEkleHTML(a){const s=c.byId[a.hareketId],e=c.programGetir(a.hareketEkle?.programId)??c.aktifProgram();return s?`
-    <div class="ust"><button class="ib" data-act="hareket-ekle-kapat" aria-label="Kapat">${d("carpi")}</button>
+    <div class="ust"><button class="ib" data-act="hareket-ekle-kapat" aria-label="Kapat">${o("carpi")}</button>
       <span class="tarih">Programa ekle</span><span class="ib-yer"></span></div>
     <div class="sayfa-baslik"><h1>${adi(s)}</h1><p>Hangi programın hangi gününe?</p></div>
     <div class="grup"><h2 class="etiket">Program</h2><div class="kaydir" role="group" aria-label="Program">${c.programListesi().map(i=>`<button class="cip" aria-pressed="${i.id===e.id}" data-he-prg="${esc(i.id)}">${esc(i.ad)}</button>`).join("")}</div></div>
-    <div class="grup"><h2 class="etiket">Gün</h2><div class="gun-secim">${e.gunler.map((i,n)=>`
-      <button class="satir" data-he-gun="${n}">
-        <span class="ad"><b>${c.gunEtiketi(n,e).kisa}</b><span>${[c.gunEtiketi(n,e).kaslar,`${i.hareketler.length} hareket`,i.hareketler.some(t=>t.exId===s.id)&&"bu günde var"].filter(Boolean).map(esc).join(" · ")}</span></span>
-        <span class="durum ikon">${d("arti")}</span>
+    <div class="grup"><h2 class="etiket">Gün</h2><div class="gun-secim">${e.gunler.map((i,t)=>`
+      <button class="satir" data-he-gun="${t}">
+        <span class="ad"><b>${c.gunEtiketi(t,e).kisa}</b><span>${[c.gunEtiketi(t,e).kaslar,`${i.hareketler.length} hareket`,i.hareketler.some(n=>n.exId===s.id)&&"bu günde var"].filter(Boolean).map(esc).join(" · ")}</span></span>
+        <span class="durum ikon">${o("arti")}</span>
       </button>`).join("")}</div></div>
-    <p class="kucuk-yazi grup-alti">${esc(sa(s))} hedefiyle eklenir; programda değiştirebilirsin.</p>`:""}export function ozelHTML(a){const s=a.ozelForm,e=(i,n,t)=>Object.entries(n).map(([r,o])=>`<button class="cip" aria-pressed="${t===r}" data-${i}="${r}">${o}</button>`).join("");return`
-    <div class="ust"><button class="ib" data-act="ozel-kapat" aria-label="Hareket seçiciye dön">${d("geri")}</button>
+    <p class="kucuk-yazi grup-alti">${esc(ca(s))} hedefiyle eklenir; programda değiştirebilirsin.</p>`:""}export function ozelHTML(a){const s=a.ozelForm,e=(i,t,n)=>Object.entries(t).map(([r,l])=>`<button class="cip" aria-pressed="${n===r}" data-${i}="${r}">${l}</button>`).join("");return`
+    <div class="ust"><button class="ib" data-act="ozel-kapat" aria-label="Hareket seçiciye dön">${o("geri")}</button>
       <span class="tarih">Özel hareket</span><span class="ib-yer"></span></div>
     <div class="sayfa-baslik"><h1>Özel hareket</h1>
       <p>Listede olmayan hareketi kendin ekle. Çizimi olmaz; kaydı ve geçmişi diğerleri gibi tutulur.</p></div>
     <div class="form-alan"><label for="o-ad">Adı</label>
       <input id="o-ad" class="metin" value="${esc(s.ad)}" maxlength="60" autocomplete="off" placeholder="ör. Smith makinesinde squat"></div>
     <div class="form-alan"><span class="etiket">Nasıl kaydedilsin?</span>
-      <div class="cip-izgara">${e("otur",ta,s.setType)}</div></div>
+      <div class="cip-izgara">${e("otur",ma,s.setType)}</div></div>
     <div class="form-alan"><span class="etiket">Ekipman</span>
-      <div class="cip-izgara">${e("oeq",f,s.equipment)}</div></div>
+      <div class="cip-izgara">${e("oeq",z,s.equipment)}</div></div>
     <div class="form-alan"><span class="etiket">Çalışan kas</span>
-      <div class="cip-izgara">${e("ogrup",Object.fromEntries(A.map(i=>[i,i])),s.grup)}</div></div>
+      <div class="cip-izgara">${e("ogrup",Object.fromEntries(K.map(i=>[i,i])),s.grup)}</div></div>
     <div class="alt"><button class="btn p" data-act="ozel-kaydet">Ekle ve güne koy</button></div>`}
