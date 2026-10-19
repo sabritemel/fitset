@@ -1,2 +1,2 @@
 /*! © 2026 Sabri Temel — tüm hakları saklıdır. Kullanım koşulları: kosullar.html */
-export const AD={on:"F",son:"Set",slogan:"BETTER EVERY SET"},SURUM="0.23.0";
+export const AD={on:"F",son:"Set",slogan:"BETTER EVERY SET"},SURUM="0.24.0";
